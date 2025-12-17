@@ -3,12 +3,13 @@ import Image from "next/image";
 import Logo from "@/public/logo.png";
 import GoogleLogoIcon from "@/public/google-icon.svg";
 import GitHubLogoIcon from "@/public/github-icon.svg";
+import Link from "next/link";
 
 const LoginPage = () => {
   return (
     <>
       {/* Container */}
-      <div className="bg-gray-100 w-full flex flex-col gap-4 py-4 px-2 rounded-md">
+      <div className="bg-gray-300 w-full flex flex-col gap-4 py-4 px-2 rounded-md shadow-[20px] shadow-gray-100">
         {/* logo */}
         <div className="mb-6 lg:mb-4">
           <Image
@@ -40,11 +41,11 @@ const LoginPage = () => {
           <div className="w-2/3 border border-gray-400 h-16"></div>
 
           {/* Login Button */}
-          <button className="w-full cursor-pointer bg-primary-1 hover:bg-primary-2 active:bg-primary-3 rounded-md py-2 font-semibold text-white">Login</button>
+          <button className="w-full cursor-pointer bg-primary-1 hover:bg-primary-2 active:bg-primary-3 rounded-md py-2 font-semibold text-white">Sign in</button>
           {/* Forgot Password and Signup */}
           <div className="flex items-center justify-between text-gray-600">
-            <p className="text-sm hover:underline cursor-pointer">Forgot password?</p>
-            <p className="text-[15px] hover:underline cursor-pointer">Register</p>
+            <Link href="/password/reset" className="text-sm hover:underline cursor-pointer">Forgot password?</Link> 
+            <Link href="/register" className="text-[15px] hover:underline cursor-pointer">Sign up</Link>
           </div>
         </form>
         {/* Other signin Options */}
