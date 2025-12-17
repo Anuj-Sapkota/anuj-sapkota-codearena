@@ -44,7 +44,7 @@ const LoginPage = () => {
           <button className="w-full cursor-pointer bg-primary-1 hover:bg-primary-2 active:bg-primary-3 rounded-md py-2 font-semibold text-white">Sign in</button>
           {/* Forgot Password and Signup */}
           <div className="flex items-center justify-between text-gray-600">
-            <Link href="/password/reset" className="text-sm hover:underline cursor-pointer">Forgot password?</Link> 
+            <Link href="/password/forgot" className="text-sm hover:underline cursor-pointer">Forgot password?</Link> 
             <Link href="/register" className="text-[15px] hover:underline cursor-pointer">Sign up</Link>
           </div>
         </form>
