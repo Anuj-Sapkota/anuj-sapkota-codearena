@@ -1,6 +1,9 @@
 {
   // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
+    "paths": {
+      "@prisma/client": ["./generated/prisma/index"]
+    },
     // File Layout
     // "rootDir": "./src",
     // "outDir": "./dist",
@@ -34,6 +37,7 @@
 
     // Recommended Options
     "strict": true,
+    "esModuleInterop": true,
     "jsx": "react-jsx",
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
