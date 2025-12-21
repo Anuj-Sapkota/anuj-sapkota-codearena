@@ -2,6 +2,8 @@
 */.env
 .vscode
 */.vscode
+backend/generated/prisma
+
 PROJECT_CYCLE.md============
 # Frontend (Next.js / React)
 # =========================
