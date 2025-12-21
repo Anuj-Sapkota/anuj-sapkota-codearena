@@ -5,10 +5,27 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+model User {
+  userId       Int      @id @default(autoincrement())
+  full_name    String
+  username     String   @unique
+  email        String   @unique
+  password_hash String
+  auth_provider String?
+  github_id    String?  
+  google_id    String?  
+  profile_pic_url String?
+  bio          String?
+  role         String   @default("user")
+  total_points Int      @default(0)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
 }
