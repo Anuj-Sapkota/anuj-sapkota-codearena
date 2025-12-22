@@ -8,6 +8,10 @@ import { ServiceError } from "../errors/ServiceError.js";
 
 const registerUser = async ({full_name, email, password}: RegisterInput): Promise<AuthUser> => {
 
+  //check required fields
+  if (!full_name || !email || !password) {
+  throw new ServiceError("Missing required fields", 400);
+}
   //username generation
   const generatedUsername = generateUsername(full_name);
 
@@ -28,7 +32,7 @@ const registerUser = async ({full_name, email, password}: RegisterInput): Promis
     throw new ServiceError("User already exists!", 409);
   }
 
-  
+
   //user creation
  const user = await prisma.user.create({
     data: {
