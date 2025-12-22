@@ -4,13 +4,36 @@ import type { CreateUserDTO } from "../types/user.types.js";
 import { generateUsername } from "../utils/username.js";
 import type { AuthUser, RegisterInput } from "../types/auth.js";
 import { hashPassword } from "../utils/password.js";
+import { ServiceError } from "../errors/ServiceError.js";
 
 const registerUser = async ({full_name, email, password}: RegisterInput): Promise<AuthUser> => {
 
+  //username generation
+  const generatedUsername = generateUsername(full_name);
+
+  //check if the user already exists or not
+  const userExists = await prisma.user.findFirst(
+    {
+      where: {
+        OR: [
+          {email},
+          {username: generatedUsername}
+        ]
+      }
+    }
+  )
+
+  if (userExists)
+  {
+    throw new ServiceError("User already exists!", 409);
+  }
+
+  
+  //user creation
  const user = await prisma.user.create({
     data: {
       full_name,
-      username: generateUsername(full_name),
+      username: generatedUsername,
       email,
       password_hash: await hashPassword(password),
     },

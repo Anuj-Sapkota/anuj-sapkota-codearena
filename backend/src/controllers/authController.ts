@@ -1,17 +1,24 @@
 import type { Request, Response } from "express";
 
-import authService from "../services/authService.js"
+import authService from "../services/authService.js";
 import type { RegisterInput } from "../types/auth.js";
+import { ServiceError } from "../errors/ServiceError.js";
 
-const registerUser = async (req:Request<{}, {}, RegisterInput>, res:Response)=> {
-
-    try {
-            console.log("Reached Controller")
-        const data = await authService.registerUser(req.body);  
-        res.status(201).json(data);  
-    } catch (error) {
-        res.status(501).send("Error creating user");
+const registerUser = async (
+  req: Request<{}, {}, RegisterInput>,
+  res: Response
+) => {
+  try {
+    console.log("Reached Controller");
+    const data = await authService.registerUser(req.body);
+    res.status(201).json(data);
+  } catch (err: any) {
+    if (err instanceof ServiceError) {
+      res.status(err.statusCode).json({ error: err.message });
+    } else {
+      res.status(500).json({ error: "Internal Server Error" });
     }
-}
+  }
+};
 
-export default {registerUser};
+export default { registerUser };
