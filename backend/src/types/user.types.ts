@@ -1,5 +1,5 @@
 export interface CreateUserDTO {
-    full_name: string
+    full_nme: string
     email: string,
     password: string,
 }
