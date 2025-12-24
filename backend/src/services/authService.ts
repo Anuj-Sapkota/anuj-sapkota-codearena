@@ -7,6 +7,7 @@ import {
   MAX_PASSWORD_LENGTH,
   MIN_PASSWORD_LENGTH,
 } from "../constants/passwordLimit.js";
+import { signAccessToken } from "../utils/jwt.js";
 
 //USER REGISTRATION
 const register = async ({
@@ -51,14 +52,21 @@ const register = async ({
       password_hash: await hashPassword(password),
     },
   });
-
-  return {
-    userId: user.userId,
-    full_name: user.full_name,
-    username: user.username,
-    email: user.email,
+  //generating access token
+  const accessToken = signAccessToken({
+    sub: user.userId,
     role: user.role,
-    total_points: user.total_points,
+  });
+  return {
+    accessToken,
+    user: {
+      userId: user.userId,
+      full_name: user.full_name,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      total_points: user.total_points,
+    },
   };
 };
 
@@ -84,14 +92,22 @@ const login = async ({
   if (!isPasswordCorrect) {
     throw new ServiceError("Incorrect Email or Password.", 404);
   }
+  //generating access token
+  const accessToken = signAccessToken({
+    sub: user.userId,
+    role: user.role,
+  });
 
   return {
-    userId: user.userId,
-    full_name: user.full_name,
-    username: user.username,
-    email: user.email,
-    role: user.role,
-    total_points: user.total_points,
+    accessToken,
+    user: {
+      userId: user.userId,
+      full_name: user.full_name,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      total_points: user.total_points,
+    },
   };
 };
 export default { register, login };
