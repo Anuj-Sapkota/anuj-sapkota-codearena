@@ -6,6 +6,12 @@ export interface RegisterInput
     password: string
 }
 
+export interface LoginInput
+{
+  emailOrUsername: string,
+  password: string
+}
+
 // server ------> User
 export interface AuthUser {
   userId: number;
