@@ -12,7 +12,6 @@ export interface LoginInput {
 
 // server ------> User
 export interface AuthUser {
-  accessToken: string;
   user: {
     userId: number;
     full_name: string;
@@ -22,4 +21,9 @@ export interface AuthUser {
     total_points: number;
     profile_pic_url?: string | null;
   };
+}
+
+export interface AccessTokenPayload {
+  sub: number;
+  role: string;
 }
