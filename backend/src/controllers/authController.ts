@@ -125,15 +125,39 @@ const refreshToken = async (req: Request, res: Response) => {
       secure: config.cookies.secure,
       maxAge: config.cookies.refreshMaxAge,
     });
-
+    console.log("cookies",req.cookies)
+    
     res.status(200).json(data.user);
   } catch (err) {
     if (err instanceof ServiceError) {
       res.status(err.statusCode).json({ error: err.message });
     } else {
+      console.log(err)
       res.status(500).json({ error: "Internal Server Error" });
     }
   }
 };
 
-export default { registerUser, loginUser };
+//logout user
+
+const logoutUser = (req: Request, res: Response) => {
+  try {
+    // Clear the cookies
+    res.clearCookie("accessToken", {
+      httpOnly: config.cookies.httpOnly,
+      sameSite: config.cookies.sameSite,
+      secure: config.cookies.secure,
+    });
+
+    res.clearCookie("refreshToken", {
+      httpOnly: config.cookies.httpOnly,
+      sameSite: config.cookies.sameSite,
+      secure: config.cookies.secure,
+    });
+
+    res.status(200).json({ message: "Logged out successfully" });
+  } catch (err) {
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+export default { registerUser, loginUser, refreshToken, logoutUser };

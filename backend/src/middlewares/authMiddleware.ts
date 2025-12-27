@@ -8,13 +8,14 @@ export const authenticate = (
   next: NextFunction
 ) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      throw new ServiceError("Unauthorized", 401);
-    }
-
-    const token = authHeader.split(" ")[1];
-
+   let token = req.cookies?.accessToken;
+if (!token) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) {
+    throw new ServiceError("Unauthorized", 401);
+  }
+  token = authHeader.split(" ")[1];
+}
     const decoded = verifyAccessToken(String(token));
 
     req.user = decoded;

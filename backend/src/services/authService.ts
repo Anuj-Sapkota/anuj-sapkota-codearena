@@ -78,14 +78,14 @@ const login = async ({
   });
   //if user exists
   if (!user) {
-    throw new ServiceError("Incorrect Email or Password.", 404);
+    throw new ServiceError("Incorrect Email or Password.", 401);
   }
 
   const userPassword = user?.password_hash;
   const isPasswordCorrect = await verifyPassword(password, userPassword); //verifying input password and stored password
 
   if (!isPasswordCorrect) {
-    throw new ServiceError("Incorrect Email or Password.", 404);
+    throw new ServiceError("Incorrect Email or Password.", 401);
   }
   //generating access token
   const accessToken = signAccessToken({
@@ -110,7 +110,7 @@ const getUserByUserID = async (userId: number): Promise<AuthUser> => {
   const user = await prisma.user.findUnique({
     where: { userId: userId },
   });
-  if (!user) throw new Error("User not found");
+  if (!user) throw new ServiceError("User not found", 404);
 
   return {
     user: {
