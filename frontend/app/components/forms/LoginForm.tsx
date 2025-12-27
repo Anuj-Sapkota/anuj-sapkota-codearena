@@ -9,7 +9,7 @@ import { LoginCredentials } from "@/app/types/auth";
 import { loginSchema } from "@/app/utils/validation";
 import { login } from "@/app/lib/api";
 import InputField from "../common/InputField";
-import { useRouter } from "next/dist/client/components/navigation";
+import { useRouter } from "next/navigation";
 
 const LoginForm: React.FC = () => {
   const router = useRouter();
@@ -70,8 +70,12 @@ const LoginForm: React.FC = () => {
           <div className="w-2/3 border border-gray-400 h-16"></div>
 
           {/* Login Button */}
-          <button type="submit" disabled={isSubmitting} className="w-full cursor-pointer bg-primary-1 hover:bg-primary-2 active:bg-primary-3 rounded-md py-2 font-semibold text-white">
-           {isSubmitting ? "Logging in..." : "Login"}
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full cursor-pointer bg-primary-1 hover:bg-primary-2 active:bg-primary-3 rounded-md py-2 font-semibold text-white"
+          >
+            {isSubmitting ? "Logging in..." : "Login"}
           </button>
           {/* Forgot Password and Signup */}
           <div className="flex items-center justify-between text-gray-600">
@@ -98,16 +102,28 @@ const LoginForm: React.FC = () => {
           </p>
 
           <div className="flex items-center justify-center gap-8">
-            <Image
-              src={GoogleLogoIcon}
-              alt="google login"
-              className="h-auto w-8 cursor-pointer hover:opacity-60 transition-all duration-250 ease-in-out"
-            />
-            <Image
-              src={GitHubLogoIcon}
-              alt="github login"
-              className="h-auto w-8 cursor-pointer hover:opacity-60 transition-all duration-250 ease-in-out"
-            />
+            <button
+              onClick={() => {
+                window.location.href = "http://localhost:5000/api/auth/google";
+              }}
+            >
+              <Image
+                src={GoogleLogoIcon}
+                alt="google login"
+                className="h-auto w-8 cursor-pointer hover:opacity-60 transition-all duration-250 ease-in-out"
+              />
+            </button>
+            <button
+              onClick={() => {
+                window.location.href = "http://localhost:5000/api/auth/github";
+              }}
+            >
+              <Image
+                src={GitHubLogoIcon}
+                alt="github login"
+                className="h-auto w-8 cursor-pointer hover:opacity-60 transition-all duration-250 ease-in-out"
+              />
+            </button>
           </div>
         </div>
       </div>

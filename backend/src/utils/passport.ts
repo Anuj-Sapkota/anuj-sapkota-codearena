@@ -1,7 +1,6 @@
 import passport, { type Profile } from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Strategy as GitHubStrategy } from "passport-github2";
-import type { Profile as GitHubProfile } from "passport-github2";
 import type { VerifyCallback } from "passport-oauth2";
 import config from "../configs/config.js";
 import authService from "../services/authService.js";
@@ -30,7 +29,7 @@ passport.use(
         {
             clientID: config.github.clientID,
             clientSecret: config.github.clientSecret,
-            callbackURL: config.google.callbackURL,
+            callbackURL: config.github.callbackURL,
             scope: ["user: email"]
         },
         async (_accessToken: string, _refreshToken: string, profile: Profile, done: VerifyCallback) => {

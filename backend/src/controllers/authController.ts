@@ -178,6 +178,6 @@ const oauthSignIn = async (req: Request, res: Response) => {
       maxAge: config.cookies.refreshMaxAge,
     });
 
-  res.redirect("/dashboard")
+  res.redirect("http://localhost:3000/dashboard");
 };
 export default { registerUser, loginUser, refreshToken, logoutUser, oauthSignIn };
