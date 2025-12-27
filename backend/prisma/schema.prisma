@@ -12,7 +12,7 @@ model User {
   full_name       String
   username        String   @unique
   email           String   @unique
-  password_hash   String
+  password_hash   String?
   auth_provider   String?
   github_id       String?
   google_id       String?
