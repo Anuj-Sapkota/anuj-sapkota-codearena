@@ -14,6 +14,13 @@ export interface LoginCredentials {
   password: string;
 }
 
+export interface RegisterCredentials {
+  full_name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+
 export interface InputFieldProps {
   label: string;
   name: string;
