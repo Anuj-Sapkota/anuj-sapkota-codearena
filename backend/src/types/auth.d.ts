@@ -1,3 +1,6 @@
+//roles for user
+export type UserRole = "admin" |  "user"; 
+
 //server -----> database
 export interface RegisterInput {
   full_name: string;
