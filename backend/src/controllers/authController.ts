@@ -138,22 +138,13 @@ const refreshToken = async (req: Request, res: Response) => {
   }
 };
 
-//logout user
+// //logout user
 
 const logoutUser = (req: Request, res: Response) => {
   try {
     // Clear the cookies
-    res.clearCookie("accessToken", {
-      httpOnly: config.cookies.httpOnly,
-      sameSite: config.cookies.sameSite,
-      secure: config.cookies.secure,
-    });
-
-    res.clearCookie("refreshToken", {
-      httpOnly: config.cookies.httpOnly,
-      sameSite: config.cookies.sameSite,
-      secure: config.cookies.secure,
-    });
+    res.clearCookie("accessToken");
+    res.clearCookie("refreshToken");
 
     res.status(200).json({ message: "Logged out successfully" });
   } catch (err) {
