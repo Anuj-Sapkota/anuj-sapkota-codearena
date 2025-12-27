@@ -153,7 +153,7 @@ const logoutUser = (req: Request, res: Response) => {
 };
 
 // google sign in
-const googleSignIn = async (req: Request, res: Response) => {
+const oauthSignIn = async (req: Request, res: Response) => {
   const userData = req.user as AuthUser;
 
   //token generation
@@ -180,4 +180,4 @@ const googleSignIn = async (req: Request, res: Response) => {
 
   res.redirect("/dashboard")
 };
-export default { registerUser, loginUser, refreshToken, logoutUser };
+export default { registerUser, loginUser, refreshToken, logoutUser, oauthSignIn };

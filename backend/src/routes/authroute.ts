@@ -1,6 +1,8 @@
 import express from "express";
 import authController from "../controllers/authController.js";
 import { authenticate } from "../middlewares/authMiddleware.js";
+import passport from "passport";
+import authService from "../services/authService.js";
 
 const router = express.Router();
 //signup
@@ -14,5 +16,21 @@ router.post("/refresh", authController.refreshToken);
 
 //logout user
 router.post("/logout", authenticate, authController.logoutUser);
+
+//google signin
+router.get("/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+
+router.get("/google/callback", passport.authenticate("google", {session: false, failureFlash: "/login"}), authController.oauthSignIn)
+router.get(
+  "/github",
+  passport.authenticate("github", { session: false })
+);
+
+// callback
+router.get(
+  "/github/callback",
+  passport.authenticate("github", { session: false }),
+  authController.oauthSignIn
+);
 
 export default router;
