@@ -7,7 +7,7 @@ import {
   MAX_PASSWORD_LENGTH,
   MIN_PASSWORD_LENGTH,
 } from "../constants/passwordLimit.js";
-import { signAccessToken } from "../utils/jwt.js";
+import { signAccessToken, signRefreshToken } from "../utils/jwt.js";
 
 //USER REGISTRATION
 const register = async ({
@@ -52,13 +52,8 @@ const register = async ({
       password_hash: await hashPassword(password),
     },
   });
-  //generating access token
-  const accessToken = signAccessToken({
-    sub: user.userId,
-    role: user.role,
-  });
+
   return {
-    accessToken,
     user: {
       userId: user.userId,
       full_name: user.full_name,
@@ -83,14 +78,14 @@ const login = async ({
   });
   //if user exists
   if (!user) {
-    throw new ServiceError("Incorrect Email or Password.", 404);
+    throw new ServiceError("Incorrect Email or Password.", 401);
   }
 
   const userPassword = user?.password_hash;
   const isPasswordCorrect = await verifyPassword(password, userPassword); //verifying input password and stored password
 
   if (!isPasswordCorrect) {
-    throw new ServiceError("Incorrect Email or Password.", 404);
+    throw new ServiceError("Incorrect Email or Password.", 401);
   }
   //generating access token
   const accessToken = signAccessToken({
@@ -99,7 +94,6 @@ const login = async ({
   });
 
   return {
-    accessToken,
     user: {
       userId: user.userId,
       full_name: user.full_name,
@@ -110,4 +104,23 @@ const login = async ({
     },
   };
 };
-export default { register, login };
+
+//get user by userId
+const getUserByUserID = async (userId: number): Promise<AuthUser> => {
+  const user = await prisma.user.findUnique({
+    where: { userId: userId },
+  });
+  if (!user) throw new ServiceError("User not found", 404);
+
+  return {
+    user: {
+      userId: user.userId,
+      full_name: user.full_name,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      total_points: user.total_points,
+    },
+  };
+};
+export default { register, login, getUserByUserID };

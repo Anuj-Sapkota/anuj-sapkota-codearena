@@ -4,6 +4,7 @@
     "paths": {
       "@prisma/client": ["./generated/prisma/index"]
     },
+    "typeRoots": ["./src/types", "./node_modules/@types"],
     // File Layout
     // "rootDir": "./src",
     // "outDir": "./dist",
