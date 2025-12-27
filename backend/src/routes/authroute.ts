@@ -18,13 +18,17 @@ router.post("/refresh", authController.refreshToken);
 router.post("/logout", authenticate, authController.logoutUser);
 
 //google signin
-router.get("/google", passport.authenticate("google", { scope: ["profile", "email"] }));
-
-router.get("/google/callback", passport.authenticate("google", {session: false, failureFlash: "/login"}), authController.oauthSignIn)
 router.get(
-  "/github",
-  passport.authenticate("github", { session: false })
+  "/google",
+  passport.authenticate("google", { scope: ["profile", "email"] })
 );
+
+router.get(
+  "/google/callback",
+  passport.authenticate("google", { session: false, failureFlash: "/login" }),
+  authController.oauthSignIn
+);
+router.get("/github", passport.authenticate("github", { session: false }));
 
 // callback
 router.get(

@@ -132,23 +132,41 @@ const getUserByUserID = async (userId: number): Promise<AuthUser> => {
 };
 
 //OAuth sign in
-const findOrCreateOAuthUser = async (
-  profile: any,
-  provider: string
-) => {
-  const email = profile.emails[0].value;
+const findOrCreateOAuthUser = async (profile: any, provider: string) => {
+  const email = profile.emails?.[0]?.value;
 
   const fullName =
-    provider === "google" ? profile.displayName : profile.username;
+    provider === "google"
+      ? profile.displayName || email.split("@")[0]
+      : profile.username;
+  const username = generateUsername(fullName);
+
+  if (!email) {
+    throw new ServiceError("Email not found in OAuth profile", 400);
+  }
 
   //check if user is registered or not
   let user = await prisma.user.findFirst({ where: { email } });
   //create user if does not exists
   if (!user) {
+    console.log("Creating OAuth user with data:");
+    console.log({
+      full_name: fullName,
+      username,
+      email,
+      auth_provider: provider,
+      google_id: profile.id,
+    });
+
+    if (!fullName) throw new Error("full_name is missing!");
+    if (!username) throw new Error("username is missing!");
+    if (!email) throw new Error("email is missing!");
+    if (!profile.id) throw new Error("google_id is missing!");
+
     user = await prisma.user.create({
       data: {
         full_name: fullName,
-        username: generateUsername(profile.displayName),
+        username,
         email,
         auth_provider: provider,
         google_id: profile.id,
