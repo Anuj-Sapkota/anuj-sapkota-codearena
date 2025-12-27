@@ -9,7 +9,6 @@ const saltRound = Number(process.env.BCRYPT_SALT_ROUNDS) || 10;
 const accessSecret = process.env.JWT_ACCESS_SECRET;
 const refreshSecret = process.env.JWT_REFRESH_SECRET;
 
-
 if (!accessSecret || !refreshSecret) {
   throw new Error("Missing JWT env variables");
 }
@@ -26,13 +25,21 @@ const config = {
     jwtRefreshExpiresIn: 7 * 24 * 60 * 60, // 7 days
   },
 
-    cookies: {
+  cookies: {
     accessMaxAge: Number(process.env.COOKIE_ACCESS_MAX_AGE),
     refreshMaxAge: Number(process.env.COOKIE_REFRESH_MAX_AGE),
     secure: process.env.COOKIE_SECURE === "true",
     sameSite: process.env.COOKIE_SAMESITE as "strict" | "lax" | "none",
     httpOnly: process.env.COOKIE_HTTPONLY === "true",
   },
+
+  google: {
+    clientID: process.env.GOOGLE_CLIENT_ID!,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    callbackURL: process.env.GOOGLE_CALLBACK_URL!,
+  },
+
+  
 };
 
 export default config;

@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 
 import authService from "../services/authService.js";
-import type { LoginInput, RegisterInput } from "../types/auth.js";
+import type { AuthUser, LoginInput, RegisterInput } from "../types/auth.js";
 import { ServiceError } from "../errors/ServiceError.js";
 import strict from "assert/strict";
 import config from "../configs/config.js";
@@ -125,14 +125,14 @@ const refreshToken = async (req: Request, res: Response) => {
       secure: config.cookies.secure,
       maxAge: config.cookies.refreshMaxAge,
     });
-    console.log("cookies",req.cookies)
-    
+    console.log("cookies", req.cookies);
+
     res.status(200).json(data.user);
   } catch (err) {
     if (err instanceof ServiceError) {
       res.status(err.statusCode).json({ error: err.message });
     } else {
-      console.log(err)
+      console.log(err);
       res.status(500).json({ error: "Internal Server Error" });
     }
   }
@@ -150,5 +150,34 @@ const logoutUser = (req: Request, res: Response) => {
   } catch (err) {
     res.status(500).json({ error: "Internal Server Error" });
   }
+};
+
+// google sign in
+const googleSignIn = async (req: Request, res: Response) => {
+  const userData = req.user as AuthUser;
+
+  //token generation
+  const accessToken = signAccessToken({
+    sub: userData.user.userId,
+    role: userData.user.role,
+  });
+  const refreshToken = signRefreshToken({ sub: userData.user.userId });
+
+  //storing tokens in cookies
+  res.cookie("accessToken", accessToken, {
+    httpOnly: config.cookies.httpOnly,
+    sameSite: config.cookies.sameSite,
+    secure: config.cookies.secure,
+    maxAge: config.cookies.accessMaxAge,
+  });
+
+  res.cookie("refreshToken", refreshToken, {
+     httpOnly: config.cookies.httpOnly,
+      sameSite: config.cookies.sameSite,
+      secure: config.cookies.secure,
+      maxAge: config.cookies.refreshMaxAge,
+    });
+
+  res.redirect("/dashboard")
 };
 export default { registerUser, loginUser, refreshToken, logoutUser };

@@ -82,6 +82,11 @@ const login = async ({
   }
 
   const userPassword = user?.password_hash;
+  if (!userPassword)
+  {
+    throw new ServiceError("This account is registered via OAuth. Please sign in with Google/GitHub.", 401)
+  }
+
   const isPasswordCorrect = await verifyPassword(password, userPassword); //verifying input password and stored password
 
   if (!isPasswordCorrect) {
@@ -123,4 +128,37 @@ const getUserByUserID = async (userId: number): Promise<AuthUser> => {
     },
   };
 };
-export default { register, login, getUserByUserID };
+
+//OAuth sign in
+const findOrCreateOAuthUser = async (
+  profile: any,
+  provider: string
+): Promise<AuthUser> => {
+  const email = profile.emails[0].value;
+  //check if user is registered or not
+  let user = await prisma.user.findFirst({ where: { email } });
+  //create user if does not exists
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        full_name: profile.displayName,
+        username: generateUsername(profile.displayName),
+        email,
+        auth_provider: provider,
+        google_id: profile.id,
+      },
+    });
+  }
+
+  return {
+    user: {
+      userId: user.userId,
+      full_name: user.full_name,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      total_points: user.total_points,
+    },
+  };
+};
+export default { register, login, getUserByUserID, findOrCreateOAuthUser };
