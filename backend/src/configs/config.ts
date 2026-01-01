@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import { response } from "express";
 
 dotenv.config();
 
@@ -39,10 +40,14 @@ const config = {
   },
 
   github: {
-  clientID: process.env.GITHUB_CLIENT_ID!,
-  clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-  callbackURL: process.env.GITHUB_CALLBACK_URL!,
-}
+    clientID: process.env.GITHUB_CLIENT_ID!,
+    clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+    callbackURL: process.env.GITHUB_CALLBACK_URL!,
+  },
+  turnstile: {
+    secret: process.env.SECRET_KEY!,
+    site_key: process.env.SITE_KEY!,
+  },
 };
 
 export default config;

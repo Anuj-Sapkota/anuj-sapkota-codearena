@@ -67,7 +67,13 @@ const LoginForm: React.FC = () => {
           />
 
           {/* For CAPTCHA */}
-          <div className="w-2/3 border border-gray-400 h-16"></div>
+          <div className="w-2/3 border border-gray-400 h-16">
+            <script
+              src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+              async
+              defer
+            ></script>
+            </div>
 
           {/* Login Button */}
           <button
