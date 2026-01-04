@@ -12,6 +12,7 @@ import { signup } from "@/app/lib/api";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { registerSchema } from "@/app/utils/validation";
 import InputField from "../common/InputField";
+import TurnstileWidget from "../auth/TurnstileWidget";
 
 const RegisterForm: React.FC = () => {
   const router = useRouter();
@@ -19,6 +20,7 @@ const RegisterForm: React.FC = () => {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<RegisterCredentials>({
     resolver: yupResolver(registerSchema),
@@ -36,7 +38,7 @@ const RegisterForm: React.FC = () => {
   return (
     <div>
       {/* Container */}
-      <div className="bg-gray-300 w-full flex flex-col gap-4 py-4 px-2 rounded-md shadow-[20px] shadow-gray-100">
+      <div className="bg-white w-full flex flex-col gap-4 py-4 px-2 rounded-md shadow-[20px] shadow-gray-100">
         {/* logo */}
         <div className="mb-6 lg:mb-4">
           <Image
@@ -83,7 +85,18 @@ const RegisterForm: React.FC = () => {
           />
 
           {/* For CAPTCHA */}
-          <div className="w-2/3 border border-gray-400 h-16"></div>
+          <div className="origin-left scale-90">
+            <TurnstileWidget
+              onVerify={(token) => {
+                setValue("turnstileToken", token);
+              }}
+            />
+            {errors.turnstileToken && (
+              <p className="text-red-500 text-sm">
+                Please verify you are human
+              </p>
+            )}
+          </div>
 
           {/* Signup Button */}
           <button

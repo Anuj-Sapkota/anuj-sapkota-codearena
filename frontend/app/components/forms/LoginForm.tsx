@@ -1,3 +1,4 @@
+"use client";
 import Image from "next/image";
 import Logo from "@/public/logo.png";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -10,6 +11,7 @@ import { loginSchema } from "@/app/utils/validation";
 import { login } from "@/app/lib/api";
 import InputField from "../common/InputField";
 import { useRouter } from "next/navigation";
+import TurnstileWidget from "../auth/TurnstileWidget";
 
 const LoginForm: React.FC = () => {
   const router = useRouter();
@@ -18,13 +20,16 @@ const LoginForm: React.FC = () => {
   const {
     register,
     handleSubmit,
+    setValue,
+
     formState: { errors, isSubmitting },
   } = useForm<LoginCredentials>({
     resolver: yupResolver(loginSchema),
   });
-
+  console.log("Validation Errors:", errors);
   const onSubmit = async (data: LoginCredentials) => {
     try {
+      console.log("data: ", data);
       const userData = await login(data);
       console.log(userData);
       router.push("/dashboard");
@@ -35,7 +40,7 @@ const LoginForm: React.FC = () => {
   return (
     <>
       {/* Container */}
-      <div className="bg-gray-300 w-full flex flex-col gap-4 py-4 px-2 rounded-md shadow-[20px] shadow-gray-100">
+      <div className="bg-white w-full flex flex-col gap-4 py-4 px-2 rounded-md shadow-[20px] shadow-gray-100">
         {/* logo */}
         <div className="mb-6 lg:mb-4">
           <Image
@@ -53,7 +58,7 @@ const LoginForm: React.FC = () => {
           {/* Email Password Fields */}
           <InputField
             label="Email or Username"
-            name="email"
+            name="emailOrUsername"
             type="text"
             register={register("emailOrUsername")}
             errors={errors}
@@ -67,7 +72,18 @@ const LoginForm: React.FC = () => {
           />
 
           {/* For CAPTCHA */}
-          <div className="w-2/3 border border-gray-400 h-16"></div>
+          <div className="origin-left scale-90">
+            <TurnstileWidget
+              onVerify={(token) => {
+                setValue("turnstileToken", token);
+              }}
+            />
+            {errors.turnstileToken && (
+              <p className="text-red-500 text-sm">
+                Please verify you are human
+              </p>
+            )}
+          </div>
 
           {/* Login Button */}
           <button

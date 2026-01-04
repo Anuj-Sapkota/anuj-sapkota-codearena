@@ -3,13 +3,14 @@ import authController from "../controllers/authController.js";
 import { authenticate } from "../middlewares/authMiddleware.js";
 import passport from "passport";
 import authService from "../services/authService.js";
+import { verifyTurnstile } from "../middlewares/verifyTurnstile.js";
 
 const router = express.Router();
 //signup
-router.post("/register", authController.registerUser);
+router.post("/register", verifyTurnstile, authController.registerUser);
 
 //sign in
-router.post("/login", authController.loginUser);
+router.post("/login", verifyTurnstile, authController.loginUser);
 
 //refresh token
 router.post("/refresh", authController.refreshToken);

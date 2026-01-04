@@ -12,6 +12,7 @@ export interface AuthUser {
 export interface LoginCredentials {
   emailOrUsername: string;
   password: string;
+  turnstileToken: string;
 }
 
 export interface RegisterCredentials {
@@ -19,6 +20,7 @@ export interface RegisterCredentials {
   email: string;
   password: string;
   confirmPassword: string;
+  turnstileToken: string
 }
 
 export interface InputFieldProps {
@@ -27,4 +29,9 @@ export interface InputFieldProps {
   type: string;
   register: UseFormRegisterReturn;
   errors: FieldErrors;
+}
+
+// Interface for props accepted by the Turnstile Widget
+export interface TurnstileWidgetProps {
+  onVerify: (token: string) => void;
 }
