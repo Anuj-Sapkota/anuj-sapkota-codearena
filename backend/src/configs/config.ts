@@ -15,7 +15,7 @@ if (!accessSecret || !refreshSecret) {
 
 const config = {
   // databaseUrl: process.env.DATABASE_URL || "",
-  port: process.env.PORT || "5000",
+  port: Number(process.env.PORT),
   saltRound,
 
   jwt: {
