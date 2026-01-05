@@ -1,10 +1,9 @@
 import express from "express";
-import cookieParser from 'cookie-parser';
+import cookieParser from "cookie-parser";
 import cors from "cors";
 import "./utils/passport.js";
 import authRoute from "./routes/authroute.js";
 import config from "./configs/config.js";
-
 
 const app = express();
 
@@ -12,8 +11,8 @@ app.use(cookieParser());
 app.use(express.json());
 
 const corsOptions = {
-  origin: "http://localhost:3000", 
-  credentials: true,               
+  origin: ["http://localhost:3000"], //DEVELOPMENT ONLY ____________________________________
+  credentials: true,
 };
 
 app.use(cors(corsOptions));
