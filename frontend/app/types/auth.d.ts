@@ -20,7 +20,7 @@ export interface RegisterCredentials {
   email: string;
   password: string;
   confirmPassword: string;
-  turnstileToken: string
+  turnstileToken: string;
 }
 
 export interface InputFieldProps {
@@ -34,4 +34,10 @@ export interface InputFieldProps {
 // Interface for props accepted by the Turnstile Widget
 export interface TurnstileWidgetProps {
   onVerify: (token: string) => void;
+}
+// types for redux auth slice
+export interface AuthState {
+  user: AuthUser | null;
+  token: string | null;
+  isAuthenticated: boolean;
 }

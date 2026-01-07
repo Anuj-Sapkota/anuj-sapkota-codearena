@@ -12,10 +12,12 @@ import { login } from "@/app/lib/api";
 import InputField from "../common/InputField";
 import { useRouter } from "next/navigation";
 import TurnstileWidget from "../auth/TurnstileWidget";
+import { useDispatch } from "react-redux";
+import { setCredentials } from "@/app/lib/store/features/authSlice";
 
 const LoginForm: React.FC = () => {
   const router = useRouter();
-
+  const dispatch = useDispatch();
   //
   const {
     register,
@@ -32,6 +34,8 @@ const LoginForm: React.FC = () => {
       console.log("data: ", data);
       const userData = await login(data);
       console.log(userData);
+      //push data to redux
+      dispatch(setCredentials({user: userData.user, token: userData.token}))
       router.push("/dashboard");
     } catch (err: unknown) {
       return err;
