@@ -1,5 +1,5 @@
 //roles for user
-export type UserRole = "admin" |  "user"; 
+export type UserRole = "admin" | "user";
 
 //server -----> database
 export interface RegisterInput {
@@ -12,9 +12,7 @@ export interface LoginInput {
   emailOrUsername: string;
   password: string;
 }
-
-// server ------> User
-export interface AuthUser {
+export interface UserProfile {
   user: {
     userId: number;
     full_name: string;
@@ -24,6 +22,10 @@ export interface AuthUser {
     total_points: number;
     profile_pic_url?: string | null;
   };
+}
+// server ------> User
+export interface AuthUser extends UserProfile {
+  token: string;
 }
 
 export interface AccessTokenPayload {

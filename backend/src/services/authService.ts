@@ -1,6 +1,6 @@
 import { prisma } from "../lib/prisma.js";
 import { generateUsername } from "../utils/username.js";
-import type { AuthUser, RegisterInput, LoginInput } from "../types/auth.js";
+import type { AuthUser, RegisterInput, LoginInput, UserProfile } from "../types/auth.js";
 import { hashPassword, verifyPassword } from "../utils/password.js";
 import { ServiceError } from "../errors/ServiceError.js";
 import {
@@ -52,6 +52,11 @@ const register = async ({
       password_hash: await hashPassword(password),
     },
   });
+  //generating access token
+  const accessToken = signAccessToken({
+    sub: user.userId,
+    role: user.role,
+  });
 
   return {
     user: {
@@ -62,6 +67,7 @@ const register = async ({
       role: user.role,
       total_points: user.total_points,
     },
+    token: accessToken
   };
 };
 
@@ -109,11 +115,12 @@ const login = async ({
       role: user.role,
       total_points: user.total_points,
     },
+    token: accessToken
   };
 };
 
 //get user by userId
-const getUserByUserID = async (userId: number): Promise<AuthUser> => {
+const getUserByUserID = async (userId: number): Promise<UserProfile> => {
   const user = await prisma.user.findUnique({
     where: { userId: userId },
   });
@@ -128,6 +135,7 @@ const getUserByUserID = async (userId: number): Promise<AuthUser> => {
       role: user.role,
       total_points: user.total_points,
     },
+    
   };
 };
 
@@ -173,7 +181,10 @@ const findOrCreateOAuthUser = async (profile: any, provider: string) => {
       },
     });
   }
-
+const accessToken = signAccessToken({
+    sub: user.userId,
+    role: user.role,
+  });
   return {
     user: {
       userId: user.userId,
@@ -183,6 +194,7 @@ const findOrCreateOAuthUser = async (profile: any, provider: string) => {
       role: user.role,
       total_points: user.total_points,
     },
+    token: accessToken
   };
 };
 export default { register, login, getUserByUserID, findOrCreateOAuthUser };

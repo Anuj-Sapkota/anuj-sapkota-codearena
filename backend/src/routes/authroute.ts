@@ -37,5 +37,8 @@ router.get(
   passport.authenticate("github", { session: false }),
   authController.oauthSignIn
 );
+ 
+
+router.get('/me', authenticate, authController.getMe);
 
 export default router;

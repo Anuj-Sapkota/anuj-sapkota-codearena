@@ -3,7 +3,6 @@ import type { Request, Response } from "express";
 import authService from "../services/authService.js";
 import type { AuthUser, LoginInput, RegisterInput } from "../types/auth.js";
 import { ServiceError } from "../errors/ServiceError.js";
-import strict from "assert/strict";
 import config from "../configs/config.js";
 import {
   signAccessToken,
@@ -41,7 +40,7 @@ const registerUser = async (
       maxAge: config.cookies.refreshMaxAge,
     });
 
-    res.status(201).json(data.user);
+    res.status(201).json(data);
   } catch (err: any) {
     if (err instanceof ServiceError) {
       res.status(err.statusCode).json({ error: err.message });
@@ -77,7 +76,7 @@ const loginUser = async (req: Request<{}, {}, LoginInput>, res: Response) => {
       secure: config.cookies.secure,
       maxAge: config.cookies.refreshMaxAge,
     });
-    res.status(200).json(data.user);
+    res.status(200).json(data);
   } catch (err) {
     if (err instanceof ServiceError) {
       res.status(err.statusCode).json({ error: err.message });
@@ -127,7 +126,7 @@ const refreshToken = async (req: Request, res: Response) => {
     });
     console.log("cookies", req.cookies);
 
-    res.status(200).json(data.user);
+    res.status(200).json(data);
   } catch (err) {
     if (err instanceof ServiceError) {
       res.status(err.statusCode).json({ error: err.message });
@@ -157,10 +156,7 @@ const oauthSignIn = async (req: Request, res: Response) => {
   const userData = req.user as AuthUser;
 
   //token generation
-  const accessToken = signAccessToken({
-    sub: userData.user.userId,
-    role: userData.user.role,
-  });
+  const accessToken = userData.token;
   const refreshToken = signRefreshToken({ sub: userData.user.userId });
 
   //storing tokens in cookies
@@ -180,4 +176,22 @@ const oauthSignIn = async (req: Request, res: Response) => {
 
   res.redirect("http://localhost:3000/dashboard");
 };
-export default { registerUser, loginUser, refreshToken, logoutUser, oauthSignIn };
+
+// controllers/auth.controller.ts
+export const getMe = async (req: Request, res: Response) => {
+  try {
+    // 
+    const userId = (req.user as any).sub; 
+
+    // Re-use of the existing service!
+    const result = await authService.getUserByUserID(userId);
+
+    res.status(200).json({
+      user: result.user,
+      token: req.cookies.accessToken || req.headers.authorization?.split(' ')[1]
+    });
+  } catch (error) {
+    res.status(401).json({ message: "Session expired" });
+  }
+};
+export default { registerUser, loginUser, refreshToken, logoutUser, oauthSignIn, getMe };

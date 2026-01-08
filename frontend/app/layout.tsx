@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import StoreProvider from "./StoreProvider";
 
 export const metadata: Metadata = {
   title: "CodeArena - Learn and Grow",
@@ -19,7 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        {children}
+<StoreProvider>{children}</StoreProvider>
         <script
           src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
           defer

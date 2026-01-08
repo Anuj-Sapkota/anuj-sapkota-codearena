@@ -8,7 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { RegisterCredentials } from "@/app/types/auth";
 import { useForm } from "react-hook-form";
-import { signup } from "@/app/lib/api";
+import { signup } from "@/app/lib/auth";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { registerSchema } from "@/app/utils/validation";
 import InputField from "../common/InputField";

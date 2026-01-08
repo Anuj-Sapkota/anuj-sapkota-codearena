@@ -1,6 +1,6 @@
 "use client";
 
-import { logout } from "@/app/lib/api";
+import { logout } from "@/app/lib/auth";
 
 const LogoutButton = () => {
 
