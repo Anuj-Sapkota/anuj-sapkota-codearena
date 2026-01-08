@@ -1,4 +1,4 @@
-import { AuthState } from "@/app/types/auth";
+import { AuthState, UserProfile } from "@/app/types/auth";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { AuthUser } from "@/app/types/auth";
 const initialState: AuthState = {
@@ -14,7 +14,7 @@ export const authSlice = createSlice({
     //when login is successful
     setCredentials: (
       state,
-      action: PayloadAction<{ user: AuthUser; token: string }>
+      action: PayloadAction<{ user: UserProfile; token: string }>
     ) => {
       state.user = action.payload.user;
       state.token = action.payload.token;

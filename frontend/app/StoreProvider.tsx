@@ -5,6 +5,7 @@ import { Persistor } from "redux-persist";
 import persistStore from "redux-persist/es/persistStore";
 import { Provider } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";
+import { injectStore } from "./lib/api";
 
 export default function StoreProvider({
   children,
@@ -12,7 +13,7 @@ export default function StoreProvider({
   children: React.ReactNode;
 }) {
   const [store] = useState(() => makeStore());
-
+  injectStore(store);
   const [persistor] = useState(() => persistStore(store));
 
   return (

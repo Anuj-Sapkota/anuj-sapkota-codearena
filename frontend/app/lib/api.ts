@@ -1,39 +1,29 @@
 import axios from "axios";
 import config from "../config";
-import { AuthUser, LoginCredentials, RegisterCredentials } from "../types/auth";
+import { AppStore } from "./store/store";
 
-export const login = async (data: LoginCredentials): Promise<AuthUser> => {
-  try {
-    const response = await axios.post(`${config.apiUrl}/auth/login`, data, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-      withCredentials: true,
-    });
-    return response.data;
-  } catch (err: unknown) {
-    throw err;
+let storeInstance: AppStore | undefined; //undefined when the code first runs
+
+export const injectStore = (store: AppStore) => {
+  //this function is called by storeProvided resuting in recieving store from redux
+  storeInstance = store;
+};
+
+const api = axios.create({
+  baseURL: config.apiUrl,
+  withCredentials: true,
+});
+
+// request interceptors which run before every request leaves the app
+api.interceptors.request.use((config) => {
+  if (storeInstance) {
+    const token = storeInstance.getState().auth.token;
+
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
-};
+  return config;
+});
 
-export const signup = async (data: RegisterCredentials): Promise<AuthUser> => {
-  try {
-    const response = await axios.post(`${config.apiUrl}/auth/register`, data, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-      withCredentials: true,
-    });
-    return response.data;
-  } catch (err: unknown) {
-    throw err;
-  }
-};
-
-//logout
-export const logout = async () => {
-  await fetch("http://localhost:5000/api/auth/logout", {
-    method: "POST",
-    credentials: "include", 
-  });
-};
+export default api;

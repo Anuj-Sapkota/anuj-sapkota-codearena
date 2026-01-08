@@ -8,7 +8,7 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { LoginCredentials } from "@/app/types/auth";
 import { loginSchema } from "@/app/utils/validation";
-import { login } from "@/app/lib/api";
+import { login } from "@/app/lib/auth";
 import InputField from "../common/InputField";
 import { useRouter } from "next/navigation";
 import TurnstileWidget from "../auth/TurnstileWidget";
@@ -28,10 +28,8 @@ const LoginForm: React.FC = () => {
   } = useForm<LoginCredentials>({
     resolver: yupResolver(loginSchema),
   });
-  console.log("Validation Errors:", errors);
   const onSubmit = async (data: LoginCredentials) => {
     try {
-      console.log("data: ", data);
       const userData = await login(data);
       console.log(userData);
       //push data to redux

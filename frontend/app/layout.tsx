@@ -20,7 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <StoreProvider>{children}</StoreProvider>
+<StoreProvider>{children}</StoreProvider>
         <script
           src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
           defer

@@ -1,13 +1,16 @@
+export interface UserProfile {
+  userId: number;
+  full_name: string;
+  username: string;
+  email: string;
+  role: string;
+  total_points: number;
+  profile_pic_url?: string | null;
+}
+
 export interface AuthUser {
-  user: {
-    userId: number;
-    full_name: string;
-    username: string;
-    email: string;
-    role: string;
-    total_points: number;
-    profile_pic_url?: string | null;
-  };
+  user: UserProfile;
+  token: string;
 }
 export interface LoginCredentials {
   emailOrUsername: string;
@@ -37,7 +40,7 @@ export interface TurnstileWidgetProps {
 }
 // types for redux auth slice
 export interface AuthState {
-  user: AuthUser | null;
+  user: UserProfile | null;
   token: string | null;
   isAuthenticated: boolean;
 }
