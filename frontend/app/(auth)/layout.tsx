@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "../lib/store/store";
 import api from "../lib/api";
 import { useEffect, useState } from "react";
-import { setCredentials, logout } from "../lib/store/features/authSlice";
+import { setCredentials, setLogout } from "../lib/store/features/authSlice";
 
 export default function AuthProvider({
   children,
@@ -29,7 +29,7 @@ export default function AuthProvider({
         }
       } catch (error) {
         //if validation fails auto logout
-        dispatch(logout());
+        dispatch(setLogout());
         console.log(error);
       } finally {
         setIsLoading(false);
