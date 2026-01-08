@@ -6,15 +6,15 @@ import GoogleLogoIcon from "@/public/google-icon.svg";
 import GitHubLogoIcon from "@/public/github-icon.svg";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { RegisterCredentials } from "@/app/types/auth";
+import { AuthModalProps, RegisterCredentials } from "@/app/types/auth";
 import { useForm } from "react-hook-form";
 import { signup } from "@/app/lib/auth";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { registerSchema } from "@/app/utils/validation";
 import InputField from "../common/InputField";
-import TurnstileWidget from "../auth/TurnstileWidget";
+import TurnstileWidget from "./TurnstileWidget";
 
-const RegisterForm: React.FC = () => {
+const RegisterForm = ({ onSuccess, onSwitch }: AuthModalProps) => {
   const router = useRouter();
 
   const {
@@ -30,6 +30,7 @@ const RegisterForm: React.FC = () => {
     try {
       const userData = await signup(data);
       console.log(userData);
+      onSuccess();
       router.push("/dashboard");
     } catch (err: unknown) {
       return err;
@@ -110,12 +111,13 @@ const RegisterForm: React.FC = () => {
           <div className="flex items-center justify-center text-gray-600">
             <p className="text-[14px]">
               Already have an account?{" "}
-              <Link
-                href="/login"
-                className="text-[15px] hover:underline cursor-pointer"
+              <button
+                type="button" // Important: set type to button so it doesn't submit the form
+                onClick={onSwitch}
+                className="text-[15px] text-primary-1 font-semibold hover:underline cursor-pointer"
               >
                 Sign in
-              </Link>
+              </button>
             </p>
           </div>
         </form>

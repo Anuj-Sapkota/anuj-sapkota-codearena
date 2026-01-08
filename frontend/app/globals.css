@@ -5,28 +5,36 @@
   --color-primary-2: #006600;
   --color-primary-3: #023300;
 }
-/* 
+@import "tailwindcss"; /* Only if using Tailwind v4 */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  /* Colors */
+  --color-darkest: #11151c;
+  --color-dark: #212d40;
+  --color-muted: #364156;
+  --color-primary: #2ec866;
+  --color-white: #ffffff;
+  --color-light: #d3d3d3;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Fonts (Next.js will handle loading the actual files) */
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-code: "JetBrains Mono", "Fira Code", monospace;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-} */
+  background-color: var(--color-darkest);
+  color: var(--color-white);
+  font-family: var(--font-sans);
+}
+
+/* Custom Tailwind Utility Mapping (if using Tailwind 4) */
+@theme {
+  --color-darkest: var(--color-darkest);
+  --color-dark: var(--color-dark);
+  --color-muted: var(--color-muted);
+  --color-primary: var(--color-primary);
+  --color-light: var(--color-light);
+  
+  --font-sans: var(--font-sans);
+  --font-code: var(--font-code);
+}

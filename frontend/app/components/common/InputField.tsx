@@ -9,19 +9,28 @@ const InputField: React.FC<InputFieldProps> = ({
   errors,
 }) => {
   return (
-    <div>
+    <div className="w-full">
       <input
-        type={type}
-        name={name}
         {...register}
+        type={type}
+        id={name}
         autoComplete={name === "identifier" ? "username" : "current-password"}
-        placeholder={label}
-        className={`w-full max-w-md border border-gray-400 rounded-md px-4 py-2 focus:border-gray-400 focus:ring-1 focus:ring-gray-500 outline-none   ${
-          errors[name] ? "border-red-500" : "border-gray-300"
-        }`}
+        placeholder={label || name} 
+        className={`w-full border rounded-md px-4 py-2 outline-none transition-all
+          
+          /* Light Mode Colors */
+          bg-white text-gray-900 
+          placeholder:text-gray-400 placeholder:opacity-100
+          
+          /* Border Logic */
+          ${errors[name] 
+            ? "border-red-500 focus:ring-red-500" 
+            : "border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          }
+        `}
       />
       {errors[name] && (
-        <p className="text-red-500 text-sm mt-1">
+        <p className="text-red-500 text-xs mt-1">
           {errors[name]?.message as string}
         </p>
       )}

@@ -1,6 +1,5 @@
 import { AuthState, UserProfile } from "@/app/types/auth";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { AuthUser } from "@/app/types/auth";
 const initialState: AuthState = {
   user: null,
   token: null,
@@ -21,7 +20,7 @@ export const authSlice = createSlice({
       state.isAuthenticated = true;
     },
     //to clear everything on logout
-    logout: (state) => {
+    setLogout: (state) => {
       state.user = null;
       state.token = null;
       state.isAuthenticated = false;
@@ -29,5 +28,5 @@ export const authSlice = createSlice({
   },
 });
 
-export const { setCredentials, logout } = authSlice.actions;
+export const { setCredentials, setLogout } = authSlice.actions;
 export default authSlice.reducer;

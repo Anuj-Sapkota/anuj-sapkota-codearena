@@ -6,16 +6,16 @@ import GoogleLogoIcon from "@/public/google-icon.svg";
 import GitHubLogoIcon from "@/public/github-icon.svg";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
-import { LoginCredentials } from "@/app/types/auth";
+import { AuthModalProps, LoginCredentials } from "@/app/types/auth";
 import { loginSchema } from "@/app/utils/validation";
 import { login } from "@/app/lib/auth";
 import InputField from "../common/InputField";
 import { useRouter } from "next/navigation";
-import TurnstileWidget from "../auth/TurnstileWidget";
+import TurnstileWidget from "./TurnstileWidget";
 import { useDispatch } from "react-redux";
 import { setCredentials } from "@/app/lib/store/features/authSlice";
 
-const LoginForm: React.FC = () => {
+const LoginForm = ({ onSuccess, onSwitch }: AuthModalProps) => {
   const router = useRouter();
   const dispatch = useDispatch();
   //
@@ -32,8 +32,9 @@ const LoginForm: React.FC = () => {
     try {
       const userData = await login(data);
       console.log(userData);
+      onSuccess();
       //push data to redux
-      dispatch(setCredentials({user: userData.user, token: userData.token}))
+      dispatch(setCredentials({ user: userData.user, token: userData.token }));
       router.push("/dashboard");
     } catch (err: unknown) {
       return err;
@@ -103,12 +104,14 @@ const LoginForm: React.FC = () => {
             >
               Forgot password?
             </Link>
-            <Link
-              href="/register"
-              className="text-[15px] hover:underline cursor-pointer"
+
+            <button
+              type="button"
+              onClick={onSwitch}
+              className="text-[15px] font-semibold text-primary-1 hover:underline cursor-pointer"
             >
               Sign up
-            </Link>
+            </button>
           </div>
         </form>
         {/* Other signin Options */}
