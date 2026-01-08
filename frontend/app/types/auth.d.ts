@@ -44,3 +44,8 @@ export interface AuthState {
   token: string | null;
   isAuthenticated: boolean;
 }
+// interface for modal forms
+export interface AuthModalProps {
+  onSuccess: () => void;
+  onSwitch: () => void;
+}
