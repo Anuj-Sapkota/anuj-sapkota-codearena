@@ -1,12 +1,7 @@
-import Navbar from "@/app/components/layout/Navbar";
 import React from "react";
 
-const DashboardPage = () => {
-  return (
-    <div>
-      <Navbar />
-    </div>
-  );
+const ExplorePage = () => {
+  return <div>Explore</div>;
 };
 
-export default DashboardPage;
+export default ExplorePage;

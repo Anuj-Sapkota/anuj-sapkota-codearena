@@ -1,5 +1,4 @@
 import dotenv from "dotenv";
-import { response } from "express";
 
 dotenv.config();
 
@@ -17,6 +16,7 @@ const config = {
   // databaseUrl: process.env.DATABASE_URL || "",
   port: Number(process.env.PORT),
   saltRound,
+  frontendUrl: process.env.FRONTEND_URL,
 
   jwt: {
     jwtSecret: accessSecret,
@@ -47,6 +47,12 @@ const config = {
   turnstile: {
     secret: process.env.SECRET_KEY!,
     site_key: process.env.SITE_KEY!,
+  },
+  resetLink: {
+    emailHost: process.env.EMAIL_HOST!,
+    emailPort: process.env.EMAIL_PORT!,
+    emailUser: process.env.EMAIL_USER!,
+    emailPassword: process.env.EMAIL_PASS!,
   },
 };
 
