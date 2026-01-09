@@ -8,7 +8,7 @@ import { RootState } from "../../lib/store/store";
 import { setLogout as logoutAction } from "../../lib/store/features/authSlice";
 import Image from "next/image";
 import Logo from "@/public/logo.png";
-import { FiSearch, FiBell, FiUser, FiSettings, FiLogOut } from "react-icons/fi";
+import { FiSearch, FiBell, FiUser, FiLogOut } from "react-icons/fi";
 
 // Import your new components
 import Modal from "@/app/components/ui/Modal"; 
@@ -41,7 +41,7 @@ export default function Navbar() {
   const closeModals = () => setActiveModal(null);
 
   return (
-    <nav className="bg-dark border-b border-muted px-6 flex items-center justify-between h-16 relative z-50">
+    <nav className="bg-darkest border-b border-muted px-6 flex items-center justify-between h-18 relative z-50">
       {/* LEFT SIDE */}
       <div className="flex items-center h-full">
         <Link href="/">
@@ -49,7 +49,7 @@ export default function Navbar() {
         </Link>
         <div className="h-6 w-px bg-muted mx-6" />
         <ul className="flex items-center gap-8 h-full">
-          {["Arena", "Problems", "Learn"].map((name) => {
+          {["Explore", "Problems", "Learn"].map((name) => {
             const href = `/${name.toLowerCase()}`;
             const isActive = pathname === href;
             return (

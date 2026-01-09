@@ -8,11 +8,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AuthModalProps, RegisterCredentials } from "@/app/types/auth";
 import { useForm } from "react-hook-form";
-import { signup } from "@/app/lib/auth";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { registerSchema } from "@/app/utils/validation";
 import InputField from "../common/InputField";
+import { authService } from "@/app/lib/services/authService";
 import TurnstileWidget from "./TurnstileWidget";
+import { toast } from "sonner";
+import { isAxiosError } from "axios";
 
 const RegisterForm = ({ onSuccess, onSwitch }: AuthModalProps) => {
   const router = useRouter();
@@ -28,12 +30,24 @@ const RegisterForm = ({ onSuccess, onSwitch }: AuthModalProps) => {
 
   const onSubmit = async (data: RegisterCredentials) => {
     try {
-      const userData = await signup(data);
+      const userData = await authService.signup(data);
       console.log(userData);
       onSuccess();
-      router.push("/dashboard");
+      router.push("/explore");
     } catch (err: unknown) {
-      return err;
+      // 1. Checking if it's an Axios error
+      if (isAxiosError(err)) {
+        const message = err.response?.data?.error || "An error occurred";
+        toast.error(message);
+      }
+      // 2. Checking if it's a standard Error object
+      else if (err instanceof Error) {
+        toast.error(err.message);
+      }
+      // 3. Fallback for literal strings or weird objects
+      else {
+        toast.error("An unexpected error occurred");
+      }
     }
   };
   return (

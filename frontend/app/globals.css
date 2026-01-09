@@ -5,11 +5,10 @@
   --color-primary-2: #006600;
   --color-primary-3: #023300;
 }
-@import "tailwindcss"; /* Only if using Tailwind v4 */
 
 :root {
   /* Colors */
-  --color-darkest: #11151c;
+    --color-darkest: #11151c;
   --color-dark: #212d40;
   --color-muted: #364156;
   --color-primary: #2ec866;
@@ -22,7 +21,7 @@
 }
 
 body {
-  background-color: var(--color-darkest);
+  background-color: var(--color-white);
   color: var(--color-white);
   font-family: var(--font-sans);
 }
@@ -34,7 +33,6 @@ body {
   --color-muted: var(--color-muted);
   --color-primary: var(--color-primary);
   --color-light: var(--color-light);
-  
   --font-sans: var(--font-sans);
   --font-code: var(--font-code);
 }

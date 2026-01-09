@@ -4,17 +4,17 @@ import Logo from "@/public/logo.png";
 import { yupResolver } from "@hookform/resolvers/yup";
 import GoogleLogoIcon from "@/public/google-icon.svg";
 import GitHubLogoIcon from "@/public/github-icon.svg";
-import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { AuthModalProps, LoginCredentials } from "@/app/types/auth";
 import { loginSchema } from "@/app/utils/validation";
-import { login } from "@/app/lib/auth";
 import InputField from "../common/InputField";
 import { useRouter } from "next/navigation";
 import TurnstileWidget from "./TurnstileWidget";
 import { useDispatch } from "react-redux";
 import { setCredentials } from "@/app/lib/store/features/authSlice";
 import { authService } from "@/app/lib/services/authService";
+import { toast } from "sonner";
+import { isAxiosError } from "axios";
 
 const LoginForm = ({ onSuccess, onSwitch }: AuthModalProps) => {
   const router = useRouter();
@@ -31,14 +31,27 @@ const LoginForm = ({ onSuccess, onSwitch }: AuthModalProps) => {
   });
   const onSubmit = async (data: LoginCredentials) => {
     try {
-      const userData = await login(data);
+      const userData = await authService.login(data);
       console.log(userData);
       onSuccess();
       //push data to redux
       dispatch(setCredentials({ user: userData.user, token: userData.token }));
-      router.push("/dashboard");
+      router.push("/explore");
     } catch (err: unknown) {
-      return err;
+      // 1. Checking if it's an Axios error
+      if (isAxiosError(err)) {
+        console.log("error:", err.response);
+        const message = err.response?.data?.error || "An error occurred";
+        toast.error(message);
+      }
+      // 2. Checking if it's a standard Error object
+      else if (err instanceof Error) {
+        toast.error(err.message);
+      }
+      // 3. Fallback for literal strings or weird objects
+      else {
+        toast.error("An unexpected error occurred");
+      }
     }
   };
   return (
