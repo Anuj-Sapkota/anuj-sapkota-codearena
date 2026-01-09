@@ -6,18 +6,31 @@ import authService from "../services/authService.js";
 import { verifyTurnstile } from "../middlewares/verifyTurnstile.js";
 
 const router = express.Router();
+//-----------------------Standard Routes -------------------------------
+
 //signup
 router.post("/register", verifyTurnstile, authController.registerUser);
 
 //sign in
 router.post("/login", verifyTurnstile, authController.loginUser);
 
-//refresh token
-router.post("/refresh", authController.refreshToken);
-
 //logout user
 router.post("/logout", authenticate, authController.logoutUser);
 
+//refresh token
+router.post("/refresh", authController.refreshToken);
+
+//self 
+router.get("/me", authenticate, authController.getMe);
+
+//-------Password Recovery Routes---------------
+//forgot password
+router.post("/forgot-password", authController.forgotPassword);
+
+//reset password
+router.post("/reset-password/:token", authController.resetPassword);
+
+//-------------------OAuth Routes -----------------------------
 //google signin
 router.get(
   "/google",
@@ -37,8 +50,6 @@ router.get(
   passport.authenticate("github", { session: false }),
   authController.oauthSignIn
 );
- 
 
-router.get('/me', authenticate, authController.getMe);
 
 export default router;

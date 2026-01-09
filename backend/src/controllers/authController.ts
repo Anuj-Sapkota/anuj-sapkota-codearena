@@ -8,11 +8,17 @@ import {
   signRefreshToken,
   verifyRefreshToken,
 } from "../utils/jwt.js";
+import { sendResetEmail } from "../services/mailService.js";
 
 /**
  * PRIVATE HELPER to Standardize cookie setting across all auth methods
  */
-const _setAuthCookies = (res: Response, userId: number, role: string, token?: string) => {
+const _setAuthCookies = (
+  res: Response,
+  userId: number,
+  role: string,
+  token?: string
+) => {
   const accessToken = token || signAccessToken({ sub: userId, role });
   const refreshToken = signRefreshToken({ sub: userId });
 
@@ -44,7 +50,10 @@ const _handleError = (res: Response, err: any) => {
 
 // --- CONTROLLER METHODS ---
 
-const registerUser = async (req: Request<{}, {}, RegisterInput>, res: Response) => {
+const registerUser = async (
+  req: Request<{}, {}, RegisterInput>,
+  res: Response
+) => {
   try {
     const data = await authService.register(req.body);
     _setAuthCookies(res, data.user.userId, data.user.role);
@@ -93,8 +102,13 @@ const oauthSignIn = async (req: Request, res: Response) => {
   try {
     const userData = req.user as AuthUser;
     // Pass the existing token from OAuth instead of signing a new one
-    _setAuthCookies(res, userData.user.userId, userData.user.role, userData.token);
-    res.redirect(`${process.env.FRONTEND_URL}/explore`);
+    _setAuthCookies(
+      res,
+      userData.user.userId,
+      userData.user.role,
+      userData.token
+    );
+    res.redirect(`${config.frontendUrl}/explore`);
   } catch (err) {
     _handleError(res, err);
   }
@@ -107,7 +121,8 @@ const getMe = async (req: Request, res: Response) => {
 
     res.status(200).json({
       user: result.user,
-      token: req.cookies.accessToken || req.headers.authorization?.split(" ")[1],
+      token:
+        req.cookies.accessToken || req.headers.authorization?.split(" ")[1],
     });
   } catch (err) {
     _handleError(res, err);
@@ -121,7 +136,8 @@ const forgotPassword = async (req: Request, res: Response) => {
 
     if (result) {
       // Logic for sending email
-      console.log(`Reset Link: http://localhost:3000/password/reset/${result.token}`);
+      await sendResetEmail(result.userEmail, result.token);
+      console.log(`Email sent successfully to ${result.userEmail}`);
     }
 
     res.status(200).json({

@@ -30,6 +30,16 @@ const RegisterForm = ({ onSuccess, onSwitch }: AuthModalProps) => {
 
   const onSubmit = async (data: RegisterCredentials) => {
     try {
+       // 1. Client-side validation
+          if (data.password !== data.confirmPassword) {
+            toast.error("Passwords do not match!");
+            return;
+          }
+      
+          if (data.password.length < 8) {
+            toast.error("Password must be at least 8 characters long.");
+            return;
+          }
       const userData = await authService.signup(data);
       console.log(userData);
       onSuccess();
