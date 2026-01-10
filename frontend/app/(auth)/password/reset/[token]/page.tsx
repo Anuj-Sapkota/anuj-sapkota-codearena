@@ -1,115 +1,111 @@
 "use client";
 
-import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { authService } from "@/app/lib/services/authService";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { authService } from "@/app/lib/services/authService";
+import InputField from "@/app/components/common/InputField";
 import { isAxiosError } from "axios";
+import { ResetPasswordInput } from "@/app/types/userData"; // Ensure this type exists
 
 const ResetPasswordPage = () => {
   const { token } = useParams();
   const router = useRouter();
 
-  // State for form inputs and loading
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    getValues,
+    formState: { errors, isSubmitting },
+  } = useForm<ResetPasswordInput>();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // 1. Client-side validation
-    if (password !== confirmPassword) {
-      toast.error("Passwords do not match!");
-      return;
-    }
-
-    if (password.length < 8) {
-      toast.error("Password must be at least 8 characters long.");
-      return;
-    }
-
-    setLoading(true);
+  const onSubmit = async (data: ResetPasswordInput) => {
     try {
-      // 2. Call the  authService
-      // pass the token from the URL and the new password
-      await authService.resetPassword(String(token), password);
+      // Calling the backend with the token from the URL and new password
+      await authService.resetPassword(String(token), data.password);
 
-      toast.success("Password changed successfully!");
+      toast.success("Password changed successfully! Redirecting...");
 
-      // 3. Redirect to login after a short delay
+      // Redirect to login after success
       setTimeout(() => {
         router.push("/login");
       }, 2000);
     } catch (err: unknown) {
       if (isAxiosError(err)) {
-        console.log("error:", err.response);
         const message = err.response?.data?.error || "An error occurred";
         toast.error(message);
-      }
-      // 2. Checking if it's a standard Error object
-      else if (err instanceof Error) {
+      } else if (err instanceof Error) {
         toast.error(err.message);
-      }
-      // 3. Fallback for literal strings or weird objects
-      else {
+      } else {
         toast.error("An unexpected error occurred");
       }
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100 px-4">
-      {/* Container - Styled to match your Forgot Password UI */}
-      <div className="bg-gray-300 w-full max-w-xl flex flex-col gap-4 py-6 px-2 rounded-md shadow-lg shadow-gray-400/20">
-        <h1 className="border-b border-gray-400 pb-4 text-2xl font-semibold px-4 text-gray-800">
-          Change Password
-        </h1>
-
-        {/* Form */}
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-col gap-4 px-4 w-full"
-        >
-          <p className="text-sm text-gray-600">
-            Please enter your new password below. Make sure it is secure.
+    <>
+      {/* Main Card - Styled exactly like Forgot Password */}
+      <div className="bg-white w-full max-w-md flex flex-col gap-6 py-8 px-6 rounded-xl shadow-sm border border-gray-200">
+        <div className="space-y-2">
+          <h1 className="text-2xl font-bold text-gray-900">Set New Password</h1>
+          <p className="text-gray-500 text-sm leading-relaxed">
+            Almost there! Enter a new secure password for your account.
           </p>
+        </div>
 
-          {/* Password Field */}
-          <input
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="flex flex-col gap-5 w-full"
+        >
+          {/* New Password Field */}
+          <InputField
+            label="New Password"
+            name="password"
             type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="New Password"
-            className="w-full border border-gray-400 rounded-md px-4 py-2 focus:border-gray-500 focus:ring-1 focus:ring-gray-500 outline-none transition-all bg-white/50"
+            register={register("password", {
+              required: "Password is required",
+              minLength: {
+                value: 8,
+                message: "Password must be at least 8 characters",
+              },
+            })}
+            errors={errors}
           />
 
           {/* Confirm Password Field */}
-          <input
+          <InputField
+            label="Confirm Password"
+            name="confirmPassword"
             type="password"
-            required
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="Enter Password Again"
-            className="w-full border border-gray-400 rounded-md px-4 py-2 focus:border-gray-500 focus:ring-1 focus:ring-gray-500 outline-none transition-all bg-white/50"
+            register={register("confirmPassword", {
+              required: "Please confirm your password",
+              validate: (value) =>
+                // Change watch to getValues
+                value === getValues("password") || "Passwords do not match",
+            })}
+            errors={errors}
           />
 
-          {/* Reset button */}
-          <button
-            type="submit"
-            disabled={loading}
-            className={`w-full cursor-pointer bg-primary-1 hover:bg-primary-2 active:bg-primary-3 rounded-md py-2 font-semibold text-white transition-colors mt-2 ${
-              loading ? "opacity-70 cursor-not-allowed" : ""
-            }`}
-          >
-            {loading ? "Updating..." : "Change Password"}
-          </button>
+          <div className="flex flex-col gap-3 mt-2">
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full h-11 cursor-pointer bg-primary-1 hover:bg-primary-2 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed rounded-lg font-semibold text-white transition-all duration-200 shadow-md shadow-primary-1/20"
+            >
+              {isSubmitting ? "Updating Password..." : "Change Password"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => router.push("/login")}
+              className="text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors py-2 text-center"
+            >
+              Back to Sign In
+            </button>
+          </div>
         </form>
       </div>
-    </div>
+    </>
   );
 };
 
