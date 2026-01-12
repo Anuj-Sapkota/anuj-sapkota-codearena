@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { FormLabel, FormInput, FormTextarea, FormButton } from "@/app/components/ui/FormElements";
 
 export default function BasicInfoPage() {

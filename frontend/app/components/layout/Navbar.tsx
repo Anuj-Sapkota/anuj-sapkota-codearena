@@ -10,7 +10,7 @@ import Image from "next/image";
 import Logo from "@/public/logo.png";
 import { FiSearch, FiBell, FiUser, FiLogOut, FiSettings } from "react-icons/fi";
 
-import Modal from "@/app/components/ui/Modal"; 
+import Modal from "@/app/components/ui/Modal";
 import LoginForm from "@/app/components/auth/LoginForm";
 import RegisterForm from "@/app/components/auth/RegisterForm";
 
@@ -22,13 +22,18 @@ export default function Navbar() {
   const pathname = usePathname();
 
   const [showProfileOptions, setShowProfileOptions] = useState(false);
-  const [activeModal, setActiveModal] = useState<'login' | 'register' | null>(null);
-  
+  const [activeModal, setActiveModal] = useState<"login" | "register" | null>(
+    null
+  );
+
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+      if (
+        modalRef.current &&
+        !modalRef.current.contains(event.target as Node)
+      ) {
         setShowProfileOptions(false);
       }
     };
@@ -39,15 +44,18 @@ export default function Navbar() {
   const closeModals = () => setActiveModal(null);
 
   return (
-    <nav className="bg-white/90 backdrop-blur-md border-b border-gray-100 px-8 flex items-center justify-between h-16 sticky top-0 z-50 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_4px_6px_-2px_rgba(0,0,0,0.05)]">
+    <nav className="bg-white/90 border-b border-gray-100 px-8 flex items-center justify-between h-16 sticky top-0 z-50 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_4px_6px_-2px_rgba(0,0,0,0.05)]">
       {/* LEFT SIDE */}
       <div className="flex items-center h-full">
-        <Link href="/" className="flex items-center hover:opacity-80 transition-opacity">
+        <Link
+          href="/"
+          className="flex items-center hover:opacity-80 transition-opacity"
+        >
           <Image src={Logo} alt="logo" className="w-24 object-contain" />
         </Link>
-        
+
         <div className="h-4 w-px bg-gray-200 mx-8" />
-        
+
         <ul className="flex items-center gap-10 h-full">
           {["Explore", "Problems", "Learn"].map((name) => {
             const href = `/${name.toLowerCase()}`;
@@ -57,7 +65,9 @@ export default function Navbar() {
                 <Link
                   href={href}
                   className={`text-sm font-bold tracking-tight transition-all duration-300 ${
-                    isActive ? "text-primary-1 scale-105" : "text-slate-500 hover:text-primary-1"
+                    isActive
+                      ? "text-primary-1 scale-105"
+                      : "text-slate-500 hover:text-primary-1"
                   }`}
                 >
                   {name}
@@ -87,7 +97,10 @@ export default function Navbar() {
           <div className="flex items-center gap-4">
             {/* Notification Bell - Gold/Yellow Theme */}
             <button className="relative p-2.5 rounded-xl text-amber-400 hover:text-amber-500 hover:bg-amber-50 transition-all duration-300 group">
-              <FiBell size={22} className="fill-current group-hover:rotate-12 transition-transform" />
+              <FiBell
+                size={22}
+                className="fill-current group-hover:rotate-12 transition-transform"
+              />
               <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 border-2 border-white rounded-full"></span>
             </button>
 
@@ -95,21 +108,32 @@ export default function Navbar() {
               <button
                 onClick={() => setShowProfileOptions(!showProfileOptions)}
                 className={`flex items-center gap-2 p-1 pr-3 rounded-full transition-all duration-300 border ${
-                  showProfileOptions 
-                  ? "bg-white border-primary-1/20 shadow-lg translate-y-[-1px]" 
-                  : "bg-gray-50 border-transparent hover:border-gray-200 shadow-sm"
+                  showProfileOptions
+                    ? "bg-white border-primary-1/20 shadow-lg translate-y-[-1px]"
+                    : "bg-gray-50 border-transparent hover:border-gray-200 shadow-sm"
                 }`}
               >
                 <div className="w-8 h-8 rounded-full overflow-hidden shadow-inner bg-slate-200">
                   {user?.profile_pic_url ? (
-                    <Image src={user.profile_pic_url} alt="profile" width={32} height={32} className="object-cover" />
+                    <Image
+                      src={user.profile_pic_url}
+                      alt="profile"
+                      width={32}
+                      height={32}
+                      className="object-cover"
+                    />
                   ) : (
-                    <FiUser size={18} className="m-auto mt-1.5 text-slate-500" />
+                    <FiUser
+                      size={18}
+                      className="m-auto mt-1.5 text-slate-500"
+                    />
                   )}
                 </div>
                 <div className="flex flex-col items-start leading-none">
-                   <span className="text-[11px] font-black text-slate-400 uppercase tracking-tighter">Account</span>
-                   <span className="text-xs font-bold text-slate-700">Menu</span>
+                  <span className="text-[11px] font-black text-slate-400 uppercase tracking-tighter">
+                    Account
+                  </span>
+                  <span className="text-xs font-bold text-slate-700">Menu</span>
                 </div>
               </button>
 
@@ -117,24 +141,37 @@ export default function Navbar() {
               {showProfileOptions && (
                 <div className="absolute right-0 mt-4 w-64 bg-white border border-gray-100 rounded-[24px] shadow-[0_20px_50px_rgba(0,0,0,0.15)] py-3 overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-300">
                   <div className="px-6 py-4 bg-gray-50/50 mb-2">
-                    <p className="text-slate-900 text-sm font-black truncate">{user?.full_name}</p>
+                    <p className="text-slate-900 text-sm font-black truncate">
+                      {user?.full_name}
+                    </p>
                     <div className="flex items-center gap-2 mt-1">
-                       <span className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
-                       <p className="text-primary-1 text-[10px] font-black uppercase tracking-widest">{user?.role || "Member"}</p>
+                      <span className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
+                      <p className="text-primary-1 text-[10px] font-black uppercase tracking-widest">
+                        {user?.role || "Member"}
+                      </p>
                     </div>
                   </div>
-                  
+
                   <div className="px-3 space-y-1">
-                    <Link href="/profile" className="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-primary-1/5 hover:text-primary-1 rounded-2xl transition-all text-sm font-bold">
+                    <Link
+                      href="/profile"
+                      className="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-primary-1/5 hover:text-primary-1 rounded-2xl transition-all text-sm font-bold"
+                    >
                       <FiUser size={18} className="opacity-70" /> My Profile
                     </Link>
-                    <Link href="/settings" className="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-primary-1/5 hover:text-primary-1 rounded-2xl transition-all text-sm font-bold">
+                    <Link
+                      href="/settings"
+                      className="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-primary-1/5 hover:text-primary-1 rounded-2xl transition-all text-sm font-bold"
+                    >
                       <FiSettings size={18} className="opacity-70" /> Settings
                     </Link>
                   </div>
 
                   <div className="mx-4 mt-3 pt-3 border-t border-gray-100">
-                    <button onClick={() => dispatch(logoutAction())} className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl text-red-500 hover:bg-red-50 transition-all text-sm font-black">
+                    <button
+                      onClick={() => dispatch(logoutAction())}
+                      className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl text-red-500 hover:bg-red-50 transition-all text-sm font-black"
+                    >
                       <FiLogOut size={18} /> LOGOUT
                     </button>
                   </div>
@@ -144,14 +181,14 @@ export default function Navbar() {
           </div>
         ) : (
           <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setActiveModal('login')}
+            <button
+              onClick={() => setActiveModal("login")}
               className="text-slate-500 text-sm font-bold hover:text-slate-900 transition-colors px-4 py-2"
             >
               Sign In
             </button>
             <button
-              onClick={() => setActiveModal('register')}
+              onClick={() => setActiveModal("register")}
               className="bg-primary-1 text-white font-extrabold px-6 py-2.5 rounded-2xl text-sm shadow-[0_10px_20px_-5px_rgba(var(--primary-rgb),0.3)] hover:shadow-[0_15px_25px_-5px_rgba(var(--primary-rgb),0.4)] hover:scale-[1.02] active:scale-95 transition-all"
             >
               Get Started
@@ -160,7 +197,20 @@ export default function Navbar() {
         )}
       </div>
 
-      {/* MODALS RENDER HERE */}
+      {/* AUTH MODALS */}
+      <Modal isOpen={activeModal === "login"} onClose={closeModals}>
+        <LoginForm
+          onSuccess={closeModals}
+          onSwitch={() => setActiveModal("register")}
+        />
+      </Modal>
+
+      <Modal isOpen={activeModal === "register"} onClose={closeModals}>
+        <RegisterForm
+          onSuccess={closeModals}
+          onSwitch={() => setActiveModal("login")}
+        />
+      </Modal>
     </nav>
   );
 }

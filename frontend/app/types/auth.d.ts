@@ -2,6 +2,7 @@ export interface UserProfile {
   userId: number;
   full_name: string;
   username: string;
+  bio?: string;
   email: string;
   role: string;
   total_points: number;

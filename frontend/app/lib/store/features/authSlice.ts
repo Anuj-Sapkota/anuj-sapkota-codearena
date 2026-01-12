@@ -25,6 +25,13 @@ export const authSlice = createSlice({
       state.token = null;
       state.isAuthenticated = false;
     },
+
+    updateUserSuccess: (state, action) => {
+      if (state.user) {
+        // Merges the new data into the existing user object
+        state.user = { ...state.user, ...action.payload };
+      }
+    },
   },
 });
 
