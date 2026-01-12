@@ -12,7 +12,7 @@ const router = express.Router();
 router.post("/register", verifyTurnstile, authController.registerUser);
 
 //sign in
-router.post("/login", verifyTurnstile, authController.loginUser);
+router.post("/login",  authController.loginUser);
 
 //logout user
 router.post("/logout", authenticate, authController.logoutUser);
