@@ -3,6 +3,7 @@
 import { FormLabel, FormInput, FormTextarea, FormButton } from "@/app/components/ui/FormElements";
 
 export default function BasicInfoPage() {
+  
   return (
     <form className="flex flex-col gap-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex flex-col gap-3">

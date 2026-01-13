@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import SettingsSidebar from "@/app/components/settings/SettingsSidebar";
 import { useUpdateProfile } from "@/app/hooks/useProfileUpdate";
 import Image from "next/image";
+import ProtectedRoute from "@/app/components/layout/ProtectedRoute";
 
 export default function SettingsLayout({
   children,
@@ -53,6 +54,7 @@ export default function SettingsLayout({
   };
 
   return (
+    <ProtectedRoute>
     <div className="min-h-screen bg-gray-50">
       <div className="bg-[#48855b] border-b border-green-100/50">
         <div className="pt-24 pb-20 px-12 max-w-7xl mx-auto">
@@ -112,5 +114,6 @@ export default function SettingsLayout({
         <main className="flex-1 pt-32 pb-24 max-w-2xl">{children}</main>
       </div>
     </div>
+    </ProtectedRoute>
   );
 }
