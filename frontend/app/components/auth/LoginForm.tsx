@@ -11,14 +11,15 @@ import InputField from "../common/InputField";
 import { useRouter } from "next/navigation";
 import TurnstileWidget from "./TurnstileWidget";
 import { useDispatch } from "react-redux";
-import { setCredentials } from "@/app/lib/store/features/authSlice";
 import { authService } from "@/app/lib/services/authService";
 import { toast } from "sonner";
 import { isAxiosError } from "axios";
+import { loginThunk } from "@/app/lib/store/features/authActions";
+import { AppDispatch } from "@/app/lib/store/store";
 
 const LoginForm = ({ onSuccess, onSwitch }: AuthModalProps) => {
   const router = useRouter();
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   //
   const {
     register,
@@ -31,11 +32,9 @@ const LoginForm = ({ onSuccess, onSwitch }: AuthModalProps) => {
   });
   const onSubmit = async (data: LoginCredentials) => {
     try {
-      const userData = await authService.login(data);
-      console.log(userData);
+      await dispatch(loginThunk(data)).unwrap();
+      toast.success("Welcome back!");
       onSuccess();
-      //push data to redux
-      dispatch(setCredentials({ user: userData.user, token: userData.token }));
       router.push("/explore");
     } catch (err: unknown) {
       // 1. Checking if it's an Axios error

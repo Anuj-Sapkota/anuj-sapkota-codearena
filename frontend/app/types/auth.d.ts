@@ -44,6 +44,8 @@ export interface AuthState {
   user: UserProfile | null;
   token: string | null;
   isAuthenticated: boolean;
+  isLoading: boolean; // 👈 Track loading status
+  error: string | null; // 👈 Track error messages
 }
 // interface for modal forms
 export interface AuthModalProps {
