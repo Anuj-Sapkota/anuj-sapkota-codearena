@@ -8,7 +8,6 @@ import {
   MAX_PASSWORD_LENGTH,
   MIN_PASSWORD_LENGTH,
 } from "../constants/passwordLimit.js";
-import { signAccessToken } from "../utils/jwt.js";
 
 /**
  * Helper to format the standard user response object for consistency
@@ -24,6 +23,8 @@ const formatAuthResponse = (user: any): { user: AuthUser["user"] } => {
       email: user.email,
       role: user.role,
       total_points: user.total_points,
+      google_id: user.google_id,
+      github_id: user.github_id,
     },
   };
 };
@@ -104,38 +105,99 @@ const getUserByUserID = async (userId: number): Promise<AuthUser> => {
 
   return formatAuthResponse(user);
 };
-
 // --- OAUTH FLOW ---
 const findOrCreateOAuthUser = async (
   profile: any,
-  provider: string
+  provider: string,
+  currentUser?: any
 ): Promise<AuthUser> => {
   const email = profile.emails?.[0]?.value;
-  if (!email) throw new ServiceError("Email not found in OAuth profile", 400);
-
-  const fullName =
-    provider === "google"
-      ? profile.displayName || email.split("@")[0]
-      : profile.username;
-  const username = generateUsername(fullName);
+  const socialId = profile.id;
   const profilePic = profile.photos?.[0]?.value || null;
-  let user = await prisma.user.findFirst({ where: { email } });
 
-  if (!user) {
-    user = await prisma.user.create({
+  // Key Fix: Determine exactly which database column we are dealing with
+  const providerField = provider === "google" ? "google_id" : "github_id";
+
+  // 1. SCENARIO: ACCOUNT LINKING (User is already logged in)
+  if (currentUser) {
+    // Extract ID based on how your middleware/Passport stores the user object
+    const userId =
+      currentUser.userId || currentUser.user?.userId || currentUser.sub;
+
+    const updatedUser = await prisma.user.update({
+      where: { userId: Number(userId) },
       data: {
-        full_name: fullName,
-        username,
-        email,
-        auth_provider: provider,
-        google_id: profile.id,
-        profile_pic_url: profilePic,
-        bio: "",
+        [providerField]: socialId, // Fixed: Only updates the specific provider column
+        profile_pic_url: currentUser.profile_pic_url || profilePic,
       },
     });
+    return formatAuthResponse(updatedUser);
   }
 
+  // 2. SCENARIO: LOGIN (Check if THIS specific Social ID is already linked)
+  let user = await prisma.user.findFirst({
+    where: {
+      [providerField]: socialId, // Fixed: Removed the OR bug. Now Google only checks google_id.
+    },
+  });
+
+  if (user) return formatAuthResponse(user);
+
+  // 3. SCENARIO: AUTO-LINKING (Check if email exists but social ID doesn't)
+  if (!email) throw new ServiceError("Email not found in OAuth profile", 400);
+
+  user = await prisma.user.findFirst({ where: { email } });
+
+  if (user) {
+    user = await prisma.user.update({
+      where: { userId: user.userId },
+      data: {
+        [providerField]: socialId, // Fixed: Dynamic column update
+      },
+    });
+    return formatAuthResponse(user);
+  }
+
+  // 4. SCENARIO: NEW USER (Registration)
+  const fullName =
+    provider === "google" ? profile.displayName : profile.username;
+  const username = generateUsername(fullName || email.split("@")[0]);
+
+  user = await prisma.user.create({
+    data: {
+      full_name: fullName || "User",
+      username,
+      email,
+      auth_provider: provider,
+      [providerField]: socialId, // Fixed: Saves to the correct column on creation
+      profile_pic_url: profilePic,
+      bio: "",
+    },
+  });
+
   return formatAuthResponse(user);
+};
+// --- UNLINK OAUTH ---
+const unlinkProvider = async (
+  userId: number,
+  provider: "google" | "github"
+) => {
+  return await prisma.user.update({
+    where: { userId },
+    data: {
+      [provider === "google" ? "google_id" : "github_id"]: null,
+    },
+  });
+};
+
+// --- DELETE USER ---
+const deleteUserAccount = async (userId: number) => {
+  // Prisma will handle deleting the user row.
+  // Note: If you have other tables (like 'Posts'), ensure you use
+  // 'onDelete: Cascade' in your schema or delete them here first.
+  return await prisma.user.delete({
+    where: { userId },
+  });
 };
 
 // --- PASSWORD RECOVERY: GENERATE TOKEN ---
@@ -201,4 +263,6 @@ export default {
   findOrCreateOAuthUser,
   generateResetToken,
   verifyAndResetPassword,
+  unlinkProvider,
+  deleteUserAccount,
 };

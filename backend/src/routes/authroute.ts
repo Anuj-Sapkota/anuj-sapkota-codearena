@@ -12,7 +12,7 @@ const router = express.Router();
 router.post("/register", verifyTurnstile, authController.registerUser);
 
 //sign in
-router.post("/login",  authController.loginUser);
+router.post("/login", authController.loginUser);
 
 //logout user
 router.post("/logout", authenticate, authController.logoutUser);
@@ -20,7 +20,7 @@ router.post("/logout", authenticate, authController.logoutUser);
 //refresh token
 router.post("/refresh", authController.refreshToken);
 
-//self 
+//self
 router.get("/me", authenticate, authController.getMe);
 
 //-------Password Recovery Routes---------------
@@ -50,6 +50,10 @@ router.get(
   passport.authenticate("github", { session: false }),
   authController.oauthSignIn
 );
+//unlink
+router.post("/unlink", authenticate, authController.unlinkOAuth);
 
+//delete the account
+router.delete("/delete-account", authenticate, authController.deleteAccount);
 
 export default router;

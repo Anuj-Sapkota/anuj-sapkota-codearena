@@ -28,6 +28,16 @@ export const authSlice = createSlice({
       state.error = null;
       state.isLoading = false;
     },
+    //to manually clear the social id
+    updateSocialLinks: (state, action: { payload: { provider: "google" | "github"; value: string | null } }) => {
+  if (state.user) {
+    if (action.payload.provider === "google") {
+      state.user.google_id = action.payload.value;
+    } else {
+      state.user.github_id = action.payload.value;
+    }
+  }
+},
   },
   extraReducers: (builder) => {
     builder
@@ -97,5 +107,5 @@ export const authSlice = createSlice({
   },
 });
 
-export const { clearError, setLogout } = authSlice.actions;
+export const { clearError, setLogout, updateSocialLinks } = authSlice.actions;
 export default authSlice.reducer;

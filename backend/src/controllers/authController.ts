@@ -135,7 +135,7 @@ const oauthSignIn = async (req: Request, res: Response) => {
 const getMe = async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any).sub;
-    const result = await authService.getUserByUserID(userId);
+    const result = await authService.getUserByUserID(Number(userId));
 
     res.status(200).json({
       success: true,
@@ -177,6 +177,43 @@ const resetPassword = async (req: Request, res: Response) => {
   }
 };
 
+// --- CONTROLLER: UNLINK ---
+const unlinkOAuth = async (req: Request, res: Response) => {
+  try {
+    const { provider } = req.body;
+    const userId = (req.user as any).sub; // Extracted from JWT middleware
+
+    await authService.unlinkProvider(userId, provider);
+    res.status(200).json({ message: `Unlinked ${provider} successfully` });
+  } catch (err) {
+    _handleError(res, err);
+  }
+};
+
+// --- CONTROLLER: DELETE ACCOUNT ---
+const deleteAccount = async (req: Request, res: Response) => {
+  try {
+    const userId = (req.user as any).userId;
+
+    await authService.deleteUserAccount(userId);
+
+    // Clear the authentication cookies
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict" as const,
+      expires: new Date(0), // Sets expiration to the past
+      path: "/",
+    };
+
+    res.cookie("accessToken", "", cookieOptions);
+    res.cookie("refreshToken", "", cookieOptions);
+
+    res.status(200).json({ message: "Account deleted permanently" });
+  } catch (err) {
+    _handleError(res, err);
+  }
+};
 export default {
   registerUser,
   loginUser,
@@ -186,4 +223,6 @@ export default {
   getMe,
   resetPassword,
   forgotPassword,
+  unlinkOAuth,
+  deleteAccount,
 };

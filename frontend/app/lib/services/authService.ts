@@ -1,8 +1,8 @@
 import api from "@/app/lib/api";
-import { 
-  AuthUser, 
-  LoginCredentials, 
-  RegisterCredentials 
+import {
+  AuthUser,
+  LoginCredentials,
+  RegisterCredentials,
 } from "@/app/types/auth";
 
 export const authService = {
@@ -37,7 +37,19 @@ export const authService = {
   },
 
   resetPassword: async (token: string, password: string) => {
-    const response = await api.post(`/auth/reset-password/${token}`, { password });
+    const response = await api.post(`/auth/reset-password/${token}`, {
+      password,
+    });
     return response.data;
-  }
+  },
+
+  unlinkOAuthProvider: async (provider: "google" | "github") => {
+    const response = await api.post("/auth/unlink", { provider });
+    return response.data;
+  },
+
+  deleteAccountApi: async () => {
+    const response = await api.delete("/auth/delete-account");
+    return response.data;
+  },
 };

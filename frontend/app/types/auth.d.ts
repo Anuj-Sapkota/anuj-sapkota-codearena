@@ -7,6 +7,8 @@ export interface UserProfile {
   role: string;
   total_points: number;
   profile_pic_url?: string | null;
+  google_id?: string | null;
+  github_id?: string | null;
 }
 
 export interface AuthUser {

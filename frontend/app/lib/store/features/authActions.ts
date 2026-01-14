@@ -47,6 +47,7 @@ export const getMeThunk = createAsyncThunk(
   "auth/getMe",
   async (_, { rejectWithValue }) => {
     try {
+      console.log(await authService.getMe());
       return await authService.getMe();
     } catch (error) {
       if (error instanceof Error) return rejectWithValue(error.message);

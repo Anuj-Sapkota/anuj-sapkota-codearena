@@ -12,7 +12,6 @@ export const updateUser = async (req: Request, res: Response) => {
     const currUserId = Number(user.sub); // From auth middleware
     const targetUserId = Number(req.params.id);
     const updateData = req.body;
-    console.log("This is updatedData", updateData);
     const file = req.file; // Provided by Multer
 
     // 2. Validate that they are actual numbers (prevents /update/abc crashing the app)
