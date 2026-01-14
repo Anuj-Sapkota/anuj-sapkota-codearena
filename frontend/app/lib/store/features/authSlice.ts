@@ -47,6 +47,7 @@ export const authSlice = createSlice({
       })
       .addCase(loginThunk.fulfilled, (state, action) => {
         state.isLoading = false;
+        console.log("This is payload of user:", action.payload.user);
         state.user = action.payload.user;
         state.token = action.payload.token;
         state.isAuthenticated = true;

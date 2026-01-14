@@ -29,6 +29,8 @@ const formatAuthResponse = (user: any): AuthUser => {
       userId: user.userId,
       full_name: user.full_name,
       username: user.username,
+      bio: user.bio,
+      profile_pic_url: user?.profile_pic_url,
       email: user.email,
       role: user.role,
       total_points: user.total_points,
