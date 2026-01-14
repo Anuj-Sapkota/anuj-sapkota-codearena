@@ -102,16 +102,7 @@ const getUserByUserID = async (userId: number): Promise<AuthUser> => {
   const user = await prisma.user.findUnique({ where: { userId } });
   if (!user) throw new ServiceError("User not found", 404);
 
-  return {
-    user: {
-      userId: user.userId,
-      full_name: user.full_name,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      total_points: user.total_points,
-    },
-  };
+  return formatAuthResponse(user);
 };
 
 // --- OAUTH FLOW ---
@@ -127,7 +118,7 @@ const findOrCreateOAuthUser = async (
       ? profile.displayName || email.split("@")[0]
       : profile.username;
   const username = generateUsername(fullName);
-
+  const profilePic = profile.photos?.[0]?.value || null;
   let user = await prisma.user.findFirst({ where: { email } });
 
   if (!user) {
@@ -138,6 +129,8 @@ const findOrCreateOAuthUser = async (
         email,
         auth_provider: provider,
         google_id: profile.id,
+        profile_pic_url: profilePic,
+        bio: "",
       },
     });
   }
