@@ -12,20 +12,19 @@ export interface LoginInput {
   emailOrUsername: string;
   password: string;
 }
-export interface UserProfile {
+
+// server ------> User
+export interface AuthUser {
   user: {
     userId: number;
     full_name: string;
     username: string;
     email: string;
+    bio?: string | null;
     role: string;
     total_points: number;
     profile_pic_url?: string | null;
   };
-}
-// server ------> User
-export interface AuthUser extends UserProfile {
-  token: string;
 }
 
 export interface AccessTokenPayload {

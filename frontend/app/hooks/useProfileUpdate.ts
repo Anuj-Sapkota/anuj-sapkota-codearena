@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { updateProfile } from "../lib/services/userService";
+import { userService } from "../lib/services/userService";
 import { toast } from "sonner";
 import { isAxiosError } from "axios";
 
@@ -11,7 +11,7 @@ export const useUpdateProfile = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await updateProfile(userId, data);
+      const result = await userService.updateProfile(userId, data);
       return result;
     } catch (err: unknown) {
       if (isAxiosError(err)) {

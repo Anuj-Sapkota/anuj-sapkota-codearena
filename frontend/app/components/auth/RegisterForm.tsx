@@ -4,21 +4,22 @@ import Image from "next/image";
 import Logo from "@/public/logo.png";
 import GoogleLogoIcon from "@/public/google-icon.svg";
 import GitHubLogoIcon from "@/public/github-icon.svg";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AuthModalProps, RegisterCredentials } from "@/app/types/auth";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { registerSchema } from "@/app/utils/validation";
 import InputField from "../common/InputField";
-import { authService } from "@/app/lib/services/authService";
 import TurnstileWidget from "./TurnstileWidget";
 import { toast } from "sonner";
 import { isAxiosError } from "axios";
+import { registerThunk } from "@/app/lib/store/features/authActions";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "@/app/lib/store/store";
 
 const RegisterForm = ({ onSuccess, onSwitch }: AuthModalProps) => {
   const router = useRouter();
-
+  const dispatch = useDispatch<AppDispatch>();
   const {
     register,
     handleSubmit,
@@ -30,18 +31,18 @@ const RegisterForm = ({ onSuccess, onSwitch }: AuthModalProps) => {
 
   const onSubmit = async (data: RegisterCredentials) => {
     try {
-       // 1. Client-side validation
-          if (data.password !== data.confirmPassword) {
-            toast.error("Passwords do not match!");
-            return;
-          }
-      
-          if (data.password.length < 8) {
-            toast.error("Password must be at least 8 characters long.");
-            return;
-          }
-      const userData = await authService.signup(data);
-      console.log(userData);
+      // 1. Client-side validation
+      if (data.password !== data.confirmPassword) {
+        toast.error("Passwords do not match!");
+        return;
+      }
+
+      if (data.password.length < 8) {
+        toast.error("Password must be at least 8 characters long.");
+        return;
+      }
+      dispatch(registerThunk(data)).unwrap();
+      toast.success("Welcome back!");
       onSuccess();
       router.push("/explore");
     } catch (err: unknown) {

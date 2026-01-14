@@ -1,12 +1,7 @@
 import { prisma } from "../lib/prisma.js";
 import crypto from "crypto";
 import { generateUsername } from "../utils/username.js";
-import type {
-  AuthUser,
-  RegisterInput,
-  LoginInput,
-  UserProfile,
-} from "../types/auth.js";
+import type { AuthUser, RegisterInput, LoginInput } from "../types/auth.js";
 import { hashPassword, verifyPassword } from "../utils/password.js";
 import { ServiceError } from "../errors/ServiceError.js";
 import {
@@ -18,25 +13,20 @@ import { signAccessToken } from "../utils/jwt.js";
 /**
  * Helper to format the standard user response object for consistency
  */
-const formatAuthResponse = (user: any): AuthUser => {
-  const accessToken = signAccessToken({
-    sub: user.userId,
-    role: user.role,
-  });
-
+const formatAuthResponse = (user: any): { user: AuthUser["user"] } => {
   return {
     user: {
       userId: user.userId,
       full_name: user.full_name,
       username: user.username,
+      bio: user.bio,
+      profile_pic_url: user?.profile_pic_url,
       email: user.email,
       role: user.role,
       total_points: user.total_points,
     },
-    token: accessToken,
   };
 };
-
 // --- USER REGISTRATION ---
 const register = async ({
   full_name,
@@ -57,7 +47,10 @@ const register = async ({
     throw new ServiceError("User already exists!", 409);
   }
 
-  if (password.length < MIN_PASSWORD_LENGTH || password.length > MAX_PASSWORD_LENGTH) {
+  if (
+    password.length < MIN_PASSWORD_LENGTH ||
+    password.length > MAX_PASSWORD_LENGTH
+  ) {
     throw new ServiceError(
       `Password must be between ${MIN_PASSWORD_LENGTH} and ${MAX_PASSWORD_LENGTH} characters`,
       400
@@ -105,30 +98,27 @@ const login = async ({
 };
 
 // --- GET USER PROFILE ---
-const getUserByUserID = async (userId: number): Promise<UserProfile> => {
+const getUserByUserID = async (userId: number): Promise<AuthUser> => {
   const user = await prisma.user.findUnique({ where: { userId } });
   if (!user) throw new ServiceError("User not found", 404);
 
-  return {
-    user: {
-      userId: user.userId,
-      full_name: user.full_name,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      total_points: user.total_points,
-    },
-  };
+  return formatAuthResponse(user);
 };
 
 // --- OAUTH FLOW ---
-const findOrCreateOAuthUser = async (profile: any, provider: string): Promise<AuthUser> => {
+const findOrCreateOAuthUser = async (
+  profile: any,
+  provider: string
+): Promise<AuthUser> => {
   const email = profile.emails?.[0]?.value;
   if (!email) throw new ServiceError("Email not found in OAuth profile", 400);
 
-  const fullName = provider === "google" ? profile.displayName || email.split("@")[0] : profile.username;
+  const fullName =
+    provider === "google"
+      ? profile.displayName || email.split("@")[0]
+      : profile.username;
   const username = generateUsername(fullName);
-
+  const profilePic = profile.photos?.[0]?.value || null;
   let user = await prisma.user.findFirst({ where: { email } });
 
   if (!user) {
@@ -139,6 +129,8 @@ const findOrCreateOAuthUser = async (profile: any, provider: string): Promise<Au
         email,
         auth_provider: provider,
         google_id: profile.id,
+        profile_pic_url: profilePic,
+        bio: "",
       },
     });
   }
@@ -147,12 +139,17 @@ const findOrCreateOAuthUser = async (profile: any, provider: string): Promise<Au
 };
 
 // --- PASSWORD RECOVERY: GENERATE TOKEN ---
-const generateResetToken = async (email: string): Promise<{ token: string; userEmail: string }> => {
+const generateResetToken = async (
+  email: string
+): Promise<{ token: string; userEmail: string }> => {
   const user = await prisma.user.findUnique({ where: { email } });
-  
+
   // Security
   if (!user) {
-     throw new ServiceError("If an account exists, a reset link has been sent.", 200);
+    throw new ServiceError(
+      "If an account exists, a reset link has been sent.",
+      200
+    );
   }
 
   const token = crypto.randomBytes(32).toString("hex");
@@ -170,7 +167,10 @@ const generateResetToken = async (email: string): Promise<{ token: string; userE
 };
 
 // --- PASSWORD RECOVERY: RESET ACTION ---
-const verifyAndResetPassword = async (token: string, newPassword: string): Promise<boolean> => {
+const verifyAndResetPassword = async (
+  token: string,
+  newPassword: string
+): Promise<boolean> => {
   const user = await prisma.user.findFirst({
     where: {
       resetToken: token,

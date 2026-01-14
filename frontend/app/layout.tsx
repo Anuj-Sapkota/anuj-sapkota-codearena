@@ -3,6 +3,7 @@ import "./globals.css";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import StoreProvider from "./StoreProvider";
 import { Toaster } from "sonner";
+import AuthHydrator from "./components/layout/AuthHydrator";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -33,7 +34,9 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${jetbrains.variable}`}>
       <body>
         <StoreProvider>
-          <main>{children}</main>
+          <AuthHydrator>
+            <main>{children}</main>
+          </AuthHydrator>
           <Toaster richColors position="top-right" closeButton />
         </StoreProvider>
         <script
