@@ -115,14 +115,14 @@ export default function Navbar() {
                     : "bg-gray-50 border-transparent hover:border-gray-200 shadow-sm"
                 }`}
               >
-                <div className="w-8 h-8 rounded-full overflow-hidden shadow-inner bg-slate-200">
+                <div className="w-8 h-8 rounded-full overflow-hidden">
                   {user?.profile_pic_url ? (
                     <Image
                       src={user.profile_pic_url}
                       alt="profile"
-                      width={32}
-                      height={32}
-                      className="object-cover"
+                      width={256}
+                      height={256}
+                      className="object-cover w-full h-full"
                     />
                   ) : (
                     <FiUser
@@ -142,18 +142,6 @@ export default function Navbar() {
               {/* Enhanced Dropdown with Premium Shadow */}
               {showProfileOptions && (
                 <div className="absolute right-0 mt-4 w-64 bg-white border border-gray-100 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] py-3 overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-300">
-                  <div className="px-6 py-4 bg-gray-50/50 mb-2">
-                    <p className="text-slate-900 text-sm font-black truncate">
-                      {user?.full_name}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
-                      <p className="text-primary-1 text-[10px] font-black uppercase tracking-widest">
-                        {user?.role}
-                      </p>
-                    </div>
-                  </div>
-
                   <div className="px-3 space-y-1">
                     <Link
                       href="/profile"
