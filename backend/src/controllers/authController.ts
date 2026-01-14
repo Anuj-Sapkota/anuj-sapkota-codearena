@@ -57,7 +57,11 @@ const registerUser = async (
   try {
     const data = await authService.register(req.body);
     _setAuthCookies(res, data.user.userId, data.user.role);
-    res.status(201).json(data);
+
+    res.status(201).json({
+      success: true,
+      user: data.user,
+    });
   } catch (err) {
     _handleError(res, err);
   }
@@ -67,7 +71,11 @@ const loginUser = async (req: Request<{}, {}, LoginInput>, res: Response) => {
   try {
     const data = await authService.login(req.body);
     _setAuthCookies(res, data.user.userId, data.user.role);
-    res.status(200).json(data);
+
+    res.status(200).json({
+      success: true,
+      user: data.user,
+    });
   } catch (err) {
     _handleError(res, err);
   }
@@ -82,7 +90,11 @@ const refreshToken = async (req: Request, res: Response) => {
     const data = await authService.getUserByUserID(Number(payload.sub));
 
     _setAuthCookies(res, data.user.userId, data.user.role);
-    res.status(200).json(data);
+
+    res.status(200).json({
+      success: true,
+      user: data.user,
+    });
   } catch (err) {
     _handleError(res, err);
   }
@@ -111,13 +123,9 @@ const logoutUser = (req: Request, res: Response) => {
 const oauthSignIn = async (req: Request, res: Response) => {
   try {
     const userData = req.user as AuthUser;
-    // Pass the existing token from OAuth instead of signing a new one
-    _setAuthCookies(
-      res,
-      userData.user.userId,
-      userData.user.role,
-      userData.token
-    );
+
+    _setAuthCookies(res, userData.user.userId, userData.user.role);
+
     res.redirect(`${config.frontendUrl}/explore`);
   } catch (err) {
     _handleError(res, err);
@@ -130,9 +138,8 @@ const getMe = async (req: Request, res: Response) => {
     const result = await authService.getUserByUserID(userId);
 
     res.status(200).json({
+      success: true,
       user: result.user,
-      token:
-        req.cookies.accessToken || req.headers.authorization?.split(" ")[1],
     });
   } catch (err) {
     _handleError(res, err);

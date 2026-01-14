@@ -1,5 +1,5 @@
-import { AuthState, UserProfile } from "@/app/types/auth";
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { AuthState } from "@/app/types/auth";
+import { createSlice } from "@reduxjs/toolkit";
 import {
   getMeThunk,
   loginThunk,
@@ -10,7 +10,6 @@ import {
 
 const initialState: AuthState = {
   user: null,
-  token: null,
   isAuthenticated: false,
   isLoading: false,
   error: null,
@@ -20,19 +19,15 @@ export const authSlice = createSlice({
   name: "Auth",
   initialState,
   reducers: {
-    // Clear error messages manually
     clearError: (state) => {
       state.error = null;
     },
-    // Standard logout to wipe state
     setLogout: (state) => {
       state.user = null;
-      state.token = null;
       state.isAuthenticated = false;
       state.error = null;
       state.isLoading = false;
     },
-    // manual user state update
   },
   extraReducers: (builder) => {
     builder
@@ -43,9 +38,7 @@ export const authSlice = createSlice({
       })
       .addCase(loginThunk.fulfilled, (state, action) => {
         state.isLoading = false;
-        console.log("This is payload of user:", action.payload.user);
         state.user = action.payload.user;
-        state.token = action.payload.token;
         state.isAuthenticated = true;
       })
       .addCase(loginThunk.rejected, (state, action) => {
@@ -61,7 +54,6 @@ export const authSlice = createSlice({
       .addCase(registerThunk.fulfilled, (state, action) => {
         state.isLoading = false;
         state.user = action.payload.user;
-        state.token = action.payload.token;
         state.isAuthenticated = true;
       })
       .addCase(registerThunk.rejected, (state, action) => {
@@ -75,12 +67,9 @@ export const authSlice = createSlice({
         state.error = null;
       })
       .addCase(updateThunk.fulfilled, (state, action) => {
-        console.log("This is action payload", action.payload);
-
         state.isLoading = false;
         if (state.user) {
           const { data } = action.payload;
-          // Merges updated data from API into existing user state
           state.user = { ...state.user, ...data };
         }
       })
@@ -88,22 +77,21 @@ export const authSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       })
+
+      /* --- GET ME --- */
       .addCase(getMeThunk.fulfilled, (state, action) => {
         state.isLoading = false;
         state.isAuthenticated = true;
         state.user = action.payload.user;
-        console.log("getme: ", action.payload);
       })
-      // inside extraReducers
+
+      /* --- LOGOUT --- */
       .addCase(logoutThunk.fulfilled, (state) => {
         state.user = null;
-        state.token = null;
         state.isAuthenticated = false;
       })
-      // if the backend logout fails
       .addCase(logoutThunk.rejected, (state) => {
         state.user = null;
-        state.token = null;
         state.isAuthenticated = false;
       });
   },

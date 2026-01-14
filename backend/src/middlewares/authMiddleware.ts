@@ -8,23 +8,24 @@ export const authenticate = (
   next: NextFunction
 ) => {
   try {
+    // look for cookie
     const cookies = req.cookies ?? {};
-    let token = cookies.accessToken;
+    const token = cookies.accessToken;
 
+    // 2. If no cookie? -> unauthorized
     if (!token) {
-      const authHeader = req.headers.authorization;
-      if (!authHeader?.startsWith("Bearer ")) {
-        throw new ServiceError("Unauthorized", 401);
-      }
-      token = authHeader.split(" ")[1];
+      throw new ServiceError("Unauthorized: No session cookie found", 401);
     }
 
+    // 3. Verify the token
     const decoded = verifyAccessToken(String(token));
 
+    // 4. Attach user to request
     (req as any).user = decoded;
 
     next();
   } catch (err) {
+    // If token is expired or invalid, verifyAccessToken will throw,
     next(err);
   }
 };
