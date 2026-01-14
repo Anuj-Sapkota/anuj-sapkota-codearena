@@ -1,48 +1,45 @@
 "use client";
-import { useDispatch, useSelector } from "react-redux";
-import { RootState } from "../lib/store/store";
-import api from "../lib/api";
 import { useEffect, useState } from "react";
-import { setCredentials, setLogout } from "../lib/store/features/authSlice";
+import { getMeThunk } from "../lib/store/features/authActions";
+import { setLogout } from "../lib/store/features/authSlice";
+import { AppDispatch, RootState } from "../lib/store/store";
+import { useDispatch, useSelector } from "react-redux";
 
 export default function AuthProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const initializeAuth = async () => {
-      try {
-        if (!isAuthenticated) {
-          const response = await api.get("/auth/me");
-
-          dispatch(
-            setCredentials({
-              user: response.data.user,
-              token: response.data.token,
-            })
-          );
+      // Only fetch if not already authenticated
+      if (!isAuthenticated) {
+        try {
+          // getMeThunk now handles the API call and the state update automatically
+          await dispatch(getMeThunk()).unwrap();
+        } catch (error) {
+          // If the token is invalid/expired, clear the state
+          dispatch(setLogout());
         }
-      } catch (error) {
-        //if validation fails auto logout
-        dispatch(setLogout());
-        console.log(error);
-      } finally {
-        setIsLoading(false);
       }
+      setIsLoading(false);
     };
 
     initializeAuth();
   }, [dispatch, isAuthenticated]);
 
-  // Optional: Show a loading spinner while checking the cookie
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="h-screen flex items-center justify-center">
+        Loading...
+      </div>
+    );
   }
+
   return (
     <div className="bg-gray-500 h-screen relative inset-0 flex justify-center items-center">
       <div className="w-full max-w-md px-6">{children}</div>

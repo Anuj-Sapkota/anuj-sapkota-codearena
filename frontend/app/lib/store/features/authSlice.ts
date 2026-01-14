@@ -1,6 +1,11 @@
 import { AuthState, UserProfile } from "@/app/types/auth";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { loginThunk, registerThunk, updateThunk } from "./authActions";
+import {
+  getMeThunk,
+  loginThunk,
+  registerThunk,
+  updateThunk,
+} from "./authActions";
 
 const initialState: AuthState = {
   user: null,
@@ -73,15 +78,26 @@ export const authSlice = createSlice({
         state.error = null;
       })
       .addCase(updateThunk.fulfilled, (state, action) => {
+        console.log("This is action payload", action.payload);
+
         state.isLoading = false;
         if (state.user) {
+          const { data } = action.payload;
           // Merges updated data from API into existing user state
-          state.user = { ...state.user, ...action.payload };
+          state.user = { ...state.user, ...data };
         }
       })
       .addCase(updateThunk.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
+      })
+      .addCase(getMeThunk.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload.user;
+        state.isAuthenticated = true;
+        if (action.payload.token) {
+          state.token = action.payload.token;
+        }
       });
   },
 });

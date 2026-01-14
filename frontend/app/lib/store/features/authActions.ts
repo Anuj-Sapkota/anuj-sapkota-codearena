@@ -41,3 +41,15 @@ export const updateThunk = createAsyncThunk(
     }
   }
 );
+
+export const getMeThunk = createAsyncThunk(
+  "auth/getMe",
+  async (_, { rejectWithValue }) => {
+    try {
+      return await authService.getMe();
+    } catch (error) {
+      if (error instanceof Error) return rejectWithValue(error.message);
+      return rejectWithValue("Session expired");
+    }
+  }
+);

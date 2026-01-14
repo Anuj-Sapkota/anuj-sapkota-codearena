@@ -86,7 +86,6 @@ export default function BasicInfoPage() {
         <FormTextarea
           rows={6}
           placeholder="Share your story..."
-          value={user?.bio}
           register={register("bio")}
         />
       </div>

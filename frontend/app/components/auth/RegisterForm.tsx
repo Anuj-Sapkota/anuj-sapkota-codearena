@@ -10,7 +10,6 @@ import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { registerSchema } from "@/app/utils/validation";
 import InputField from "../common/InputField";
-import { authService } from "@/app/lib/services/authService";
 import TurnstileWidget from "./TurnstileWidget";
 import { toast } from "sonner";
 import { isAxiosError } from "axios";

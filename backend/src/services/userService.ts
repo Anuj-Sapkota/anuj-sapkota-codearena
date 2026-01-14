@@ -51,7 +51,7 @@ export const updateUserService = async (
   const updatedUser = await prisma.user.update({
     where: { userId: userId },
     data: {
-      full_name: data.fullName ?? user.full_name,
+      full_name: data.full_name ?? user.full_name,
       bio: data.bio ?? user.bio,
       profile_pic_url: profilePicUrl,
     },
