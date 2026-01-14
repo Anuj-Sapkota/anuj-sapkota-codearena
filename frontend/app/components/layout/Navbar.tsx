@@ -4,8 +4,8 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSelector, useDispatch } from "react-redux";
-import { RootState } from "../../lib/store/store";
-import { setLogout as logoutAction } from "../../lib/store/features/authSlice";
+import { AppDispatch, RootState } from "../../lib/store/store";
+import { setLogout } from "../../lib/store/features/authSlice";
 import Image from "next/image";
 import Logo from "@/public/logo.png";
 import { FiSearch, FiBell, FiUser, FiLogOut, FiSettings } from "react-icons/fi";
@@ -13,15 +13,15 @@ import { FiSearch, FiBell, FiUser, FiLogOut, FiSettings } from "react-icons/fi";
 import Modal from "@/app/components/ui/Modal";
 import LoginForm from "@/app/components/auth/LoginForm";
 import RegisterForm from "@/app/components/auth/RegisterForm";
+import { logoutThunk } from "@/app/lib/store/features/authActions";
 
 export default function Navbar() {
   const { isAuthenticated, user } = useSelector(
     (state: RootState) => state.auth
   );
   //---------------------Hooks-----------------------
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const pathname = usePathname();
-  const router = useRouter();
 
   const [showProfileOptions, setShowProfileOptions] = useState(false);
   const [activeModal, setActiveModal] = useState<"login" | "register" | null>(
@@ -159,7 +159,7 @@ export default function Navbar() {
 
                   <div className="mx-4 mt-3 pt-3 border-t border-gray-100">
                     <button
-                      onClick={() => dispatch(logoutAction())} //logout
+                      onClick={() => dispatch(logoutThunk())} //logout
                       className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl text-red-500 hover:bg-red-50 transition-all text-sm font-black"
                     >
                       <FiLogOut size={18} /> LOGOUT

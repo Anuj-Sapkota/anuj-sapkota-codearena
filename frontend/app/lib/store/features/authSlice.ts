@@ -3,6 +3,7 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import {
   getMeThunk,
   loginThunk,
+  logoutThunk,
   registerThunk,
   updateThunk,
 } from "./authActions";
@@ -32,11 +33,6 @@ export const authSlice = createSlice({
       state.isLoading = false;
     },
     // manual user state update
-    updateUser: (state, action: PayloadAction<Partial<UserProfile>>) => {
-      if (state.user) {
-        state.user = { ...state.user, ...action.payload };
-      }
-    },
   },
   extraReducers: (builder) => {
     builder
@@ -94,14 +90,24 @@ export const authSlice = createSlice({
       })
       .addCase(getMeThunk.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload.user;
         state.isAuthenticated = true;
-        if (action.payload.token) {
-          state.token = action.payload.token;
-        }
+        state.user = action.payload.user;
+        console.log("getme: ", action.payload);
+      })
+      // inside extraReducers
+      .addCase(logoutThunk.fulfilled, (state) => {
+        state.user = null;
+        state.token = null;
+        state.isAuthenticated = false;
+      })
+      // if the backend logout fails
+      .addCase(logoutThunk.rejected, (state) => {
+        state.user = null;
+        state.token = null;
+        state.isAuthenticated = false;
       });
   },
 });
 
-export const { clearError, setLogout, updateUser } = authSlice.actions;
+export const { clearError, setLogout } = authSlice.actions;
 export default authSlice.reducer;

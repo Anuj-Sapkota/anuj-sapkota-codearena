@@ -54,3 +54,18 @@ export const getMeThunk = createAsyncThunk(
     }
   }
 );
+
+export const logoutThunk = createAsyncThunk(
+  "auth/logout",
+  async (_, { rejectWithValue }) => {
+    try {
+      // This MUST hit your logoutUser controller on the backend
+      // Ensure your axios instance has { withCredentials: true }
+      const response = await authService.logout();
+      return response;
+    } catch (error) {
+      if (error instanceof Error) return rejectWithValue(error.message);
+      return rejectWithValue("Logout failed");
+    }
+  }
+);

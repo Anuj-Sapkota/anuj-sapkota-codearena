@@ -90,8 +90,18 @@ const refreshToken = async (req: Request, res: Response) => {
 
 const logoutUser = (req: Request, res: Response) => {
   try {
-    res.clearCookie("accessToken");
-    res.clearCookie("refreshToken");
+    const options = {
+      httpOnly: config.cookies.httpOnly,
+      sameSite: config.cookies.sameSite,
+      secure: config.cookies.secure,
+      path: "/",
+      expires: new Date(0), // Jan 1, 1970
+      maxAge: 0,
+    };
+
+    res.cookie("accessToken", "", options);
+    res.cookie("refreshToken", "", options);
+
     res.status(200).json({ message: "Logged out successfully" });
   } catch (err) {
     _handleError(res, err);
