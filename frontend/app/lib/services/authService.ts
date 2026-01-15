@@ -1,6 +1,7 @@
 import api from "@/app/lib/api";
 import {
   AuthUser,
+  ChangePasswordCredentials,
   LoginCredentials,
   RegisterCredentials,
 } from "@/app/types/auth";
@@ -62,6 +63,13 @@ export const authService = {
       { password },
       { withCredentials: true }
     );
+    return response.data;
+  },
+
+  changePasswordApi: async (passwords: ChangePasswordCredentials) => {
+    const response = await api.post("/auth/change-password", passwords, {
+      withCredentials: true,
+    });
     return response.data;
   },
 };

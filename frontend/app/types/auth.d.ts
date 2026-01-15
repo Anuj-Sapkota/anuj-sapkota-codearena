@@ -61,3 +61,8 @@ export interface SetPasswordFormValues {
   password: string;
   confirmPassword: string;
 }
+
+export interface ChangePasswordCredentials {
+  oldPassword: string;
+  newPassword: string;
+}

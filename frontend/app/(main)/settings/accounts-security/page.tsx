@@ -3,7 +3,10 @@ import { useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useForm } from "react-hook-form";
 import { RootState, AppDispatch } from "@/app/lib/store/store";
-import { setInitialPasswordThunk, logoutThunk } from "@/app/lib/store/features/authActions";
+import {
+  setInitialPasswordThunk,
+  logoutThunk,
+} from "@/app/lib/store/features/authActions";
 import { updateSocialLinks } from "@/app/lib/store/features/authSlice";
 import { authService } from "@/app/lib/services/authService";
 import { toast } from "sonner";
@@ -16,8 +19,13 @@ import { AuthProvider, SetPasswordFormValues } from "@/app/types/auth";
 import config from "@/app/config";
 
 // Atomic & Base Components
-import { FormLabel, FormInput, FormButton } from "@/app/components/ui/FormElements";
+import {
+  FormLabel,
+  FormInput,
+  FormButton,
+} from "@/app/components/ui/FormElements";
 import { BaseModal } from "@/app/components/ui/BaseModal";
+import { ChangePasswordModal } from "@/app/components/settings/modals/ChangePasswordModal";
 
 export default function SecuritySettings() {
   const { user } = useSelector((state: RootState) => state.auth);
@@ -29,7 +37,7 @@ export default function SecuritySettings() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
+  const [isChangeModalOpen, setIsChangeModalOpen] = useState(false);
   // Forms
   const setPasswordForm = useForm<SetPasswordFormValues>({
     defaultValues: { password: "", confirmPassword: "" },
@@ -50,7 +58,9 @@ export default function SecuritySettings() {
       setIsSetPasswordModalOpen(false);
       setPasswordForm.reset();
     } catch (err) {
-      toast.error(isAxiosError(err) ? err.response?.data?.error : "Failed to set password");
+      toast.error(
+        isAxiosError(err) ? err.response?.data?.error : "Failed to set password"
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -64,7 +74,9 @@ export default function SecuritySettings() {
       await dispatch(logoutThunk());
       window.location.href = "/login";
     } catch (err) {
-      toast.error(isAxiosError(err) ? err.response?.data?.error : "Incorrect password");
+      toast.error(
+        isAxiosError(err) ? err.response?.data?.error : "Incorrect password"
+      );
     } finally {
       setIsDeleting(false);
     }
@@ -76,8 +88,13 @@ export default function SecuritySettings() {
   };
 
   const handleUnlink = async (provider: AuthProvider) => {
-    if (!user?.has_password && !(provider === "google" ? user?.github_id : user?.google_id)) {
-      return toast.error("Please set a password first to avoid getting locked out.");
+    if (
+      !user?.has_password &&
+      !(provider === "google" ? user?.github_id : user?.google_id)
+    ) {
+      return toast.error(
+        "Please set a password first to avoid getting locked out."
+      );
     }
     if (confirm(`Are you sure you want to disconnect ${provider}?`)) {
       try {
@@ -93,29 +110,60 @@ export default function SecuritySettings() {
     }
   };
 
-  const socialProviders: { id: AuthProvider; name: string; icon: StaticImageData; val: string | null | undefined }[] = [
-    { id: "google", name: "Google", icon: GoogleLogoIcon, val: user?.google_id },
-    { id: "github", name: "GitHub", icon: GitHubLogoIcon, val: user?.github_id },
+  const socialProviders: {
+    id: AuthProvider;
+    name: string;
+    icon: StaticImageData;
+    val: string | null | undefined;
+  }[] = [
+    {
+      id: "google",
+      name: "Google",
+      icon: GoogleLogoIcon,
+      val: user?.google_id,
+    },
+    {
+      id: "github",
+      name: "GitHub",
+      icon: GitHubLogoIcon,
+      val: user?.github_id,
+    },
   ];
 
   return (
     <div className="max-w-2xl mx-auto p-6 space-y-10">
       <header>
         <h1 className="text-2xl font-bold">Account & Security</h1>
-        <p className="text-gray-500">Manage your credentials and connected apps.</p>
+        <p className="text-gray-500">
+          Manage your credentials and connected apps.
+        </p>
       </header>
 
       {/* 1. Password Management */}
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold border-b pb-2 text-gray-800">Password</h2>
+        <h2 className="text-lg font-semibold border-b pb-2 text-gray-800">
+          Password
+        </h2>
         <div className="flex items-center justify-between p-4 bg-white border rounded-xl shadow-sm">
           <div>
             <p className="font-semibold text-sm">Login Password</p>
             <p className="text-xs text-gray-500">
-              {user?.has_password ? "Secure password is set" : "No password set (Social Login only)"}
+              {user?.has_password
+                ? "Secure password is set"
+                : "No password set (Social Login only)"}
             </p>
           </div>
-          {!user?.has_password && (
+
+          {user?.has_password ? (
+            /* State: User HAS a password -> Show Change option */
+            <button
+              onClick={() => setIsChangeModalOpen(true)}
+              className="text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg text-sm font-semibold transition-all active:scale-95 border border-blue-100"
+            >
+              Change Password
+            </button>
+          ) : (
+            /* State: User NO password -> Show Set option */
             <button
               onClick={() => setIsSetPasswordModalOpen(true)}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-all active:scale-95"
@@ -128,28 +176,49 @@ export default function SecuritySettings() {
 
       {/* 2. Social Connections */}
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold border-b pb-2 text-gray-800">Connected Accounts</h2>
+        <h2 className="text-lg font-semibold border-b pb-2 text-gray-800">
+          Connected Accounts
+        </h2>
         {socialProviders.map((item) => (
-          <div key={item.id} className="flex items-center justify-between p-4 bg-white border border-gray-100 shadow-sm rounded-xl">
+          <div
+            key={item.id}
+            className="flex items-center justify-between p-4 bg-white border border-gray-100 shadow-sm rounded-xl"
+          >
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 border">
                 <Image src={item.icon} width={20} height={20} alt={item.name} />
               </div>
               <div className="flex flex-col">
-                <span className="font-semibold text-sm">{item.name} Account</span>
-                <span className={`text-xs ${item.val ? "text-green-600" : "text-gray-400"}`}>
+                <span className="font-semibold text-sm">
+                  {item.name} Account
+                </span>
+                <span
+                  className={`text-xs ${
+                    item.val ? "text-green-600" : "text-gray-400"
+                  }`}
+                >
                   {item.val ? "Connected" : "Not linked"}
                 </span>
               </div>
             </div>
             <button
               disabled={busyProvider === item.id}
-              onClick={() => (item.val ? handleUnlink(item.id) : handleConnect(item.id))}
+              onClick={() =>
+                item.val ? handleUnlink(item.id) : handleConnect(item.id)
+              }
               className={`min-w-[110px] px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                item.val ? "text-red-500 hover:bg-red-50" : "bg-gray-900 text-white hover:bg-gray-800"
+                item.val
+                  ? "text-red-500 hover:bg-red-50"
+                  : "bg-gray-900 text-white hover:bg-gray-800"
               }`}
             >
-              {busyProvider === item.id ? <FaSpinner className="animate-spin mx-auto" /> : item.val ? "Disconnect" : "Connect"}
+              {busyProvider === item.id ? (
+                <FaSpinner className="animate-spin mx-auto" />
+              ) : item.val ? (
+                "Disconnect"
+              ) : (
+                "Connect"
+              )}
             </button>
           </div>
         ))}
@@ -158,7 +227,9 @@ export default function SecuritySettings() {
       {/* 3. Danger Zone */}
       <section className="p-6 border border-red-100 bg-red-50/50 rounded-2xl space-y-4">
         <h2 className="text-lg font-bold text-red-700">Danger Zone</h2>
-        <p className="text-sm text-red-600/80">Deleting your account is permanent and cannot be undone.</p>
+        <p className="text-sm text-red-600/80">
+          Deleting your account is permanent and cannot be undone.
+        </p>
         <button
           onClick={() => setIsDeleteModalOpen(true)}
           className="flex items-center gap-2 bg-red-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-red-700 transition-all active:scale-95"
@@ -172,10 +243,16 @@ export default function SecuritySettings() {
       {/* Modal: Set Password */}
       <BaseModal
         isOpen={isSetPasswordModalOpen}
-        onClose={() => { setIsSetPasswordModalOpen(false); setPasswordForm.reset(); }}
+        onClose={() => {
+          setIsSetPasswordModalOpen(false);
+          setPasswordForm.reset();
+        }}
         title="Set Account Password"
       >
-        <form onSubmit={setPasswordForm.handleSubmit(onSetPassword)} className="space-y-6">
+        <form
+          onSubmit={setPasswordForm.handleSubmit(onSetPassword)}
+          className="space-y-6"
+        >
           <div className="space-y-1">
             <FormLabel>New Password</FormLabel>
             <FormInput
@@ -196,7 +273,8 @@ export default function SecuritySettings() {
               error={setPasswordForm.formState.errors.confirmPassword?.message}
               register={setPasswordForm.register("confirmPassword", {
                 required: "Please confirm your password",
-                validate: (val) => val === passwordValue || "Passwords do not match",
+                validate: (val) =>
+                  val === passwordValue || "Passwords do not match",
               })}
             />
           </div>
@@ -209,26 +287,46 @@ export default function SecuritySettings() {
       {/* Modal: Delete Account */}
       <BaseModal
         isOpen={isDeleteModalOpen}
-        onClose={() => { setIsDeleteModalOpen(false); deleteAccountForm.reset(); }}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          deleteAccountForm.reset();
+        }}
         title="Confirm Deletion"
         variant="danger"
       >
-        <form onSubmit={deleteAccountForm.handleSubmit(onConfirmDelete)} className="space-y-6">
-          <p className="text-sm text-gray-600">Please enter your password to permanently delete your account.</p>
+        <form
+          onSubmit={deleteAccountForm.handleSubmit(onConfirmDelete)}
+          className="space-y-6"
+        >
+          <p className="text-sm text-gray-600">
+            Please enter your password to permanently delete your account.
+          </p>
           <div className="space-y-1">
             <FormLabel>Your Password</FormLabel>
             <FormInput
               type="password"
               placeholder="Verify password"
               error={deleteAccountForm.formState.errors.password?.message}
-              register={deleteAccountForm.register("password", { required: "Password is required" })}
+              register={deleteAccountForm.register("password", {
+                required: "Password is required",
+              })}
             />
           </div>
-          <FormButton type="submit" isLoading={isDeleting} className="w-full bg-red-600 hover:bg-red-700">
+          <FormButton
+            type="submit"
+            isLoading={isDeleting}
+            className="w-full bg-red-600 hover:bg-red-700"
+          >
             Confirm Permanent Deletion
           </FormButton>
         </form>
       </BaseModal>
+
+      {/* Modal: Change Password */}
+      <ChangePasswordModal
+        isOpen={isChangeModalOpen}
+        onClose={() => setIsChangeModalOpen(false)}
+      />
     </div>
   );
 }

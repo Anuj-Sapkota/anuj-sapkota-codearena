@@ -1,8 +1,13 @@
-import { LoginCredentials, RegisterCredentials } from "@/app/types/auth";
+import {
+  ChangePasswordCredentials,
+  LoginCredentials,
+  RegisterCredentials,
+} from "@/app/types/auth";
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { authService } from "../../services/authService";
 import { userService } from "../../services/userService";
-import { BasicSettingsFormValue } from "@/app/types/settings";
+import { isAxiosError } from "axios";
+
 export const registerThunk = createAsyncThunk(
   "auth/register",
   async (data: RegisterCredentials, { rejectWithValue }) => {
@@ -82,8 +87,25 @@ export const setInitialPasswordThunk = createAsyncThunk(
       return response.data; // Should return { success: true }
     } catch (err) {
       if (err instanceof Error) return rejectWithValue(err.message);
-      console.log(err)
+      console.log(err);
       return rejectWithValue("Failed to set password");
+    }
+  }
+);
+
+export const changePasswordThunk = createAsyncThunk(
+  "auth/changePassword",
+  async (data: ChangePasswordCredentials, { rejectWithValue }) => {
+    try {
+      const response = await authService.changePasswordApi(data);
+      return response;
+    } catch (err) {
+      if (isAxiosError(err)) {
+        return rejectWithValue(
+          err.response?.data?.error || "Failed to change password"
+        );
+      }
+      return rejectWithValue("An unexpected error occurred");
     }
   }
 );
