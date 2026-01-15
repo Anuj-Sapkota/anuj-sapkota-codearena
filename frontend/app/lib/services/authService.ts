@@ -48,8 +48,20 @@ export const authService = {
     return response.data;
   },
 
-  deleteAccountApi: async () => {
-    const response = await api.delete("/auth/delete-account");
+  deleteAccountApi: async (password: string) => {
+    const response = await api.delete("/auth/delete-account", {
+      data: { password },
+      withCredentials: true,
+    });
+    return response.data;
+  },
+  setInitialPasswordApi: async (password: string) => {
+    // We use withCredentials to send the accessToken cookie
+    const response = await api.post(
+      `/auth/set-initial-password`,
+      { password },
+      { withCredentials: true }
+    );
     return response.data;
   },
 };

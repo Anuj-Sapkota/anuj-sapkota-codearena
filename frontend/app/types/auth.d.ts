@@ -6,6 +6,7 @@ export interface UserProfile {
   email: string;
   role: string;
   total_points: number;
+  has_password: boolean;
   profile_pic_url?: string | null;
   google_id?: string | null;
   github_id?: string | null;
@@ -52,4 +53,11 @@ export interface AuthState {
 export interface AuthModalProps {
   onSuccess: () => void;
   onSwitch: () => void;
+}
+
+export type AuthProvider = "google" | "github";
+
+export interface SetPasswordFormValues {
+  password: string;
+  confirmPassword: string;
 }

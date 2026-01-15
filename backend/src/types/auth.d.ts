@@ -23,6 +23,7 @@ export interface AuthUser {
     bio?: string | null;
     role: string;
     total_points: number;
+    has_password: boolean;
     profile_pic_url?: string | null;
     google_id?: string | null;
     github_id?: string | null;

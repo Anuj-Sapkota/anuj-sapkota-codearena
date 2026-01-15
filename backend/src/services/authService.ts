@@ -22,6 +22,7 @@ const formatAuthResponse = (user: any): { user: AuthUser["user"] } => {
       profile_pic_url: user?.profile_pic_url,
       email: user.email,
       role: user.role,
+      has_password: user.has_password,
       total_points: user.total_points,
       google_id: user.google_id,
       github_id: user.github_id,
@@ -182,6 +183,22 @@ const unlinkProvider = async (
   userId: number,
   provider: "google" | "github"
 ) => {
+  const user = await prisma.user.findUnique({ where: { userId } });
+
+  if (!user) throw new ServiceError("User not found", 404);
+
+  // Check if they are removing their last way to log in
+  const hasPassword = !!user.password_hash;
+  const hasOtherOAuth =
+    provider === "google" ? !!user.github_id : !!user.google_id;
+
+  if (!hasPassword && !hasOtherOAuth) {
+    throw new ServiceError(
+      "Cannot unlink your only login method. Set a password first.",
+      400
+    );
+  }
+
   return await prisma.user.update({
     where: { userId },
     data: {
@@ -189,14 +206,43 @@ const unlinkProvider = async (
     },
   });
 };
-
 // --- DELETE USER ---
-const deleteUserAccount = async (userId: number) => {
-  // Prisma will handle deleting the user row.
-  // Note: If you have other tables (like 'Posts'), ensure you use
-  // 'onDelete: Cascade' in your schema or delete them here first.
+const deleteUserAccount = async (userId: number, password?: string) => {
+  // 1. Find user
+  const user = await prisma.user.findUnique({
+    where: { userId },
+  });
+
+  if (!user) {
+    throw new ServiceError("User not found", 404);
+  }
+
+  // 2. Security Check: If user has a password set, verify it
+  if (user.password_hash) {
+    if (!password) {
+      throw new ServiceError("Password is required to delete account", 400);
+    }
+
+    const isMatch = await verifyPassword(password, user.password_hash);
+
+    if (!isMatch) {
+      throw new ServiceError("Incorrect password. Deletion aborted.", 401);
+    }
+  }
+
+  // 3. Perform Deletion
   return await prisma.user.delete({
     where: { userId },
+  });
+};
+
+const setInitialPassword = async (userId: number, newPassword: string) => {
+  return await prisma.user.update({
+    where: { userId },
+    data: {
+      password_hash: await hashPassword(newPassword),
+      has_password: true,
+    },
   });
 };
 
@@ -265,4 +311,5 @@ export default {
   verifyAndResetPassword,
   unlinkProvider,
   deleteUserAccount,
+  setInitialPassword,
 };

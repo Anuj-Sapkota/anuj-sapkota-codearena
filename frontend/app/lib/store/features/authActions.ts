@@ -70,3 +70,20 @@ export const logoutThunk = createAsyncThunk(
     }
   }
 );
+
+// app/lib/store/features/authActions.ts
+
+export const setInitialPasswordThunk = createAsyncThunk(
+  "auth/setInitialPassword",
+  async (password: string, { rejectWithValue }) => {
+    try {
+      // Assuming you added this to your authService
+      const response = await authService.setInitialPasswordApi(password);
+      return response.data; // Should return { success: true }
+    } catch (err) {
+      if (err instanceof Error) return rejectWithValue(err.message);
+      console.log(err)
+      return rejectWithValue("Failed to set password");
+    }
+  }
+);

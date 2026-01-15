@@ -53,6 +53,13 @@ router.get(
 //unlink
 router.post("/unlink", authenticate, authController.unlinkOAuth);
 
+//set-inti
+router.post(
+  "/set-initial-password", 
+  authenticate, 
+  authController.setInitialPassword
+);
+
 //delete the account
 router.delete("/delete-account", authenticate, authController.deleteAccount);
 

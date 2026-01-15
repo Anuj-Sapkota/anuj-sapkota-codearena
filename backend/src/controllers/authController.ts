@@ -190,27 +190,47 @@ const unlinkOAuth = async (req: Request, res: Response) => {
   }
 };
 
+const setInitialPassword = async (req: Request, res: Response) => {
+  try {
+    const { password } = req.body;
+    const userId = (req.user as any).userId || (req.user as any).sub;
+
+    if (!password || password.length < 8) {
+      throw new ServiceError(
+        "Password must be at least 8 characters long",
+        400
+      );
+    }
+
+    await authService.setInitialPassword(Number(userId), password);
+
+    res.status(200).json({
+      success: true,
+      message:
+        "Password set successfully. You can now disconnect social accounts.",
+    });
+  } catch (err) {
+    _handleError(res, err);
+  }
+};
 // --- CONTROLLER: DELETE ACCOUNT ---
 const deleteAccount = async (req: Request, res: Response) => {
   try {
-    const userId = (req.user as any).userId;
+    const { password } = req.body;
+    console.log("password:", password);
+    const userId = (req.user as any).sub; // Or .sub depending on your JWT payload
 
-    await authService.deleteUserAccount(userId);
+    await authService.deleteUserAccount(Number(userId), password);
 
-    // Clear the authentication cookies
-    const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict" as const,
-      expires: new Date(0), // Sets expiration to the past
-      path: "/",
-    };
+    // Clear the auth cookie if you are using cookies
+    res.clearCookie("accessToken");
 
-    res.cookie("accessToken", "", cookieOptions);
-    res.cookie("refreshToken", "", cookieOptions);
-
-    res.status(200).json({ message: "Account deleted permanently" });
+    res.status(200).json({
+      success: true,
+      message: "Account and all associated data deleted successfully.",
+    });
   } catch (err) {
+    console.log(err);
     _handleError(res, err);
   }
 };
@@ -225,4 +245,5 @@ export default {
   forgotPassword,
   unlinkOAuth,
   deleteAccount,
+  setInitialPassword,
 };
