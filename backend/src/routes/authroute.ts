@@ -63,4 +63,6 @@ router.post(
 //delete the account
 router.delete("/delete-account", authenticate, authController.deleteAccount);
 
+//change password
+router.post("/change-password", authenticate, authController.changePassword);
 export default router;

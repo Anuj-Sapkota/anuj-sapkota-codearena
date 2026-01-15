@@ -302,6 +302,38 @@ const verifyAndResetPassword = async (
   return true;
 };
 
+const changeUserPassword = async (
+  userId: number,
+  oldPass: string,
+  newPass: string
+) => {
+  const user = await prisma.user.findUnique({
+    where: { userId },
+  });
+
+  if (!user || !user.password_hash) {
+    throw new ServiceError("User not found or no password set to change.", 404);
+  }
+
+  // 2. Verify if the "Current Password" provided matches the DB
+  const isMatch = await verifyPassword(oldPass, user.password_hash);
+
+  if (!isMatch) {
+    throw new ServiceError(
+      "The current password you entered is incorrect.",
+      401
+    );
+  }
+
+  return await prisma.user.update({
+    where: { userId },
+    data: {
+      password_hash: await hashPassword(newPass),
+      has_password: true,
+    },
+  });
+};
+
 export default {
   register,
   login,
@@ -312,4 +344,5 @@ export default {
   unlinkProvider,
   deleteUserAccount,
   setInitialPassword,
+  changeUserPassword,
 };

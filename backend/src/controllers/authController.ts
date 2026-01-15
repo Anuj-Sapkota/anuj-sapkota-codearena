@@ -234,6 +234,34 @@ const deleteAccount = async (req: Request, res: Response) => {
     _handleError(res, err);
   }
 };
+
+//---------- CHANGE PASSWORD -------
+
+export const changePassword = async (req: Request, res: Response) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    const userId = (req as any).user.sub; // Ensure this matches your JWT payload key
+
+    if (!oldPassword || !newPassword) {
+      return res
+        .status(400)
+        .json({ error: "Both current and new passwords are required." });
+    }
+
+    await authService.changeUserPassword(
+      Number(userId),
+      oldPassword,
+      newPassword
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Password updated successfully.",
+    });
+  } catch (err) {
+    _handleError(res, err);
+  }
+};
 export default {
   registerUser,
   loginUser,
@@ -246,4 +274,5 @@ export default {
   unlinkOAuth,
   deleteAccount,
   setInitialPassword,
+  changePassword,
 };
