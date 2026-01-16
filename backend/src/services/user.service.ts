@@ -1,6 +1,6 @@
 import { prisma } from "../lib/prisma.js";
-import uploadFile from "../lib/cloudinary.js";
-import { v2 as cloudinary } from "cloudinary";
+import uploadFile from "./cloudinary.service.js";
+import cloudinary from "../lib/cloudinary.js";
 const forbiddenFields = ["password", "role", "createdBy", "email"];
 
 export const updateUserService = async (
