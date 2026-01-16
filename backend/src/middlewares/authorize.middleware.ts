@@ -1,6 +1,7 @@
-import { ServiceError } from "../errors/ServiceError.js";
+import { ServiceError } from "../errors/service.error.js";
 import type { AuthRequest } from "../types/auth.js";
 import type { NextFunction, Response } from "express";
+
 export const authorize = (...allowedRoles: string[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     const user = req.user;

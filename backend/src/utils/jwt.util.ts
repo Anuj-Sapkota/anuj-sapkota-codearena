@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import config from "../configs/config.js";
-import { ServiceError } from "../errors/ServiceError.js";
+import { ServiceError } from "../errors/service.error.js";
 import type { AccessTokenPayload } from "../types/auth.js";
 
 const { sign, verify } = jwt;

@@ -1,7 +1,7 @@
 import express from "express";
 import multer from "multer";
-import { updateUser } from "../controllers/userController.js";
-import { authenticate } from "../middlewares/authMiddleware.js"; // Your middleware
+import { updateUser } from "../controllers/user.controller.js";
+import { authenticate } from "../middlewares/auth.middleware.js"; // Your middleware
 
 const router = express.Router();
 

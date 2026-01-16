@@ -1,9 +1,8 @@
 import express from "express";
-import authController from "../controllers/authController.js";
-import { authenticate } from "../middlewares/authMiddleware.js";
+import authController from "../controllers/auth.controller.js";
+import { authenticate } from "../middlewares/auth.middleware.js";
 import passport from "passport";
-import authService from "../services/authService.js";
-import { verifyTurnstile } from "../middlewares/verifyTurnstile.js";
+import { verifyTurnstile } from "../middlewares/turnstile.middleware.js";
 
 const router = express.Router();
 //-----------------------Standard Routes -------------------------------

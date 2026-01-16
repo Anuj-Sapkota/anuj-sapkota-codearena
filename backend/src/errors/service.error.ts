@@ -1,4 +1,3 @@
-
 //new class ServiceError which includes statusCode.
 export class ServiceError extends Error {
   statusCode: number;

@@ -4,7 +4,7 @@ import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Strategy as GitHubStrategy } from "passport-github2";
 import type { VerifyCallback } from "passport-oauth2";
 import config from "../configs/config.js";
-import authService from "../services/authService.js";
+import authService from "../services/auth.service.js";
 
 // Google
 passport.use(

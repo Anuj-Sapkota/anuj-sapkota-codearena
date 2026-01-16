@@ -1,13 +1,13 @@
 import { prisma } from "../lib/prisma.js";
 import crypto from "crypto";
-import { generateUsername } from "../utils/username.js";
+import { generateUsername } from "../utils/username.util.js";
 import type { AuthUser, RegisterInput, LoginInput } from "../types/auth.js";
-import { hashPassword, verifyPassword } from "../utils/password.js";
-import { ServiceError } from "../errors/ServiceError.js";
+import { hashPassword, verifyPassword } from "../utils/password.util.js";
+import { ServiceError } from "../errors/service.error.js";
 import {
   MAX_PASSWORD_LENGTH,
   MIN_PASSWORD_LENGTH,
-} from "../constants/passwordLimit.js";
+} from "../constants/password.constants.js";
 
 /**
  * Helper to format the standard user response object for consistency

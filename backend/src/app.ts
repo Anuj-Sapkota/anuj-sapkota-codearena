@@ -2,11 +2,11 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 
-import "./utils/passport.js";
-import authRoute from "./routes/authroute.js";
-import userRoute from "./routes/userRoute.js";
+import "./utils/passport.strategy.js";
+import authRoute from "./routes/auth.routes.js";
+import userRoute from "./routes/user.routes.js";
 import config from "./configs/config.js";
-import { connectCloudinary } from "./configs/cloudinaryConfig.js";
+import { connectCloudinary } from "./configs/cloudinary.config.js";
 
 const app = express();
 connectCloudinary();

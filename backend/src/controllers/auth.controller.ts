@@ -1,14 +1,14 @@
-import type { Request, Response } from "express";
-import authService from "../services/authService.js";
+import type { NextFunction, Request, Response } from "express";
+import authService from "../services/auth.service.js";
 import type { AuthUser, LoginInput, RegisterInput } from "../types/auth.js";
-import { ServiceError } from "../errors/ServiceError.js";
+import { ServiceError } from "../errors/service.error.js";
 import config from "../configs/config.js";
 import {
   signAccessToken,
   signRefreshToken,
   verifyRefreshToken,
-} from "../utils/jwt.js";
-import { sendResetEmail } from "../services/mailService.js";
+} from "../utils/jwt.util.js";
+import { sendResetEmail } from "../services/mail.service.js";
 
 /**
  * PRIVATE HELPER to Standardize cookie setting across all auth methods
@@ -37,21 +37,12 @@ const _setAuthCookies = (
   });
 };
 
-/**
- * PRIVATE HELPER to Standardize the error response format
- */
-const _handleError = (res: Response, err: any) => {
-  if (err instanceof ServiceError) {
-    return res.status(err.statusCode).json({ error: err.message });
-  }
-  return res.status(500).json({ error: "Internal Server Error" });
-};
-
 // --- CONTROLLER METHODS ---
 
 const registerUser = async (
   req: Request<{}, {}, RegisterInput>,
-  res: Response
+  res: Response,
+  next: NextFunction
 ) => {
   try {
     const data = await authService.register(req.body);
@@ -62,11 +53,15 @@ const registerUser = async (
       user: data.user,
     });
   } catch (err) {
-    _handleError(res, err);
+    next(err);
   }
 };
 
-const loginUser = async (req: Request<{}, {}, LoginInput>, res: Response) => {
+const loginUser = async (
+  req: Request<{}, {}, LoginInput>,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const data = await authService.login(req.body);
     _setAuthCookies(res, data.user.userId, data.user.role);
@@ -75,11 +70,15 @@ const loginUser = async (req: Request<{}, {}, LoginInput>, res: Response) => {
       user: data.user,
     });
   } catch (err) {
-    _handleError(res, err);
+    next(err);
   }
 };
 
-const refreshToken = async (req: Request, res: Response) => {
+const refreshToken = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const token = req.cookies.refreshToken;
     if (!token) throw new ServiceError("No Refresh token found", 401);
@@ -94,11 +93,11 @@ const refreshToken = async (req: Request, res: Response) => {
       user: data.user,
     });
   } catch (err) {
-    _handleError(res, err);
+    next(err);
   }
 };
 
-const logoutUser = (req: Request, res: Response) => {
+const logoutUser = (req: Request, res: Response, next: NextFunction) => {
   try {
     const options = {
       httpOnly: config.cookies.httpOnly,
@@ -114,11 +113,11 @@ const logoutUser = (req: Request, res: Response) => {
 
     res.status(200).json({ message: "Logged out successfully" });
   } catch (err) {
-    _handleError(res, err);
+    next(err);
   }
 };
 
-const oauthSignIn = async (req: Request, res: Response) => {
+const oauthSignIn = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userData = req.user as AuthUser;
 
@@ -127,11 +126,11 @@ const oauthSignIn = async (req: Request, res: Response) => {
     const redirectUrl = `${config.frontendUrl}/settings/accounts-security?status=success`; //redirection after signing from OAuth
     res.redirect(redirectUrl);
   } catch (err) {
-    _handleError(res, err);
+    next(err);
   }
 };
 
-const getMe = async (req: Request, res: Response) => {
+const getMe = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = (req.user as any).sub;
     const result = await authService.getUserByUserID(Number(userId));
@@ -141,11 +140,15 @@ const getMe = async (req: Request, res: Response) => {
       user: result.user,
     });
   } catch (err) {
-    _handleError(res, err);
+    next(err);
   }
 };
 
-const forgotPassword = async (req: Request, res: Response) => {
+const forgotPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { email } = req.body;
     const result = await authService.generateResetToken(email);
@@ -160,11 +163,15 @@ const forgotPassword = async (req: Request, res: Response) => {
       message: "If an account exists, a reset link has been sent.",
     });
   } catch (err) {
-    _handleError(res, err);
+    next(err);
   }
 };
 
-const resetPassword = async (req: Request, res: Response) => {
+const resetPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { token } = req.params;
     const { password } = req.body;
@@ -172,12 +179,12 @@ const resetPassword = async (req: Request, res: Response) => {
     await authService.verifyAndResetPassword(String(token), password);
     res.status(200).json({ message: "Password reset successful" });
   } catch (err) {
-    _handleError(res, err);
+    next(err);
   }
 };
 
 // --- CONTROLLER: UNLINK ---
-const unlinkOAuth = async (req: Request, res: Response) => {
+const unlinkOAuth = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { provider } = req.body;
     const userId = (req.user as any).sub; // Extracted from JWT middleware
@@ -186,11 +193,15 @@ const unlinkOAuth = async (req: Request, res: Response) => {
     res.status(200).json({ message: `Unlinked ${provider} successfully` });
   } catch (err) {
     console.log(err);
-    _handleError(res, err);
+    next(err);
   }
 };
 
-const setInitialPassword = async (req: Request, res: Response) => {
+const setInitialPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { password } = req.body;
     const userId = (req.user as any).userId || (req.user as any).sub;
@@ -210,11 +221,15 @@ const setInitialPassword = async (req: Request, res: Response) => {
         "Password set successfully. You can now disconnect social accounts.",
     });
   } catch (err) {
-    _handleError(res, err);
+    next(err);
   }
 };
 // --- CONTROLLER: DELETE ACCOUNT ---
-const deleteAccount = async (req: Request, res: Response) => {
+const deleteAccount = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { password } = req.body;
     console.log("password:", password);
@@ -231,13 +246,17 @@ const deleteAccount = async (req: Request, res: Response) => {
     });
   } catch (err) {
     console.log(err);
-    _handleError(res, err);
+    next(err);
   }
 };
 
 //---------- CHANGE PASSWORD -------
 
-export const changePassword = async (req: Request, res: Response) => {
+export const changePassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { oldPassword, newPassword } = req.body;
     const userId = (req as any).user.sub; // Ensure this matches your JWT payload key
@@ -259,7 +278,7 @@ export const changePassword = async (req: Request, res: Response) => {
       message: "Password updated successfully.",
     });
   } catch (err) {
-    _handleError(res, err);
+    next(err);
   }
 };
 export default {

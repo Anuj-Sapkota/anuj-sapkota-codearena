@@ -1,8 +1,12 @@
-import type { Request, Response } from "express";
-import * as userService from "../services/userService.js";
-import { ServiceError } from "../errors/ServiceError.js";
+import type { NextFunction, Request, Response } from "express";
+import * as userService from "../services/user.service.js";
+import { ServiceError } from "../errors/service.error.js";
 
-export const updateUser = async (req: Request, res: Response) => {
+export const updateUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const user = (req as any).user;
     if (!user) {
@@ -16,8 +20,6 @@ export const updateUser = async (req: Request, res: Response) => {
 
     // 2. Validate that they are actual numbers (prevents /update/abc crashing the app)
     if (isNaN(targetUserId) || isNaN(currUserId)) {
-      console.log("DEBUG -> Params ID:", req.params.id);
-      console.log("DEBUG -> User Object:", (req as any).user.sub);
       return res.status(400).json({
         success: false,
         message: "Invalid User ID format. IDs must be numeric.",
@@ -38,17 +40,7 @@ export const updateUser = async (req: Request, res: Response) => {
       message: "Profile updated successfully",
       data: updatedUser,
     });
-  } catch (error: any) {
-    // 4. Smart Error Handling
-    // If the error has a status code (like the 403/404 we defined in the service), use it
-    const statusCode = error.statusCode || 500;
-    const message = error.message || "Internal Server Error";
-
-    console.error(`[UpdateUser Error]: ${message}`);
-
-    return res.status(statusCode).json({
-      success: false,
-      message: message,
-    });
+  } catch (err) {
+    next(err);
   }
 };

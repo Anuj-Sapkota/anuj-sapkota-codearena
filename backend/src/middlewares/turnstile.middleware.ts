@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
-import { ServiceError } from "../errors/ServiceError.js";
+import { ServiceError } from "../errors/service.error.js";
 import axios from "axios";
 import config from "../configs/config.js";
 
