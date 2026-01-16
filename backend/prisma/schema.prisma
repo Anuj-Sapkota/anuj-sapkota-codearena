@@ -8,20 +8,21 @@ datasource db {
 }
 
 model User {
-  userId          Int       @id @default(autoincrement())
-  full_name       String
-  username        String    @unique
-  email           String    @unique
-  password_hash   String?
-  resetToken      String?   @unique
-  resetTokenExp   DateTime?
-  auth_provider   String?
-  github_id       String?
-  google_id       String?
-  profile_pic_url String?
-  bio             String?
-  role            String    @default("user")
-  total_points    Int       @default(0)
-  created_at      DateTime  @default(now())
-  updated_at      DateTime  @updatedAt
+  userId           Int       @id @default(autoincrement())
+  full_name        String
+  username         String    @unique
+  email            String    @unique
+  password_hash    String?
+  has_password     Boolean   @default(false)
+  auth_provider    String?
+  github_id        String?
+  google_id        String?
+  profile_pic_url  String?
+  resetToken       String?   @unique
+  resetTokenExpiry DateTime?
+  bio              String?
+  role             String    @default("user")
+  total_points     Int       @default(0)
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
 }

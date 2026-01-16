@@ -1,9 +1,11 @@
 import api from "@/app/lib/api";
-import { 
-  AuthUser, 
-  LoginCredentials, 
-  RegisterCredentials 
+import {
+  AuthUser,
+  ChangePasswordCredentials,
+  LoginCredentials,
+  RegisterCredentials,
 } from "@/app/types/auth";
+import { GetMeResponse } from "@/app/types/userData";
 
 export const authService = {
   // --- OAuth Links ---
@@ -25,7 +27,7 @@ export const authService = {
     await api.post("/auth/logout");
   },
 
-  getMe: async (): Promise<AuthUser> => {
+  getMe: async (): Promise<GetMeResponse> => {
     const response = await api.get("/auth/me");
     return response.data;
   },
@@ -37,7 +39,42 @@ export const authService = {
   },
 
   resetPassword: async (token: string, password: string) => {
-    const response = await api.post(`/auth/reset-password/${token}`, { password });
+    const response = await api.post(`/auth/reset-password/${token}`, {
+      password,
+    });
     return response.data;
-  }
+  },
+
+  unlinkOAuthProvider: async (provider: "google" | "github") => {
+    const response = await api.post(
+      "/auth/unlink",
+      { provider },
+      { withCredentials: true }
+    );
+    return response.data;
+  },
+
+  deleteAccountApi: async (password: string) => {
+    const response = await api.delete("/auth/delete-account", {
+      data: { password },
+      withCredentials: true,
+    });
+    return response.data;
+  },
+  setInitialPasswordApi: async (password: string) => {
+    // We use withCredentials to send the accessToken cookie
+    const response = await api.post(
+      `/auth/set-initial-password`,
+      { password },
+      { withCredentials: true }
+    );
+    return response.data;
+  },
+
+  changePasswordApi: async (passwords: ChangePasswordCredentials) => {
+    const response = await api.post("/auth/change-password", passwords, {
+      withCredentials: true,
+    });
+    return response.data;
+  },
 };

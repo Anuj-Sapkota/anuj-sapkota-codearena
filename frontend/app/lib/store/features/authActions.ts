@@ -1,16 +1,20 @@
-import { LoginCredentials, RegisterCredentials } from "@/app/types/auth";
+import {
+  ChangePasswordCredentials,
+  LoginCredentials,
+  RegisterCredentials,
+} from "@/app/types/auth";
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { authService } from "../../services/authService";
 import { userService } from "../../services/userService";
-import { BasicSettingsFormValue } from "@/app/types/settings";
+import { handleAxiosError } from "@/app/utils/handleAxiosError";
+
 export const registerThunk = createAsyncThunk(
   "auth/register",
   async (data: RegisterCredentials, { rejectWithValue }) => {
     try {
       return await authService.signup(data);
     } catch (error: unknown) {
-      if (error instanceof Error) return rejectWithValue(error.message);
-      return rejectWithValue("Unknown Error");
+      return rejectWithValue(handleAxiosError(error, "Registration failed"));
     }
   }
 );
@@ -19,11 +23,9 @@ export const loginThunk = createAsyncThunk(
   "auth/login",
   async (data: LoginCredentials, { rejectWithValue }) => {
     try {
-      console.log("This us login data", await authService.login(data));
       return await authService.login(data);
-    } catch (error) {
-      if (error instanceof Error) return rejectWithValue(error.message);
-      return rejectWithValue("Unknown Error");
+    } catch (error: unknown) {
+      return rejectWithValue(handleAxiosError(error, "Login failed"));
     }
   }
 );
@@ -36,9 +38,10 @@ export const updateThunk = createAsyncThunk(
   ) => {
     try {
       return await userService.updateProfile(userId, data);
-    } catch (error) {
-      if (error instanceof Error) return rejectWithValue(error.message);
-      return rejectWithValue("Unknown Error");
+    } catch (error: unknown) {
+      return rejectWithValue(
+        handleAxiosError(error, "Failed to update profile")
+      );
     }
   }
 );
@@ -48,9 +51,8 @@ export const getMeThunk = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       return await authService.getMe();
-    } catch (error) {
-      if (error instanceof Error) return rejectWithValue(error.message);
-      return rejectWithValue("Session expired");
+    } catch (error: unknown) {
+      return rejectWithValue(handleAxiosError(error, "Session expired"));
     }
   }
 );
@@ -59,13 +61,34 @@ export const logoutThunk = createAsyncThunk(
   "auth/logout",
   async (_, { rejectWithValue }) => {
     try {
-      // This MUST hit your logoutUser controller on the backend
-      // Ensure your axios instance has { withCredentials: true }
-      const response = await authService.logout();
-      return response;
-    } catch (error) {
-      if (error instanceof Error) return rejectWithValue(error.message);
-      return rejectWithValue("Logout failed");
+      return await authService.logout();
+    } catch (error: unknown) {
+      return rejectWithValue(handleAxiosError(error, "Logout failed"));
+    }
+  }
+);
+
+export const setInitialPasswordThunk = createAsyncThunk(
+  "auth/setInitialPassword",
+  async (password: string, { rejectWithValue }) => {
+    try {
+      const response = await authService.setInitialPasswordApi(password);
+      return response.data;
+    } catch (error: unknown) {
+      return rejectWithValue(handleAxiosError(error, "Failed to set password"));
+    }
+  }
+);
+
+export const changePasswordThunk = createAsyncThunk(
+  "auth/changePassword",
+  async (data: ChangePasswordCredentials, { rejectWithValue }) => {
+    try {
+      return await authService.changePasswordApi(data);
+    } catch (error: unknown) {
+      return rejectWithValue(
+        handleAxiosError(error, "Failed to change password")
+      );
     }
   }
 );

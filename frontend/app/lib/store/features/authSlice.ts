@@ -5,6 +5,7 @@ import {
   loginThunk,
   logoutThunk,
   registerThunk,
+  setInitialPasswordThunk,
   updateThunk,
 } from "./authActions";
 
@@ -27,6 +28,21 @@ export const authSlice = createSlice({
       state.isAuthenticated = false;
       state.error = null;
       state.isLoading = false;
+    },
+    //to manually clear the social id
+    updateSocialLinks: (
+      state,
+      action: {
+        payload: { provider: "google" | "github"; value: string | null };
+      }
+    ) => {
+      if (state.user) {
+        if (action.payload.provider === "google") {
+          state.user.google_id = action.payload.value;
+        } else {
+          state.user.github_id = action.payload.value;
+        }
+      }
     },
   },
   extraReducers: (builder) => {
@@ -84,7 +100,6 @@ export const authSlice = createSlice({
         state.isAuthenticated = true;
         state.user = action.payload.user;
       })
-
       /* --- LOGOUT --- */
       .addCase(logoutThunk.fulfilled, (state) => {
         state.user = null;
@@ -93,9 +108,14 @@ export const authSlice = createSlice({
       .addCase(logoutThunk.rejected, (state) => {
         state.user = null;
         state.isAuthenticated = false;
+      })
+      .addCase(setInitialPasswordThunk.fulfilled, (state) => {
+        if (state.user) {
+          state.user.has_password = true;
+        }
       });
   },
 });
 
-export const { clearError, setLogout } = authSlice.actions;
+export const { clearError, setLogout, updateSocialLinks } = authSlice.actions;
 export default authSlice.reducer;

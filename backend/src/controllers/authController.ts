@@ -44,7 +44,6 @@ const _handleError = (res: Response, err: any) => {
   if (err instanceof ServiceError) {
     return res.status(err.statusCode).json({ error: err.message });
   }
-  console.error("Unexpected Error:", err);
   return res.status(500).json({ error: "Internal Server Error" });
 };
 
@@ -71,7 +70,6 @@ const loginUser = async (req: Request<{}, {}, LoginInput>, res: Response) => {
   try {
     const data = await authService.login(req.body);
     _setAuthCookies(res, data.user.userId, data.user.role);
-
     res.status(200).json({
       success: true,
       user: data.user,
@@ -126,7 +124,8 @@ const oauthSignIn = async (req: Request, res: Response) => {
 
     _setAuthCookies(res, userData.user.userId, userData.user.role);
 
-    res.redirect(`${config.frontendUrl}/explore`);
+    const redirectUrl = `${config.frontendUrl}/settings/accounts-security?status=success`; //redirection after signing from OAuth
+    res.redirect(redirectUrl);
   } catch (err) {
     _handleError(res, err);
   }
@@ -135,7 +134,7 @@ const oauthSignIn = async (req: Request, res: Response) => {
 const getMe = async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any).sub;
-    const result = await authService.getUserByUserID(userId);
+    const result = await authService.getUserByUserID(Number(userId));
 
     res.status(200).json({
       success: true,
@@ -177,6 +176,92 @@ const resetPassword = async (req: Request, res: Response) => {
   }
 };
 
+// --- CONTROLLER: UNLINK ---
+const unlinkOAuth = async (req: Request, res: Response) => {
+  try {
+    const { provider } = req.body;
+    const userId = (req.user as any).sub; // Extracted from JWT middleware
+
+    await authService.unlinkProvider(userId, provider);
+    res.status(200).json({ message: `Unlinked ${provider} successfully` });
+  } catch (err) {
+    console.log(err);
+    _handleError(res, err);
+  }
+};
+
+const setInitialPassword = async (req: Request, res: Response) => {
+  try {
+    const { password } = req.body;
+    const userId = (req.user as any).userId || (req.user as any).sub;
+
+    if (!password || password.length < 8) {
+      throw new ServiceError(
+        "Password must be at least 8 characters long",
+        400
+      );
+    }
+
+    await authService.setInitialPassword(Number(userId), password);
+
+    res.status(200).json({
+      success: true,
+      message:
+        "Password set successfully. You can now disconnect social accounts.",
+    });
+  } catch (err) {
+    _handleError(res, err);
+  }
+};
+// --- CONTROLLER: DELETE ACCOUNT ---
+const deleteAccount = async (req: Request, res: Response) => {
+  try {
+    const { password } = req.body;
+    console.log("password:", password);
+    const userId = (req.user as any).sub; // Or .sub depending on your JWT payload
+
+    await authService.deleteUserAccount(Number(userId), password);
+
+    // Clear the auth cookie if you are using cookies
+    res.clearCookie("accessToken");
+
+    res.status(200).json({
+      success: true,
+      message: "Account and all associated data deleted successfully.",
+    });
+  } catch (err) {
+    console.log(err);
+    _handleError(res, err);
+  }
+};
+
+//---------- CHANGE PASSWORD -------
+
+export const changePassword = async (req: Request, res: Response) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    const userId = (req as any).user.sub; // Ensure this matches your JWT payload key
+
+    if (!oldPassword || !newPassword) {
+      return res
+        .status(400)
+        .json({ error: "Both current and new passwords are required." });
+    }
+
+    await authService.changeUserPassword(
+      Number(userId),
+      oldPassword,
+      newPassword
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Password updated successfully.",
+    });
+  } catch (err) {
+    _handleError(res, err);
+  }
+};
 export default {
   registerUser,
   loginUser,
@@ -186,4 +271,8 @@ export default {
   getMe,
   resetPassword,
   forgotPassword,
+  unlinkOAuth,
+  deleteAccount,
+  setInitialPassword,
+  changePassword,
 };
