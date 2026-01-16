@@ -5,6 +5,7 @@ import {
   LoginCredentials,
   RegisterCredentials,
 } from "@/app/types/auth";
+import { GetMeResponse } from "@/app/types/userData";
 
 export const authService = {
   // --- OAuth Links ---
@@ -26,7 +27,7 @@ export const authService = {
     await api.post("/auth/logout");
   },
 
-  getMe: async (): Promise<AuthUser> => {
+  getMe: async (): Promise<GetMeResponse> => {
     const response = await api.get("/auth/me");
     return response.data;
   },
@@ -45,7 +46,11 @@ export const authService = {
   },
 
   unlinkOAuthProvider: async (provider: "google" | "github") => {
-    const response = await api.post("/auth/unlink", { provider });
+    const response = await api.post(
+      "/auth/unlink",
+      { provider },
+      { withCredentials: true }
+    );
     return response.data;
   },
 

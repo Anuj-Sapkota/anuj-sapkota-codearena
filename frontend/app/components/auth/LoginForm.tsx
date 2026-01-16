@@ -37,18 +37,11 @@ const LoginForm = ({ onSuccess, onSwitch }: AuthModalProps) => {
       onSuccess();
       router.push("/explore");
     } catch (err: unknown) {
-      // 1. Checking if it's an Axios error
-      if (isAxiosError(err)) {
-        console.log("error:", err.response);
-        const message = err.response?.data?.error || "An error occurred";
-        toast.error(message);
-      }
-      // 2. Checking if it's a standard Error object
-      else if (err instanceof Error) {
-        toast.error(err.message);
-      }
-      // 3. Fallback for literal strings or weird objects
-      else {
+      //as the thunk always returns string
+      if (typeof err === "string") {
+        toast.error(err);
+      } else {
+        // This is a safety net for unexpected crashes
         toast.error("An unexpected error occurred");
       }
     }

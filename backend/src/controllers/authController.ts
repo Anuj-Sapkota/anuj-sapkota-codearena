@@ -44,7 +44,6 @@ const _handleError = (res: Response, err: any) => {
   if (err instanceof ServiceError) {
     return res.status(err.statusCode).json({ error: err.message });
   }
-  console.error("Unexpected Error:", err);
   return res.status(500).json({ error: "Internal Server Error" });
 };
 
@@ -71,7 +70,6 @@ const loginUser = async (req: Request<{}, {}, LoginInput>, res: Response) => {
   try {
     const data = await authService.login(req.body);
     _setAuthCookies(res, data.user.userId, data.user.role);
-
     res.status(200).json({
       success: true,
       user: data.user,
@@ -126,7 +124,8 @@ const oauthSignIn = async (req: Request, res: Response) => {
 
     _setAuthCookies(res, userData.user.userId, userData.user.role);
 
-    res.redirect(`${config.frontendUrl}/explore`);
+    const redirectUrl = `${config.frontendUrl}/settings/accounts-security?status=success`; //redirection after signing from OAuth
+    res.redirect(redirectUrl);
   } catch (err) {
     _handleError(res, err);
   }
@@ -186,6 +185,7 @@ const unlinkOAuth = async (req: Request, res: Response) => {
     await authService.unlinkProvider(userId, provider);
     res.status(200).json({ message: `Unlinked ${provider} successfully` });
   } catch (err) {
+    console.log(err);
     _handleError(res, err);
   }
 };

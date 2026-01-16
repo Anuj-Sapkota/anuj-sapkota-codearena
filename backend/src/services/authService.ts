@@ -187,7 +187,6 @@ const unlinkProvider = async (
 
   if (!user) throw new ServiceError("User not found", 404);
 
-  // Check if they are removing their last way to log in
   const hasPassword = !!user.password_hash;
   const hasOtherOAuth =
     provider === "google" ? !!user.github_id : !!user.google_id;
@@ -199,10 +198,22 @@ const unlinkProvider = async (
     );
   }
 
+  // Determine what the new auth_provider value should be
+  let newAuthProvider = user.auth_provider;
+
+  if (hasPassword) {
+    // If they have a password, they can function as a "normal" user
+    newAuthProvider = null;
+  } else if (hasOtherOAuth) {
+    // If no password, they must be identified by the REMAINING provider
+    newAuthProvider = provider === "google" ? "github" : "google";
+  }
+
   return await prisma.user.update({
     where: { userId },
     data: {
       [provider === "google" ? "google_id" : "github_id"]: null,
+      auth_provider: newAuthProvider,
     },
   });
 };

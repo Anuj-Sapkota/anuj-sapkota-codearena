@@ -100,7 +100,6 @@ export const authSlice = createSlice({
         state.isAuthenticated = true;
         state.user = action.payload.user;
       })
-
       /* --- LOGOUT --- */
       .addCase(logoutThunk.fulfilled, (state) => {
         state.user = null;
@@ -112,7 +111,7 @@ export const authSlice = createSlice({
       })
       .addCase(setInitialPasswordThunk.fulfilled, (state) => {
         if (state.user) {
-          state.user.has_password = true; 
+          state.user.has_password = true;
         }
       });
   },
