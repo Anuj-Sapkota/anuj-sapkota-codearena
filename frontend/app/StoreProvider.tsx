@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { makeStore } from "./lib/store/store";
+import { makeStore } from "../lib/store/store";
 import persistStore from "redux-persist/es/persistStore";
 import { Provider } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";

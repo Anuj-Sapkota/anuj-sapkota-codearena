@@ -1,7 +1,8 @@
 "use client";
 
-import RegisterForm from "@/app/components/auth/RegisterForm";
 import { useRouter } from "next/navigation";
+
+import RegisterForm from "@/components/auth/RegisterForm";
 
 const RegisterPage: React.FC = () => {
   const router = useRouter();

@@ -5,13 +5,13 @@ import {
   FormInput,
   FormTextarea,
   FormButton,
-} from "@/app/components/ui/FormElements";
-import { AppDispatch, RootState } from "@/app/lib/store/store";
+} from "@/components/ui/Form";
+import { AppDispatch, RootState } from "@/lib/store/store";
 import { useDispatch, useSelector } from "react-redux";
 import { useForm } from "react-hook-form";
-import { BasicSettingsFormValue } from "@/app/types/settings";
+import { BasicSettingsFormValue } from "@/types/settings.types";
 import { useEffect } from "react";
-import { updateThunk } from "@/app/lib/store/features/authActions";
+import { updateThunk } from "@/lib/store/features/auth.actions";
 import { toast } from "sonner";
 
 export default function BasicInfoPage() {

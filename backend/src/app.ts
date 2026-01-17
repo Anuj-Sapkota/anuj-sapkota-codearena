@@ -7,6 +7,7 @@ import authRoute from "./routes/auth.routes.js";
 import userRoute from "./routes/user.routes.js";
 import config from "./configs/config.js";
 import { connectCloudinary } from "./configs/cloudinary.config.js";
+import { errorHandler } from "./middlewares/error.middleware.js";
 
 const app = express();
 connectCloudinary();
@@ -28,6 +29,9 @@ app.use("/api/auth", authRoute);
 
 //User
 app.use("/api/user", userRoute);
+
+app.use(errorHandler); //error handler middleware
+
 app.listen(config.port, () => {
   console.log(`Server running at port ${config.port}...`);
 });

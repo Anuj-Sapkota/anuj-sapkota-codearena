@@ -3,7 +3,7 @@ import "./globals.css";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import StoreProvider from "./StoreProvider";
 import { Toaster } from "sonner";
-import AuthHydrator from "./components/layout/AuthHydrator";
+import AuthHydrator from "../components/layout/AuthHydrator";
 
 const inter = Inter({
   subsets: ["latin"],
