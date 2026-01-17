@@ -1,14 +1,14 @@
 "use client";
 import { useState } from "react";
 import { useSelector } from "react-redux";
-import { RootState } from "@/app/lib/store/store";
+import { RootState } from "@/lib/store/store";
 import { FaTrash } from "react-icons/fa";
 
 // Sub-components
-import { SocialConnections } from "@/app/components/settings/SocialConnections";
-import { SetPasswordModal } from "@/app/components/settings/modals/SetPasswordModal";
-import { ChangePasswordModal } from "@/app/components/settings/modals/ChangePasswordModal";
-import { DeleteAccountModal } from "@/app/components/settings/modals/DeleteAccountModal";
+import { SocialConnections } from "@/components/settings/SocialConnections";
+import { SetPasswordModal } from "@/components/settings/modals/SetPasswordModal";
+import { ChangePasswordModal } from "@/components/settings/modals/ChangePasswordModal";
+import { DeleteAccountModal } from "@/components/settings/modals/DeleteAccountModal";
 
 export default function SecuritySettings() {
   const { user } = useSelector((state: RootState) => state.auth);

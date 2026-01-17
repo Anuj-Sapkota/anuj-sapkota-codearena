@@ -7,10 +7,10 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 
-import SettingsSidebar from "@/app/components/settings/SettingsSidebar";
-import ProtectedRoute from "@/app/components/layout/ProtectedRoute";
-import { AppDispatch, RootState } from "@/app/lib/store/store";
-import { updateThunk } from "@/app/lib/store/features/authActions";
+import SettingsSidebar from "@/components/settings/SettingsSidebar";
+import ProtectedRoute from "@/components/layout/ProtectedRoute";
+import { AppDispatch, RootState } from "@/lib/store/store";
+import { updateThunk } from "@/lib/store/features/auth.actions";
 import { useDispatch, useSelector } from "react-redux";
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
