@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 import { authService } from "@/lib/services/auth.service";
 import { handleAxiosError } from "@/utils/axios-error.util";
-import { PASSWORD_MIN_LENGTH } from "@/utils/constants.util";
+import { PASSWORD_MIN_LENGTH } from "@/constants/constants";
 import { FormLabel, FormInput, FormButton } from "@/components/ui/Form";
 
 import type { ResetPasswordInput } from "@/types/user.types";

@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 import { authService } from "@/lib/services/auth.service";
 import { handleAxiosError } from "@/utils/axios-error.util";
-import { EMAIL_REGEX } from "@/utils/constants.util";
+import { EMAIL_REGEX } from "@/constants/constants";
 import { FormLabel, FormInput, FormButton } from "@/components/ui/Form"; 
 
 import type { ForgotPasswordInput } from "@/types/user.types";
