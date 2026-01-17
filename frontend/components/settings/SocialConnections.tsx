@@ -6,7 +6,6 @@ import { useDispatch } from "react-redux";
 import { toast } from "sonner";
 import { FaSpinner } from "react-icons/fa";
 
-import config from "@/config";
 import GoogleLogoIcon from "@/public/google-icon.svg";
 import GitHubLogoIcon from "@/public/github-icon.svg";
 import { AppDispatch } from "@/lib/store/store";
