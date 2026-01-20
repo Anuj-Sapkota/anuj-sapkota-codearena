@@ -1,8 +1,9 @@
 import express from "express";
 import authController from "../controllers/auth.controller.js";
-import { authenticate } from "../middlewares/auth.middleware.js";
+import { authenticateRequest } from "../middlewares/auth.middleware.js";
 import passport from "passport";
 import { verifyTurnstile } from "../middlewares/turnstile.middleware.js";
+import { authorizeRequest } from "../middlewares/authorize.middleware.js";
 
 const router = express.Router();
 //-----------------------Standard Routes -------------------------------
@@ -11,16 +12,16 @@ const router = express.Router();
 router.post("/register", verifyTurnstile, authController.registerUser);
 
 //sign in
-router.post("/login", authController.loginUser);
+router.post("/login", authController.loginUser); // add turnstile----for DEVELOPMENT ONLY
 
 //logout user
-router.post("/logout", authenticate, authController.logoutUser);
+router.post("/logout", authenticateRequest, authController.logoutUser);
 
 //refresh token
 router.post("/refresh", authController.refreshToken);
 
 //self
-router.get("/me", authenticate, authController.getMe);
+router.get("/me", authenticateRequest, authController.getMe);
 
 //-------Password Recovery Routes---------------
 //forgot password
@@ -50,18 +51,18 @@ router.get(
   authController.oauthSignIn
 );
 //unlink
-router.post("/unlink", authenticate, authController.unlinkOAuth);
+router.post("/unlink", authenticateRequest, authController.unlinkOAuth);
 
 //set-inti
 router.post(
   "/set-initial-password", 
-  authenticate, 
+  authenticateRequest,
   authController.setInitialPassword
 );
 
 //delete the account
-router.delete("/delete-account", authenticate, authController.deleteAccount);
+router.delete("/delete-account", authenticateRequest, authController.deleteAccount);
 
 //change password
-router.post("/change-password", authenticate, authController.changePassword);
+router.post("/change-password", authenticateRequest, authController.changePassword);
 export default router;

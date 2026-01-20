@@ -1,22 +1,19 @@
 import { prisma } from "../lib/prisma.js";
 import uploadFile from "./cloudinary.service.js";
 import cloudinary from "../lib/cloudinary.js";
+import { ServiceError } from "../errors/service.error.js";
+import type { AuthUser } from "../types/auth.js";
+import formatAuthResponse from "../helper/format-auth-response.helper.js";
 const forbiddenFields = ["password", "role", "createdBy", "email"];
 
 export const updateUserService = async (
   userId: number,
   currUserId: number,
   data: any,
-  file?: Express.Multer.File
+  file?: Express.Multer.File,
 ) => {
   // 1. Fetch existing user
-  const user = await prisma.user.findUnique({
-    where: { userId: userId },
-  });
-
-  if (!user) {
-    throw { message: "User does not exist!", statusCode: 404 };
-  }
+  const user = await findUserRaw(userId);
 
   // 2. Authorization Check
   if (userId !== currUserId) {
@@ -55,17 +52,31 @@ export const updateUserService = async (
       bio: data.bio ?? user.bio,
       profile_pic_url: profilePicUrl,
     },
-
-    //returning data except for password
-    select: {
-      userId: true,
-      full_name: true,
-      email: true,
-      bio: true,
-      profile_pic_url: true,
-      role: true,
-    },
   });
 
-  return updatedUser;
+  return formatAuthResponse(updatedUser);
+};
+
+/**
+ * --------------GET USER BY ID -----------------
+ */
+export const getUserByID = async (userId: number): Promise<AuthUser> => {
+  const user = await prisma.user.findUnique({
+    where: { userId: userId },
+  });
+  if (!user) {
+    throw new ServiceError("User does not exist!", 404);
+  }
+  console.log("Returned formatted response: ", formatAuthResponse(user));
+  return formatAuthResponse(user);
+};
+
+/**
+ * -----------GET RAW USER DETAILS FROM ID -----------
+ * this is used by other services
+ */
+export const findUserRaw = async (userId: number) => {
+  const user = await prisma.user.findUnique({ where: { userId } });
+  if (!user) throw new ServiceError("User does not exist!", 404);
+  return user;
 };

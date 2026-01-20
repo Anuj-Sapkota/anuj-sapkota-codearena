@@ -37,10 +37,15 @@ const LoginForm = ({ onSuccess, onSwitch }: AuthModalProps) => {
 
   const onSubmit = async (data: LoginCredentials) => {
     try {
-      await dispatch(loginThunk(data)).unwrap();
+      const user = await dispatch(loginThunk(data)).unwrap();
       toast.success("Welcome back!");
       onSuccess();
-      router.push(ROUTES.MAIN.EXPLORE);
+      //checking user role to redirect
+      if (user.user.role === "ADMIN") {
+        router.push(ROUTES.ADMIN.DASHBOAD);
+      } else {
+        router.push(ROUTES.MAIN.EXPLORE);
+      }
     } catch (err: unknown) {
       const errorMessage =
         typeof err === "string" ? err : "An unexpected error occurred";

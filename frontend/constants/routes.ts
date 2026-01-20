@@ -22,7 +22,10 @@ export const ROUTES = {
     LEARN: "/learn",
     NOTIFICATIONS: "/settings/notifications",
   },
-
+  ADMIN: {
+    DASHBOAD: "/admin",
+    CATEGORY: "/admin/category",
+  },
   // Static Pages
   HOME: "/",
 } as const;

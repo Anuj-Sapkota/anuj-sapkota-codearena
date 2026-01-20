@@ -17,7 +17,7 @@ const _setAuthCookies = (
   res: Response,
   userId: number,
   role: string,
-  token?: string
+  token?: string,
 ) => {
   const accessToken = token || signAccessToken({ sub: userId, role });
   const refreshToken = signRefreshToken({ sub: userId });
@@ -42,7 +42,7 @@ const _setAuthCookies = (
 const registerUser = async (
   req: Request<{}, {}, RegisterInput>,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const data = await authService.register(req.body);
@@ -60,7 +60,7 @@ const registerUser = async (
 const loginUser = async (
   req: Request<{}, {}, LoginInput>,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const data = await authService.login(req.body);
@@ -77,7 +77,7 @@ const loginUser = async (
 const refreshToken = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const token = req.cookies.refreshToken;
@@ -147,7 +147,7 @@ const getMe = async (req: Request, res: Response, next: NextFunction) => {
 const forgotPassword = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const { email } = req.body;
@@ -170,7 +170,7 @@ const forgotPassword = async (
 const resetPassword = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const { token } = req.params;
@@ -200,7 +200,7 @@ const unlinkOAuth = async (req: Request, res: Response, next: NextFunction) => {
 const setInitialPassword = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const { password } = req.body;
@@ -209,7 +209,7 @@ const setInitialPassword = async (
     if (!password || password.length < 8) {
       throw new ServiceError(
         "Password must be at least 8 characters long",
-        400
+        400,
       );
     }
 
@@ -228,7 +228,7 @@ const setInitialPassword = async (
 const deleteAccount = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const { password } = req.body;
@@ -255,7 +255,7 @@ const deleteAccount = async (
 export const changePassword = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const { oldPassword, newPassword } = req.body;
@@ -270,7 +270,7 @@ export const changePassword = async (
     await authService.changeUserPassword(
       Number(userId),
       oldPassword,
-      newPassword
+      newPassword,
     );
 
     res.status(200).json({

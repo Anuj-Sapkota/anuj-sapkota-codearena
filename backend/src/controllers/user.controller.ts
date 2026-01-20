@@ -5,7 +5,7 @@ import { ServiceError } from "../errors/service.error.js";
 export const updateUser = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const user = (req as any).user;
@@ -31,7 +31,7 @@ export const updateUser = async (
       targetUserId,
       currUserId,
       updateData,
-      file as any // Casting if using Web File API vs Multer File
+      file as any, // Casting if using Web File API vs Multer File
     );
 
     // 3. Return 200 OK (Standard for updates)
@@ -39,6 +39,26 @@ export const updateUser = async (
       success: true,
       message: "Profile updated successfully",
       data: updatedUser,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getUserById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const user = (req as any).user;
+    if (!user) {
+      throw new ServiceError("Authentication required", 401);
+    }
+    const userData = await userService.getUserByID(user.sub);
+
+    return res.status(200).json({
+      data: userData,
     });
   } catch (err) {
     next(err);

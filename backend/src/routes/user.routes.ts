@@ -1,7 +1,7 @@
 import express from "express";
 import multer from "multer";
-import { updateUser } from "../controllers/user.controller.js";
-import { authenticate } from "../middlewares/auth.middleware.js"; // Your middleware
+import { updateUser, getUserById } from "../controllers/user.controller.js";
+import { authenticateRequest } from "../middlewares/auth.middleware.js"; // Your middleware
 
 const router = express.Router();
 
@@ -13,11 +13,12 @@ const upload = multer({
 });
 
 // 2. Apply to the specific route
-    router.patch(
+router.patch(
   "/update/:id",
-  authenticate,
+  authenticateRequest,
   upload.single("profile_pic"),
-  updateUser
+  updateUser,
 );
 
+router.get("/:id", authenticateRequest, getUserById)
 export default router;
