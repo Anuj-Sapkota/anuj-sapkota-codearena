@@ -8,7 +8,7 @@ import { isAxiosError } from "axios";
 import { BaseModal } from "@/components/ui/BaseModal";
 import { FormLabel, FormInput, FormButton } from "@/components/ui/Form";
 import { AppDispatch } from "@/lib/store/store";
-import { setInitialPasswordThunk } from "@/lib/store/features/auth.actions";
+import { setInitialPasswordThunk } from "@/lib/store/features/auth/auth.actions";
 
 import type { SetPasswordFormValues } from "@/types/auth.types";
 

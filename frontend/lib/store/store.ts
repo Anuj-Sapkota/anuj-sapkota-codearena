@@ -2,11 +2,12 @@ import { combineReducers, configureStore } from "@reduxjs/toolkit";
 import storage from "redux-persist/lib/storage";
 import persistReducer from "redux-persist/es/persistReducer";
 
-import authReducer from "@/lib/store/features/auth.slice";
-
+import authReducer from "@/lib/store/features/auth/auth.slice";
+import categoryReducer from "@/lib/store/features/category/category.slice";
 //setting up the root reducer
 const rootReducer = combineReducers({
   auth: authReducer,
+  category: categoryReducer,
 });
 
 //setting up the persist configuration
@@ -28,6 +29,7 @@ export const makeStore = () => {
             "persist/PERSIST",
             "persist/REHYDRATE",
             "persist/REGISTER",
+            "persist/PURGE",
           ],
         },
       }),

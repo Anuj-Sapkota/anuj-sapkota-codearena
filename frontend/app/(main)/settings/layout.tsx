@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import SettingsSidebar from "@/components/settings/SettingsSidebar";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import { AppDispatch, RootState } from "@/lib/store/store";
-import { updateThunk } from "@/lib/store/features/auth.actions";
+import { updateThunk } from "@/lib/store/features/auth/auth.actions";
 import { useDispatch, useSelector } from "react-redux";
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {

@@ -2,7 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import { ServiceError } from "../errors/service.error.js";
 import { verifyAccessToken } from "../utils/jwt.util.js";
 
-export const authenticate = (
+export const authenticateRequest = (
   req: Request,
   res: Response,
   next: NextFunction

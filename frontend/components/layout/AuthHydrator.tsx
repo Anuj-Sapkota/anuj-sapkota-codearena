@@ -4,8 +4,8 @@ import { useEffect, useState, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 
-import { getMeThunk } from "@/lib/store/features/auth.actions";
-import { setLogout } from "@/lib/store/features/auth.slice";
+import { getMeThunk } from "@/lib/store/features/auth/auth.actions";
+import { setLogout } from "@/lib/store/features/auth/auth.slice";
 import { AppDispatch, RootState } from "@/lib/store/store";
 
 import type { GetMeResponse } from "@/types/user.types";

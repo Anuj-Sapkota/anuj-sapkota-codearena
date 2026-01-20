@@ -6,7 +6,7 @@ import { isAxiosError } from "axios";
 import { useState } from "react";
 
 import { AppDispatch } from "@/lib/store/store";
-import { changePasswordThunk } from "@/lib/store/features/auth.actions";
+import { changePasswordThunk } from "@/lib/store/features/auth/auth.actions";
 import { BaseModal } from "@/components/ui/BaseModal";
 import { FormInput, FormLabel, FormButton } from "@/components/ui/Form";
 

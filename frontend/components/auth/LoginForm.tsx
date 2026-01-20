@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { yupResolver } from "@hookform/resolvers/yup";
 
 import { loginSchema } from "@/utils/validation.util";
-import { loginThunk } from "@/lib/store/features/auth.actions";
+import { loginThunk } from "@/lib/store/features/auth/auth.actions";
 import { AppDispatch } from "@/lib/store/store";
 
 // Components
@@ -37,10 +37,15 @@ const LoginForm = ({ onSuccess, onSwitch }: AuthModalProps) => {
 
   const onSubmit = async (data: LoginCredentials) => {
     try {
-      await dispatch(loginThunk(data)).unwrap();
+      const user = await dispatch(loginThunk(data)).unwrap();
       toast.success("Welcome back!");
       onSuccess();
-      router.push(ROUTES.MAIN.EXPLORE);
+      //checking user role to redirect
+      if (user.user.role === "ADMIN") {
+        router.push(ROUTES.ADMIN.DASHBOAD);
+      } else {
+        router.push(ROUTES.MAIN.EXPLORE);
+      }
     } catch (err: unknown) {
       const errorMessage =
         typeof err === "string" ? err : "An unexpected error occurred";

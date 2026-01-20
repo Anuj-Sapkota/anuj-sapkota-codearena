@@ -35,7 +35,7 @@ export interface AccessTokenPayload {
   role: string;
 }
 
-export type AuthRequest = Request & { user: { sub: number; role: string } };
+  export type AuthRequest = Request & { user: { sub: number; role: string } };
 
 import { JwtPayload } from "jsonwebtoken";
 

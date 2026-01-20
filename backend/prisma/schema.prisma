@@ -6,23 +6,99 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+enum Role {
+  USER
+  ADMIN
+}
 
 model User {
-  userId           Int       @id @default(autoincrement())
+  userId           Int          @id @default(autoincrement())
   full_name        String
-  username         String    @unique
-  email            String    @unique
+  username         String       @unique
+  email            String       @unique
   password_hash    String?
-  has_password     Boolean   @default(false)
+  has_password     Boolean      @default(false)
   auth_provider    String?
   github_id        String?
   google_id        String?
   profile_pic_url  String?
-  resetToken       String?   @unique
+  resetToken       String?      @unique
   resetTokenExpiry DateTime?
   bio              String?
-  role             String    @default("user")
-  total_points     Int       @default(0)
-  created_at       DateTime  @default(now())
-  updated_at       DateTime  @updatedAt
+  role             Role         @default(USER)
+  total_points     Int          @default(0)
+  
+  // Relations
+  submissions      Submission[] // Link back to submissions
+  
+  created_at       DateTime     @default(now())
+  updated_at       DateTime     @updatedAt
+
+  @@map("users")
+}
+
+model Category {
+  categoryId  Int       @id @default(autoincrement())
+  name        String    @unique
+  slug        String    @unique
+  description String?   @db.Text
+  
+  // Relations
+  problems    Problem[] // Many-to-many relationship
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("categories")
+}
+
+model Problem {
+  problemId    Int        @id @default(autoincrement())
+  title        String
+  slug         String     @unique
+  content      String     @db.Text
+  difficulty   String     // EASY, MEDIUM, HARD
+  
+  // Monaco/Judge0 Specifics
+  timeLimit    Float      @default(1.0) // In seconds
+  memoryLimit  Int        @default(128) // In MB
+  
+  // Relations
+  categories   Category[]
+  testCases    TestCase[] // Hidden inputs/outputs for Judge0
+  submissions  Submission[]
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  @@map("problems")
+}
+
+model TestCase {
+  id           Int      @id @default(autoincrement())
+  input        String   @db.Text
+  expectedOutput String @db.Text
+  isSample     Boolean  @default(false) // If true, show to user. If false, hidden.
+  
+  problemId    Int
+  problem      Problem  @relation(fields: [problemId], references: [problemId], onDelete: Cascade)
+
+  @@map("test_cases")
+}
+
+model Submission {
+  id           Int      @id @default(autoincrement())
+  code         String   @db.Text
+  languageId   Int      // Judge0 Language ID (e.g., 63 for JavaScript)
+  status       String   // "Accepted", "Wrong Answer", "Runtime Error", etc.
+  executionTime Float?
+  memoryUsed   Int?
+  
+  userId       Int
+  user         User     @relation(fields: [userId], references: [userId])
+  
+  problemId    Int
+  problem      Problem  @relation(fields: [problemId], references: [problemId])
+
+  createdAt    DateTime @default(now())
+  @@map("submissions")
 }
