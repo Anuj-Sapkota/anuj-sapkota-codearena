@@ -11,7 +11,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useForm } from "react-hook-form";
 import { BasicSettingsFormValue } from "@/types/settings.types";
 import { useEffect } from "react";
-import { updateThunk } from "@/lib/store/features/auth.actions";
+import { updateThunk } from "@/lib/store/features/auth/auth.actions";
 import { toast } from "sonner";
 
 export default function BasicInfoPage() {

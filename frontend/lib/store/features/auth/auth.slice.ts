@@ -7,7 +7,7 @@ import {
   registerThunk,
   setInitialPasswordThunk,
   updateThunk,
-} from "@/lib/store/features/auth.actions";
+} from "@/lib/store/features/auth/auth.actions";
 
 import type { AuthState } from "@/types/auth.types";
 

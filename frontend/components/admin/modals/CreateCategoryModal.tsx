@@ -1,108 +1,127 @@
 "use client";
 
-import { FaTimes, FaFolderPlus, FaHashtag, FaAlignLeft } from "react-icons/fa";
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useForm } from "react-hook-form";
+import { AppDispatch, RootState } from "@/lib/store/store";
+import { createCategoryThunk, updateCategoryThunk } from "@/lib/store/features/category/category.actions";
+import { Category, CreateCategoryDTO } from "@/types/category.types";
+
+import Modal from "@/components/ui/Modal";
+import { FormLabel, FormInput, FormTextarea, FormButton } from "@/components/ui/Form"; 
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
+  editData?: Category | null;
 }
 
-export default function CreateCategoryModal({ isOpen, onClose }: Props) {
-  if (!isOpen) return null;
+export default function CreateCategoryModal({ isOpen, onClose, editData }: Props) {
+  const dispatch = useDispatch<AppDispatch>();
+  const { isLoading } = useSelector((state: RootState) => state.category);
+
+  const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<CreateCategoryDTO>({
+    defaultValues: {
+      name: editData?.name || "",
+      slug: editData?.slug || "",
+      description: editData?.description || "",
+    }
+  });
+
+  // Auto-slugging logic: Only runs when creating a NEW category
+  const categoryName = watch("name");
+  useEffect(() => {
+    if (!editData && categoryName) {
+      const slug = categoryName.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^\w-]+/g, "");
+      setValue("slug", slug);
+    }
+  }, [categoryName, setValue, editData]);
+
+  const onSubmit = async (data: CreateCategoryDTO) => {
+    let result;
+    if (editData) {
+      result = await dispatch(updateCategoryThunk({ id: editData.categoryId, data }));
+    } else {
+      result = await dispatch(createCategoryThunk(data));
+    }
+
+    if (updateCategoryThunk.fulfilled.match(result) || createCategoryThunk.fulfilled.match(result)) {
+      onClose();
+      reset();
+    }
+  };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
-      {/* Backdrop: Blurs the background for focus */}
-      <div 
-        className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" 
-        onClick={onClose}
-      />
-      
-      {/* Modal Content */}
-      <div className="relative bg-white w-full max-w-lg rounded-t-[2rem] sm:rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom sm:zoom-in duration-300">
-        
-        {/* Decorative Handle for Mobile */}
-        <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mt-3 sm:hidden" />
-
-        {/* Header */}
-        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 bg-primary-1/10 text-primary-1 rounded-xl flex items-center justify-center">
-              <FaFolderPlus size={18} />
-            </div>
-            <div>
-              <h3 className="font-black text-slate-800 text-lg leading-tight">Create Category</h3>
-              <p className="text-slate-400 text-xs font-medium">Add a new tag for problems</p>
-            </div>
-          </div>
-          <button 
-            onClick={onClose} 
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all"
-          >
-            <FaTimes size={18} />
-          </button>
+    <Modal isOpen={isOpen} onClose={onClose}>
+      <div className="p-8 space-y-6">
+        <div className="border-b-2 border-gray-100 pb-4">
+          <h3 className="text-2xl font-black text-darkest uppercase tracking-tight">
+            {editData ? "Modify Category" : "New Category"}
+            <span className="text-primary-1">.</span>
+          </h3>
+          <p className="text-[10px] font-bold text-muted uppercase tracking-[0.2em] mt-1">
+            {editData ? "Updating system taxonomy" : "Define a new problem tag"}
+          </p>
         </div>
 
-        {/* Form Body */}
-        <form className="p-6 space-y-5" onSubmit={(e) => e.preventDefault()}>
-          
-          {/* Category Name */}
-          <div className="space-y-1.5">
-            <label className="flex items-center gap-2 text-xs font-black text-slate-500 uppercase tracking-widest ml-1">
-              <FaAlignLeft size={10} /> Display Name
-            </label>
-            <input 
-              type="text" 
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          {/* Display Name */}
+          <div className="space-y-1">
+            <FormLabel>Display Name</FormLabel>
+            <FormInput 
               placeholder="e.g. Dynamic Programming"
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-primary-1/10 focus:border-primary-1 focus:bg-white outline-none transition-all text-sm font-bold text-slate-700"
+              error={errors.name?.message}
+              register={register("name", { required: "Name is required" })}
             />
           </div>
 
-          {/* URL Slug */}
-          <div className="space-y-1.5">
-            <label className="flex items-center gap-2 text-xs font-black text-slate-500 uppercase tracking-widest ml-1">
-              <FaHashtag size={10} /> URL Slug
-            </label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-mono">/</span>
-              <input 
-                type="text" 
-                placeholder="dynamic-programming"
-                className="w-full pl-7 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-primary-1/10 focus:border-primary-1 focus:bg-white outline-none transition-all text-sm font-mono text-slate-600"
-              />
-            </div>
+          {/* URL Slug - Now Editable */}
+          <div className="space-y-1">
+            <FormLabel>URL Slug</FormLabel>
+            <FormInput 
+              placeholder="category-slug"
+              error={errors.slug?.message}
+              register={register("slug", { 
+                required: "Slug is required",
+                pattern: {
+                    value: /^[a-z0-9-]+$/,
+                    message: "Lower case, numbers, and hyphens only"
+                }
+              })}
+            />
+            {editData && (
+              <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded flex items-start gap-2">
+                <span className="text-amber-600 text-[10px] font-black uppercase leading-none mt-0.5">Note:</span>
+                <p className="text-[10px] text-amber-700 font-medium leading-tight">
+                  Changing the slug will break any existing URLs shared externally for this category.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Description */}
-          <div className="space-y-1.5">
-            <label className="flex items-center gap-2 text-xs font-black text-slate-500 uppercase tracking-widest ml-1">
-              Description
-            </label>
-            <textarea 
-              rows={3}
-              placeholder="What kind of challenges belong here?"
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-primary-1/10 focus:border-primary-1 focus:bg-white outline-none transition-all text-sm font-medium text-slate-600 resize-none"
+          <div className="space-y-1">
+            <FormLabel>Description</FormLabel>
+            <FormTextarea 
+              placeholder="Explain what problems fall into this category..."
+              register={register("description")}
             />
           </div>
 
-          {/* Action Buttons: Vertical on mobile, Horizontal on desktop */}
-          <div className="pt-4 flex flex-col sm:flex-row gap-3">
+          <div className="flex items-center justify-between pt-4">
             <button 
-              type="button"
-              onClick={onClose}
-              className="order-2 sm:order-1 flex-1 px-6 py-3.5 text-slate-500 font-bold text-sm hover:bg-slate-50 rounded-xl transition-all"
+              type="button" 
+              onClick={onClose} 
+              className="text-muted font-black text-xs uppercase tracking-widest hover:text-darkest transition-colors"
             >
               Discard
             </button>
-            <button 
-              type="submit"
-              className="order-1 sm:order-2 flex-[2] px-6 py-3.5 bg-primary-1 text-white rounded-xl font-black text-sm shadow-lg shadow-primary-1/25 hover:scale-[1.02] active:scale-[0.98] transition-all"
-            >
-              Create Category
-            </button>
+            <FormButton isLoading={isLoading} type="submit">
+              {editData ? "Update Record" : "Confirm Entry"}
+            </FormButton>
           </div>
         </form>
       </div>
-    </div>
+    </Modal>
   );
 }

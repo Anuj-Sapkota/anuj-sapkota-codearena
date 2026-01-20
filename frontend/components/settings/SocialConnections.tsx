@@ -9,7 +9,7 @@ import { FaSpinner } from "react-icons/fa";
 import GoogleLogoIcon from "@/public/google-icon.svg";
 import GitHubLogoIcon from "@/public/github-icon.svg";
 import { AppDispatch } from "@/lib/store/store";
-import { updateSocialLinks } from "@/lib/store/features/auth.slice";
+import { updateSocialLinks } from "@/lib/store/features/auth/auth.slice";
 import { authService } from "@/lib/services/auth.service";
 
 import type { AuthProvider, UserProfile } from "@/types/auth.types";

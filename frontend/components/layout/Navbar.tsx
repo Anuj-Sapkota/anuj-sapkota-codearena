@@ -11,7 +11,7 @@ import Logo from "@/public/logo.png";
 import Modal from "@/components/ui/Modal";
 import LoginForm from "@/components/auth/LoginForm";
 import RegisterForm from "@/components/auth/RegisterForm";
-import { logoutThunk } from "@/lib/store/features/auth.actions";
+import { logoutThunk } from "@/lib/store/features/auth/auth.actions";
 import { AppDispatch, RootState } from "@/lib/store/store";
 import { NAV_ITEMS, ROUTES } from "@/constants/routes";
 

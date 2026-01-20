@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { isAxiosError } from "axios";
 
 import { AppDispatch } from "@/lib/store/store";
-import { logoutThunk } from "@/lib/store/features/auth.actions";
+import { logoutThunk } from "@/lib/store/features/auth/auth.actions";
 import { authService } from "@/lib/services/auth.service";
 import { BaseModal } from "@/components/ui/BaseModal";
 import { FormLabel, FormInput, FormButton } from "@/components/ui/Form";

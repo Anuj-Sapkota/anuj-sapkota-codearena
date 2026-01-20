@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { yupResolver } from "@hookform/resolvers/yup";
 
 import { registerSchema } from "@/utils/validation.util";
-import { registerThunk } from "@/lib/store/features/auth.actions";
+import { registerThunk } from "@/lib/store/features/auth/auth.actions";
 import { AppDispatch } from "@/lib/store/store";
 import { handleAxiosError } from "@/utils/axios-error.util";
 

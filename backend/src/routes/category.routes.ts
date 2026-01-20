@@ -3,11 +3,15 @@ import { authenticateRequest } from "../middlewares/auth.middleware.js";
 import { authorizeRequest } from "../middlewares/authorize.middleware.js";
 import {
   createCategory,
-  getCategory,
+  getCategoryById,
+  getCategories,
+  updateCategory,
+  deleteCategory
 } from "../controllers/category.controller.js";
 
 const router = express.Router();
 
+router.get("/", authenticateRequest, getCategories);
 /**
  * @route   POST /api/categories/create
  * @desc    Create a new problem category
@@ -25,6 +29,9 @@ router.post(
  * @desc    Get details for a specific category
  * @access  Private (Authenticated Users)
  */
-router.get("/:id", authenticateRequest, getCategory);
+router.get("/:id", authenticateRequest, getCategoryById);
 
+// New Routes
+router.put("/update/:id", authenticateRequest, authorizeRequest("ADMIN"), updateCategory);
+router.delete("/delete/:id", authenticateRequest, authorizeRequest("ADMIN"), deleteCategory);
 export default router;

@@ -5,6 +5,7 @@ import cors from "cors";
 import "./utils/passport.strategy.js";
 import authRoute from "./routes/auth.routes.js";
 import userRoute from "./routes/user.routes.js";
+import categoryRoute from "./routes/category.routes.js";
 import config from "./configs/config.js";
 import { connectCloudinary } from "./configs/cloudinary.config.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
@@ -29,6 +30,9 @@ app.use("/api/auth", authRoute);
 
 //User
 app.use("/api/user", userRoute);
+
+//Category
+app.use("/api/categories", categoryRoute);
 
 app.use(errorHandler); //error handler middleware
 

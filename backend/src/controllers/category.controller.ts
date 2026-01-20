@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
-import * as CategoryService from "../services/category.service.js";
+import {createCategoryService, getById, getAllCategories, update, remove} from "../services/category.service.js";
 import { ServiceError } from "../errors/service.error.js";
 
 /**
@@ -19,12 +19,15 @@ export const createCategory = async (
       throw new ServiceError("Authentication context missing", 401);
     }
 
-    const newCategory = await CategoryService.createCategoryService(adminId, req.body);
+    const newCategory = await createCategoryService(
+      adminId,
+      req.body,
+    );
 
     res.status(201).json({
       success: true,
       data: newCategory,
-      message: "Category initialized successfully"
+      message: "Category initialized successfully",
     });
   } catch (err) {
     next(err); // Hands off to your errorHandler middleware
@@ -34,7 +37,7 @@ export const createCategory = async (
 /**
  * Handles Fetching a Single Category
  */
-export const getCategory = async (
+export const getCategoryById = async (
   req: Request,
   res: Response,
   next: NextFunction,
@@ -46,13 +49,63 @@ export const getCategory = async (
       throw new ServiceError("Category ID is required for lookup", 400);
     }
 
-    const category = await CategoryService.getCategoryById(Number(id));
+    const category = await getById(Number(id));
 
     res.status(200).json({
       success: true,
-      data: category
+      data: category,
     });
   } catch (err) {
     next(err);
+  }
+};
+
+export const getCategories = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const categories = await getAllCategories();
+
+    res.status(200).json({
+      success: true,
+      message: "Categories retrieved successfully",
+      data: categories,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+// UPDATE CATEGORY
+export const updateCategory = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const updatedCategory = await update(Number(id), req.body);
+    
+    res.status(200).json({
+      success: true,
+      message: "Category updated successfully",
+      data: updatedCategory
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// DELETE CATEGORY
+export const deleteCategory = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    await remove(Number(id));
+    
+    res.status(200).json({
+      success: true,
+      message: "Category deleted successfully"
+    });
+  } catch (error) {
+    next(error);
   }
 };

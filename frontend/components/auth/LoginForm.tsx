@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { yupResolver } from "@hookform/resolvers/yup";
 
 import { loginSchema } from "@/utils/validation.util";
-import { loginThunk } from "@/lib/store/features/auth.actions";
+import { loginThunk } from "@/lib/store/features/auth/auth.actions";
 import { AppDispatch } from "@/lib/store/store";
 
 // Components
