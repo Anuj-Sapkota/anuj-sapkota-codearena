@@ -118,7 +118,10 @@ export const remove = async (id: number) => {
   });
 
   if (category?._count.problems && category._count.problems > 0) {
-    throw new Error("Cannot delete category with existing problems");
+    throw new ServiceError(
+      "Cannot delete category with existing problems",
+      400,
+    );
   }
 
   return await prisma.category.delete({ where: { categoryId: id } });

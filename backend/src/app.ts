@@ -6,6 +6,7 @@ import "./utils/passport.strategy.js";
 import authRoute from "./routes/auth.routes.js";
 import userRoute from "./routes/user.routes.js";
 import categoryRoute from "./routes/category.routes.js";
+import problemRoute from "./routes/problem.routes.js"
 import config from "./configs/config.js";
 import { connectCloudinary } from "./configs/cloudinary.config.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
@@ -33,6 +34,9 @@ app.use("/api/user", userRoute);
 
 //Category
 app.use("/api/categories", categoryRoute);
+
+//Problems
+app.use("/api/problems", problemRoute);
 
 app.use(errorHandler); //error handler middleware
 
