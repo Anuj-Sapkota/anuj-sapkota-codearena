@@ -17,6 +17,8 @@ export interface Problem {
   memoryLimit: number;
   categories: Category[];
   testCases?: TestCase[];
+  status: "SOLVED" | "ATTEMPTED" | "UNSOLVED";
+  isSolved?: boolean;
   _count?: {
     submissions: number;
   };
@@ -55,4 +57,11 @@ export type SortOption = "newest" | "title_asc" | "difficulty_high";
 export interface FilterState {
   sortBy: SortOption;
   difficulty: DifficultyFilter;
+}
+
+export interface ProblemMeta {
+  total: number;
+  page: number;
+  pages: number;
+  totalSolved?: number; // The "?" makes it safe if the backend hasn't sent it yet
 }

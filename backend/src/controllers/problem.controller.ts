@@ -4,7 +4,7 @@ import {
   getAllProblemsService,
   getProblemBySlug,
   deleteProblemService,
-  updateProblemService
+  updateProblemService,
 } from "../services/problem.service.js";
 import { ServiceError } from "../errors/service.error.js";
 
@@ -35,16 +35,26 @@ export const createProblem = async (
  */
 export const getAllProblems = async (req: Request, res: Response) => {
   try {
+    // 1. Extract 'userId' and 'status' from query parameters explicitly
     const { 
       page, 
       limit, 
       search, 
       difficulty, 
       categoryIds, 
-      sortBy 
+      sortBy, 
+      status, 
+      userId: queryUserId // Rename to avoid conflict
     } = req.query;
 
-    // Convert query strings to the format the service needs
+    // 2. Determine the User ID
+    // Priority: Authenticated Token (req.user) > Query Param (?userId=123)
+    const tokenUserId = (req as any).user?.userId;
+    const effectiveUserId = tokenUserId 
+      ? Number(tokenUserId) 
+      : (queryUserId ? Number(queryUserId) : undefined);
+
+    // 3. Call Service
     const results = await getAllProblemsService({
       page: page as string,
       limit: limit as string,
@@ -52,19 +62,20 @@ export const getAllProblems = async (req: Request, res: Response) => {
       difficulty: difficulty as string,
       categoryIds: categoryIds as string,
       sortBy: sortBy as string,
+      status: status as string, // Pass the status string ('SOLVED', 'ATTEMPTED')
+      userId: effectiveUserId,  // Pass the resolved User ID
     });
 
-    // Return the items along with the 'meta' (pagination info)
     return res.status(200).json({
       success: true,
       data: results.items,
-      meta: results.meta
+      meta: results.meta,
     });
   } catch (error: any) {
     console.error("GET_ALL_PROBLEMS_ERROR:", error);
     return res.status(500).json({
       success: false,
-      message: "Internal Server Error during challenge retrieval"
+      message: error.message || "Internal Server Error",
     });
   }
 };
