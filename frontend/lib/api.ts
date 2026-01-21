@@ -18,6 +18,7 @@ api.interceptors.response.use(
         ROUTES.HOME,
         ROUTES.AUTH.LOGIN,
         ROUTES.AUTH.REGISTER,
+        ROUTES.MAIN.EXPLORE
       ];
       const isPublicPage = publicPages.includes(window.location.pathname);
 
