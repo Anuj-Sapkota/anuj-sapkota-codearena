@@ -53,7 +53,7 @@ export interface AuthState {
 }
 // interface for modal forms
 export interface AuthModalProps {
-  onSuccess: () => void;
+  onSuccess: (user:UserProfile) => void;
   onSwitch: () => void;
 }
 

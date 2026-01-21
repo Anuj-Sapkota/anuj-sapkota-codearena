@@ -37,11 +37,11 @@ const LoginForm = ({ onSuccess, onSwitch }: AuthModalProps) => {
 
   const onSubmit = async (data: LoginCredentials) => {
     try {
-      const user = await dispatch(loginThunk(data)).unwrap();
+      const {user} = await dispatch(loginThunk(data)).unwrap();
       toast.success("Welcome back!");
-      onSuccess();
+      onSuccess(user);
       //checking user role to redirect
-      if (user.user.role === "ADMIN") {
+      if (user.role === "ADMIN") {
         router.push(ROUTES.ADMIN.DASHBOAD);
       } else {
         router.push(ROUTES.MAIN.EXPLORE);

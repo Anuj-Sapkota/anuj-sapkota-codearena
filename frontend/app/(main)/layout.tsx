@@ -1,5 +1,8 @@
+"use client"; // Important since ProtectedRoute is a client component
+
 import React from "react";
 import Navbar from "../../components/layout/Navbar";
+import ProtectedRoute from "@/components/layout/ProtectedRoute";
 
 const MainPagesLayout = ({
   children,
@@ -7,10 +10,14 @@ const MainPagesLayout = ({
   children: React.ReactNode;
 }>) => {
   return (
-    <div>
-      <Navbar />
-      {children}
-    </div>
+    <ProtectedRoute>
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-grow">
+          {children}
+        </main>
+      </div>
+    </ProtectedRoute>
   );
 };
 
