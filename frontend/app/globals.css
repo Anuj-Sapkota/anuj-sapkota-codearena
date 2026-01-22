@@ -45,13 +45,22 @@ body {
   }
 }
 
-/* Add this to your global.css if resizing isn't working */
-[data-panel-group] {
-  display: flex;
-  width: 100%;
-  height: 100%;
+
+/* Add this to your globals.css */
+
+/* This forces the Vertical Group to actually stack its children */
+[data-panel-group-direction="vertical"] {
+  flex-direction: column !important;
+  display: flex !important;
 }
 
-[data-panel-group-direction="vertical"] {
-  flex-direction: column;
+/* This ensures the Horizontal Group stays side-by-side */
+[data-panel-group-direction="horizontal"] {
+  flex-direction: row !important;
+  display: flex !important;
+}
+
+/* Fix for the right side container */
+.h-full {
+  height: 100% !important;
 }
