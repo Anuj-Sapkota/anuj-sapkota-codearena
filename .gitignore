@@ -42,3 +42,10 @@ backend/prisma/migrations/
 *.sublime-project
 .idea/
 .vscode/
+
+    # ======================
+    # Judge0 FOLDER
+    # ======================
+    judge0-v1.13.1/judge0.conf
+    judge0-v1.13.1/data/
+    judge0-v1.13.1/log/
