@@ -171,9 +171,10 @@ export const getAllProblemsService = async (query: {
     },
   };
 };
-export const getProblemBySlug = async (slug: string) => {
+export const getProblemById = async (id: number) => {
+
   const problem = await prisma.problem.findUnique({
-    where: { slug },
+    where: { problemId: id },
     include: {
       categories: true,
       testCases: {
