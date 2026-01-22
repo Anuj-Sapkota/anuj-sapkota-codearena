@@ -86,19 +86,17 @@ model TestCase {
 }
 
 model Submission {
-  id           Int      @id @default(autoincrement())
-  code         String   @db.Text
-  languageId   Int      // Judge0 Language ID (e.g., 63 for JavaScript)
-  status       String   // "Accepted", "Wrong Answer", "Runtime Error", etc.
-  executionTime Float?
-  memoryUsed   Int?
+  id          String   @id @default(uuid())
+  problemId   Int
+  userId      Int
+  code        String   @db.Text
+  languageId  Int
+  status      String   // "PENDING", "ACCEPTED", "WRONG_ANSWER", "TLE"
+  memory      Int?     // in KB
+  time        Float?   // in seconds
+  token       String?  @unique // The Judge0 Token
+  createdAt   DateTime @default(now())
   
-  userId       Int
-  user         User     @relation(fields: [userId], references: [userId])
-  
-  problemId    Int
-  problem      Problem  @relation(fields: [problemId], references: [problemId])
-
-  createdAt    DateTime @default(now())
-  @@map("submissions")
+  problem     Problem  @relation(fields: [problemId], references: [problemId])
+  user        User     @relation(fields: [userId], references: [userId])
 }

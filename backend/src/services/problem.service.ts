@@ -60,46 +60,69 @@ export const createProblemService = async (data: any) => {
     throw error;
   }
 };
-
 export const getAllProblemsService = async (query: {
-  page?: string;
-  limit?: string;
-  search?: string;
-  difficulty?: string;
-  categoryIds?: string; // Comma separated string: "1,2,3"
-  sortBy?: string;
+  page?: string | undefined;
+  limit?: string | undefined;
+  search?: string | undefined;
+  difficulty?: string | undefined;
+  categoryIds?: string | undefined;
+  sortBy?: string | undefined;
+  userId?: number | undefined;
+  status?: string | undefined; // New: Filter by 'SOLVED', 'ATTEMPTED', or 'UNSOLVED'
 }) => {
   const page = parseInt(query.page || "1");
   const limit = parseInt(query.limit || "10");
   const skip = (page - 1) * limit;
 
-  // 1. Build Dynamic Filter Object
   const where: any = {};
 
+  // 1. Search Filter
   if (query.search) {
     where.OR = [
-      { title: { contains: query.search, mode: 'insensitive' } },
-      { slug: { contains: query.search, mode: 'insensitive' } }
+      { title: { contains: query.search, mode: "insensitive" } },
+      { slug: { contains: query.search, mode: "insensitive" } },
     ];
   }
 
-  if (query.difficulty && query.difficulty !== 'ALL') {
+  // 2. Difficulty Filter
+  if (query.difficulty && query.difficulty !== "ALL") {
     where.difficulty = query.difficulty;
   }
 
+  // 3. Category Filter
   if (query.categoryIds) {
-    const ids = query.categoryIds.split(',').map(id => parseInt(id));
+    const ids = query.categoryIds.split(",").map((id) => parseInt(id));
     where.categories = {
-      some: { categoryId: { in: ids } }
+      some: { categoryId: { in: ids } },
     };
   }
 
-  // 2. Sorting Logic
-  let orderBy: any = { createdAt: 'desc' };
-  if (query.sortBy === 'title_asc') orderBy = { title: 'asc' };
-  if (query.sortBy === 'title_desc') orderBy = { title: 'desc' };
+  // 4. Status Filter (Advanced Logic)
+  // If the user wants to see only Solved/Attempted, we filter based on existence of submissions
+  if (query.userId && query.status) {
+    const statusFilter = query.status.toUpperCase(); // Force uppercase to match frontend
+    const uId = Number(query.userId);
 
-  // 3. Execute Transaction (Get data + Total count in one go)
+    if (statusFilter === "SOLVED") {
+      where.submissions = {
+        some: { userId: uId, status: "ACCEPTED" },
+      };
+    } else if (statusFilter === "ATTEMPTED") {
+      where.submissions = {
+        some: { userId: uId }, // User has tried at least once
+        none: { userId: uId, status: "ACCEPTED" }, // But has NOT succeeded yet
+      };
+    } else if (statusFilter === "UNSOLVED") {
+      where.submissions = {
+        none: { userId: uId }, // User has zero submissions
+      };
+    }
+  }
+
+  let orderBy: any = { createdAt: "desc" };
+  if (query.sortBy === "title_asc") orderBy = { title: "asc" };
+  if (query.sortBy === "title_desc") orderBy = { title: "desc" };
+
   const [items, total] = await prisma.$transaction([
     prisma.problem.findMany({
       where,
@@ -108,22 +131,46 @@ export const getAllProblemsService = async (query: {
       take: limit,
       include: {
         categories: { select: { name: true, categoryId: true } },
-        _count: { select: { submissions: true } }
-      }
+        _count: { select: { submissions: true } },
+        // Check for ALL user submissions to determine Solved vs Attempted
+        submissions: query.userId
+          ? {
+              where: { userId: query.userId },
+              select: { status: true },
+            }
+          : false,
+      },
     }),
-    prisma.problem.count({ where })
+    prisma.problem.count({ where }),
   ]);
 
+  // 5. Formatting Logic
+  const formattedItems = items.map((problem) => {
+    const { submissions, _count, ...rest } = problem as any;
+
+    let status = "UNSOLVED";
+    if (submissions && submissions.length > 0) {
+      const hasAccepted = submissions.some((s: any) => s.status === "ACCEPTED");
+      status = hasAccepted ? "SOLVED" : "ATTEMPTED";
+    }
+
+    return {
+      ...rest,
+      status, // Returns 'SOLVED', 'ATTEMPTED', or 'UNSOLVED'
+      isSolved: status === "SOLVED",
+      submissionCount: _count.submissions,
+    };
+  });
+
   return {
-    items,
+    items: formattedItems,
     meta: {
       total,
       page,
-      pages: Math.ceil(total / limit)
-    }
+      pages: Math.ceil(total / limit),
+    },
   };
 };
-
 export const getProblemBySlug = async (slug: string) => {
   const problem = await prisma.problem.findUnique({
     where: { slug },
