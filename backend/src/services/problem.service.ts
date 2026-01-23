@@ -1,6 +1,5 @@
 import { prisma } from "../lib/prisma.js";
 import { ServiceError } from "../errors/service.error.js";
-import slugifyModule from "slugify";
 
 export const createProblemService = async (data: any) => {
   const {
@@ -8,6 +7,8 @@ export const createProblemService = async (data: any) => {
     content,
     difficulty,
     timeLimit,
+    functionName,
+    starterCode,
     memoryLimit,
     categoryIds, // Array of Ints
     testCases, // Array of {input, expectedOutput, isSample}
@@ -18,17 +19,19 @@ export const createProblemService = async (data: any) => {
     throw new ServiceError("Title, content, and difficulty are required", 400);
   }
 
-  // 2. Slug Generation
-  const slugify = (slugifyModule as any).default || slugifyModule;
-  const slug = slugify(title, { lower: true, strict: true });
-
   try {
     return await prisma.problem.create({
       data: {
         title,
-        slug,
         content,
         difficulty,
+        functionName: functionName || "solution",
+        starterCode: starterCode || {
+          javascript: "",
+          python: "",
+          java: "",
+          cpp: "",
+        },
         timeLimit: parseFloat(timeLimit) || 1.0,
         memoryLimit: parseInt(memoryLimit) || 128,
         // Many-to-Many: Connect existing categories by ID
@@ -52,10 +55,7 @@ export const createProblemService = async (data: any) => {
     });
   } catch (error: any) {
     if (error.code === "P2002") {
-      throw new ServiceError(
-        "A problem with this title or slug already exists",
-        400,
-      );
+      throw new ServiceError("A problem with this title already exists", 400);
     }
     throw error;
   }
@@ -78,10 +78,7 @@ export const getAllProblemsService = async (query: {
 
   // 1. Search Filter
   if (query.search) {
-    where.OR = [
-      { title: { contains: query.search, mode: "insensitive" } },
-      { slug: { contains: query.search, mode: "insensitive" } },
-    ];
+    where.OR = [{ title: { contains: query.search, mode: "insensitive" } }];
   }
 
   // 2. Difficulty Filter
@@ -171,9 +168,9 @@ export const getAllProblemsService = async (query: {
     },
   };
 };
-export const getProblemBySlug = async (slug: string) => {
+export const getProblemById = async (id: number) => {
   const problem = await prisma.problem.findUnique({
-    where: { slug },
+    where: { problemId: id },
     include: {
       categories: true,
       testCases: {
@@ -195,23 +192,24 @@ export const updateProblemService = async (id: string, data: any) => {
     content,
     difficulty,
     timeLimit,
+    functionName,
+    starterCode,
     memoryLimit,
     categoryIds,
     testCases,
   } = data;
 
-  const slugify = (slugifyModule as any).default || slugifyModule;
   const numericId = parseInt(id);
 
   const updateData: any = {};
 
   if (title) {
     updateData.title = title;
-    updateData.slug = slugify(title, { lower: true, strict: true });
   }
   if (content) updateData.content = content;
   if (difficulty) updateData.difficulty = difficulty;
-
+  if (functionName) updateData.functionName = functionName;
+  if (starterCode !== undefined) updateData.starterCode = starterCode || {};
   if (timeLimit !== undefined && timeLimit !== null) {
     updateData.timeLimit = parseFloat(timeLimit);
   }

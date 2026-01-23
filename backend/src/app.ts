@@ -7,6 +7,7 @@ import authRoute from "./routes/auth.routes.js";
 import userRoute from "./routes/user.routes.js";
 import categoryRoute from "./routes/category.routes.js";
 import problemRoute from "./routes/problem.routes.js"
+import submissionRoutes from './routes/submission.routes.js';
 import config from "./configs/config.js";
 import { connectCloudinary } from "./configs/cloudinary.config.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
@@ -37,6 +38,9 @@ app.use("/api/categories", categoryRoute);
 
 //Problems
 app.use("/api/problems", problemRoute);
+
+//Submission 
+app.use('/api/submissions', submissionRoutes);
 
 app.use(errorHandler); //error handler middleware
 

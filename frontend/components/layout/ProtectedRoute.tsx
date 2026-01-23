@@ -19,13 +19,15 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const pathname = usePathname(); // Get the current URL
 
   useEffect(() => {
+    // 1. If the app is currently fetching the user profile, DO NOTHING.
     if (isLoading) return;
 
-    const publicPaths = [ROUTES.HOME, "/explore", "/register"];
+    const publicPaths = [ROUTES.HOME, "/explore", "/register", "/login"];
     const isPublicPath = publicPaths.includes(pathname);
-      console.error("REDIRECT TRIGGERED BY PROTECTED ROUTE AT:", pathname); 
+
+    // 2. ONLY redirect if we are SURE loading is finished AND isAuthenticated is still false
     if (!isAuthenticated && !isPublicPath) {
-      console.error("REDIRECT TRIGGERED BY PROTECTED ROUTE AT:", pathname); // Added this
+      console.error("REDIRECT TRIGGERED BY PROTECTED ROUTE AT:", pathname);
       router.push(ROUTES.HOME);
     }
   }, [isAuthenticated, isLoading, router, pathname]);

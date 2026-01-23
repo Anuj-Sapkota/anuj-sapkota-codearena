@@ -2,7 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import {
   createProblemService,
   getAllProblemsService,
-  getProblemBySlug,
+  getProblemById,
   deleteProblemService,
   updateProblemService,
 } from "../services/problem.service.js";
@@ -36,23 +36,25 @@ export const createProblem = async (
 export const getAllProblems = async (req: Request, res: Response) => {
   try {
     // 1. Extract 'userId' and 'status' from query parameters explicitly
-    const { 
-      page, 
-      limit, 
-      search, 
-      difficulty, 
-      categoryIds, 
-      sortBy, 
-      status, 
-      userId: queryUserId // Rename to avoid conflict
+    const {
+      page,
+      limit,
+      search,
+      difficulty,
+      categoryIds,
+      sortBy,
+      status,
+      userId: queryUserId, // Rename to avoid conflict
     } = req.query;
 
     // 2. Determine the User ID
     // Priority: Authenticated Token (req.user) > Query Param (?userId=123)
     const tokenUserId = (req as any).user?.userId;
-    const effectiveUserId = tokenUserId 
-      ? Number(tokenUserId) 
-      : (queryUserId ? Number(queryUserId) : undefined);
+    const effectiveUserId = tokenUserId
+      ? Number(tokenUserId)
+      : queryUserId
+        ? Number(queryUserId)
+        : undefined;
 
     // 3. Call Service
     const results = await getAllProblemsService({
@@ -63,7 +65,7 @@ export const getAllProblems = async (req: Request, res: Response) => {
       categoryIds: categoryIds as string,
       sortBy: sortBy as string,
       status: status as string, // Pass the status string ('SOLVED', 'ATTEMPTED')
-      userId: effectiveUserId,  // Pass the resolved User ID
+      userId: effectiveUserId, // Pass the resolved User ID
     });
 
     return res.status(200).json({
@@ -86,12 +88,13 @@ export const getSingleProblem = async (
   next: NextFunction,
 ) => {
   try {
-    const { slug } = req.params;
+    const { id } = req.params;
 
-    if (!slug) {
-      throw new ServiceError("Problem slug is required for lookup", 400);
+    if (!id) {
+      throw new ServiceError("Problem id is required for lookup", 400);
     }
-    const problem = await getProblemBySlug(slug);
+
+    const problem = await getProblemById(Number(id));
     res.status(200).json({
       success: true,
       data: problem,

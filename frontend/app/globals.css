@@ -44,3 +44,23 @@ body {
     scrollbar-width: none; /* Firefox */
   }
 }
+
+
+/* Add this to your globals.css */
+
+/* This forces the Vertical Group to actually stack its children */
+[data-panel-group-direction="vertical"] {
+  flex-direction: column !important;
+  display: flex !important;
+}
+
+/* This ensures the Horizontal Group stays side-by-side */
+[data-panel-group-direction="horizontal"] {
+  flex-direction: row !important;
+  display: flex !important;
+}
+
+/* Fix for the right side container */
+.h-full {
+  height: 100% !important;
+}

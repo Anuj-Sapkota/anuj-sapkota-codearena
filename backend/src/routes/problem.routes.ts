@@ -23,7 +23,7 @@ router.get("/", getAllProblems);
  * @desc    Fetch a single problem by its slug (Problem details page)
  * @access  Public
  */
-router.get("/:slug", getSingleProblem);
+router.get("/:id", getSingleProblem);
 
 /**
  * @route   POST /api/problems

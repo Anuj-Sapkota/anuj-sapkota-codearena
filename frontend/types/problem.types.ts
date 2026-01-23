@@ -1,3 +1,4 @@
+import { Dispatch, SetStateAction } from "react";
 import { Category } from "./category.types";
 
 export interface TestCase {
@@ -14,6 +15,8 @@ export interface Problem {
   content: string;
   difficulty: "EASY" | "MEDIUM" | "HARD";
   timeLimit: number;
+  functionName: string;
+  starterCode: string;
   memoryLimit: number;
   categories: Category[];
   testCases?: TestCase[];
@@ -46,6 +49,8 @@ export interface CreateProblemDTO {
   content: string;
   difficulty: "EASY" | "MEDIUM" | "HARD";
   timeLimit: number;
+  functionName: string;
+  starterCode: Record<string,string>;
   memoryLimit: number;
   categoryIds: number[];
   testCases: Omit<TestCase, "id">[];
@@ -64,4 +69,11 @@ export interface ProblemMeta {
   page: number;
   pages: number;
   totalSolved?: number; // The "?" makes it safe if the backend hasn't sent it yet
+}
+
+
+export interface TabProps {
+  formData: CreateProblemDTO;
+  setFormData: Dispatch<SetStateAction<CreateProblemDTO>>;
+  categories?: Category[]; // Only used in BasicConfigTab
 }
