@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, use } from "react";
+import React, { useState, useEffect, use, useRef } from "react";
 import { Panel, Group, Separator } from "react-resizable-panels";
 import { CodeEditor } from "@/components/problems/CodeEditor";
 import { TerminalOutput } from "@/components/problems/TerminalOutput";
@@ -9,6 +9,7 @@ import { ProblemDescription } from "@/components/problems/ProblemDescription";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { ProblemHeader } from "@/components/problems/ProblemHeader";
 
 const LANGUAGES = [
   { id: "javascript", label: "JavaScript", judge0Id: 63 },
@@ -25,6 +26,7 @@ export default function WorkspacePage({
   const resolvedParams = use(params);
   const router = useRouter();
 
+  const descriptionRef = useRef<HTMLDivElement>(null);
   const [problem, setProblem] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isRunning, setIsRunning] = useState(false);
@@ -153,22 +155,20 @@ export default function WorkspacePage({
   return (
     <div className="h-screen flex flex-col bg-[#1a1a1a] overflow-hidden">
       {/* HEADER */}
-      <div className="h-16 border-b border-gray-700 bg-[#252526] flex items-center px-6 justify-between">
-        <button
-          onClick={() => router.push("/problems")}
-          className="text-gray-400 hover:text-white text-xs font-bold"
-        >
-          ← BACK
-        </button>
-        <FormButton onClick={handleRun} isLoading={isRunning}>
-          Run_
-        </FormButton>
-      </div>
-
+      <ProblemHeader
+        handleRun={handleRun}
+        isRunning={isRunning}
+        scrollContainerRef={descriptionRef}
+      />
       <div className="flex-1 overflow-hidden">
         <Group orientation="horizontal">
           <Panel defaultSize={50} minSize={20}>
-            <ProblemDescription problem={problem} />
+            <div
+              ref={descriptionRef}
+              className="h-full overflow-y-auto custom-scrollbar"
+            >
+              <ProblemDescription problem={problem} />
+            </div>
           </Panel>
           <Separator className="w-1 bg-gray-800 hover:bg-emerald-500" />
           <Panel defaultSize={50}>
