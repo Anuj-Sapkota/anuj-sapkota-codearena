@@ -10,6 +10,13 @@ import axios from "axios";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+const LANGUAGES = [
+  { id: "javascript", label: "JavaScript", judge0Id: 63 },
+  { id: "python", label: "Python", judge0Id: 71 },
+  { id: "java", label: "Java", judge0Id: 62 },
+  { id: "cpp", label: "C++", judge0Id: 54 },
+];
+
 export default function WorkspacePage({
   params,
 }: {
@@ -19,14 +26,21 @@ export default function WorkspacePage({
   const router = useRouter();
 
   const [problem, setProblem] = useState<any>(null);
-  const [code, setCode] = useState("");
-  const [language, setLanguage] = useState("javascript");
-  const [output, setOutput] = useState("");
-  const [isRunning, setIsRunning] = useState(false);
   const [loading, setLoading] = useState(true);
-
-  // ADDED THIS: To control the child component's tabs
+  const [isRunning, setIsRunning] = useState(false);
+  const [output, setOutput] = useState("");
   const [activeTab, setActiveTab] = useState<"testcase" | "result">("testcase");
+
+  // State for the currently selected language object
+  const [selectedLang, setSelectedLang] = useState(LANGUAGES[0]);
+
+  // State to hold code for ALL languages simultaneously
+  const [codes, setCodes] = useState<Record<string, string>>({
+    javascript: "",
+    python: "",
+    java: "",
+    cpp: "",
+  });
 
   useEffect(() => {
     const fetchProblem = async () => {
@@ -35,12 +49,19 @@ export default function WorkspacePage({
         const res = await axios.get(
           `http://localhost:5000/api/problems/${resolvedParams.id}`,
         );
-        if (res.data && res.data.success) {
-          setProblem(res.data.data);
-          setCode(res.data.data.starterCode || "// Start coding...");
+        if (res.data?.success) {
+          const prob = res.data.data;
+          setProblem(prob);
+          // Initialize our local codes state with the starter code from DB
+          setCodes({
+            javascript: prob.starterCode?.javascript || "",
+            python: prob.starterCode?.python || "",
+            java: prob.starterCode?.java || "",
+            cpp: prob.starterCode?.cpp || "",
+          });
         }
       } catch (err) {
-        console.error("Fetch Error:", err);
+        toast.error("Failed to load problem data");
       } finally {
         setLoading(false);
       }
@@ -48,85 +69,97 @@ export default function WorkspacePage({
     fetchProblem();
   }, [resolvedParams.id]);
 
- const handleRun = async () => {
-  setIsRunning(true);
-  setOutput("> Initializing Test Suite...");
-  setActiveTab("result"); // Switch to console view initially
+  const handleCodeChange = (newVal: string) => {
+    setCodes((prev) => ({ ...prev, [selectedLang.id]: newVal }));
+  };
 
-  try {
-    const res = await axios.post("http://localhost:5000/api/submissions/submit", {
-      source_code: code,
-      language_id: 63,
-      problemId: problem.problemId 
-    });
+  const handleRun = async () => {
+    setIsRunning(true);
+    setOutput("> Initializing Test Suite...");
+    setActiveTab("result");
 
-    const { success, results, totalPassed, totalCases, allPassed } = res.data;
+    try {
+      const res = await axios.post(
+        "http://localhost:5000/api/submissions/submit",
+        {
+          source_code: codes[selectedLang.id], // Current language code string
+          language_id: selectedLang.judge0Id, // Correct ID for the judge
+          problemId: problem.problemId,
+        },
+      );
 
-    if (!success || !results) {
-      toast.error("Execution encountered an error.");
-      setOutput("> Error: System failed to retrieve results.");
-      return;
+      const { results, totalPassed, totalCases, allPassed } = res.data;
+
+      // Map backend results back to test cases for UI markers
+      const updatedTestCases = problem.testCases.map(
+        (tc: any, index: number) => {
+          const result = results[index];
+
+          // 1. Get the raw output and the expected output
+          const actual = result?.stdout?.trim() || "";
+          const expected = tc.expectedOutput?.toString().trim() || "";
+
+          // 2. LOGIC FIX:
+          // Status 3 means "Success" (the code didn't crash).
+          // We only set "PASSED" if it didn't crash AND the output matches.
+          const isCorrect = result?.status?.id === 3 && actual === expected;
+
+          return {
+            ...tc,
+            actualOutput:
+              actual || result?.stderr || result?.compile_output || "---",
+            status: isCorrect ? "PASSED" : "FAILED",
+          };
+        },
+      );
+
+      // Update the problem state to reflect the new test case statuses (Red/Green)
+      setProblem({ ...problem, testCases: updatedTestCases });
+
+      // Show the primary output in the console log tab
+      setOutput(
+        results[0]?.stdout ||
+          results[0]?.stderr ||
+          results[0]?.compile_output ||
+          "> Execution finished with no output.",
+      );
+
+      // Trigger the Toast notifications based on global success
+      if (allPassed) {
+        toast.success(`ACCEPTED: ${totalPassed}/${totalCases} PASSED`, {
+          icon: "🚀",
+        });
+      } else {
+        toast.error(`FAILED: ${totalPassed}/${totalCases} PASSED`);
+        // Auto-switch back to test cases tab so the user can see which one failed
+        setActiveTab("testcase");
+      }
+    } catch (err) {
+      console.error("Submission Error:", err);
+      toast.error("Execution failed: Could not connect to judge.");
+      setOutput("> Error: Communication link failure.");
+    } finally {
+      setIsRunning(false);
     }
+  };
 
-    // 1. Map backend results to your local problem state
-    const updatedTestCases = problem.testCases.map((tc: any, index: number) => {
-      const result = results[index];
-      return {
-        ...tc,
-        actualOutput: result?.stdout || result?.stderr || result?.compile_output || "---",
-        status: result?.status?.id === 3 ? "PASSED" : "FAILED"
-      };
-    });
-    
-    setProblem({ ...problem, testCases: updatedTestCases });
-
-    // 2. Show first output in console for quick reference
-    const firstResult = results[0];
-    setOutput(firstResult?.stdout || firstResult?.stderr || firstResult?.compile_output || "> No output received.");
-
-    // 3. Global Feedback
-    if (allPassed) {
-      toast.success(`ACCEPTED: ${totalPassed}/${totalCases} PASSED`, {
-        icon: '🚀',
-        style: { background: '#10b981', color: '#fff' }
-      });
-    } else {
-      toast.error(`FAILED: ${totalPassed}/${totalCases} PASSED`);
-      setActiveTab("testcase"); // Auto-switch to show the red/green markers
-    }
-
-  } catch (err: any) {
-    toast.error("COMMUNICATION_LINK_FAILURE");
-    setOutput("> Connection to Judge0 server lost.");
-  } finally {
-    setIsRunning(false);
-  }
-};
-  if (loading) {
+  if (loading)
     return (
-      <div className="h-screen bg-[#1a1a1a] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-emerald-500 font-mono text-xs tracking-widest animate-pulse">
-            LOADING_DATA...
-          </p>
-        </div>
+      <div className="h-screen bg-[#1a1a1a] flex items-center justify-center text-emerald-500">
+        LOADING...
       </div>
     );
-  }
 
   return (
     <div className="h-screen flex flex-col bg-[#1a1a1a] overflow-hidden">
-      <div className="h-16 shrink-0 border-b border-gray-700 bg-[#252526] flex items-center px-6 justify-between">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => router.push("/problems")}
-            className="text-gray-400 hover:text-white transition-colors text-xs font-bold uppercase tracking-tighter"
-          >
-            ← Back
-          </button>
-          <div className="h-4 w-[2px] bg-gray-700 mx-2" />
-        </div>
+      {/* HEADER */}
+      <div className="h-16 border-b border-gray-700 bg-[#252526] flex items-center px-6 justify-between">
+        <button
+          onClick={() => router.push("/problems")}
+          className="text-gray-400 hover:text-white text-xs font-bold"
+        >
+          ← BACK
+        </button>
         <FormButton onClick={handleRun} isLoading={isRunning}>
           Run_
         </FormButton>
@@ -134,18 +167,38 @@ export default function WorkspacePage({
 
       <div className="flex-1 overflow-hidden">
         <Group orientation="horizontal">
-          <Panel minSize="20%" defaultSize="55%" maxSize="70%">
+          <Panel defaultSize={50} minSize={20}>
             <ProblemDescription problem={problem} />
           </Panel>
-          <Separator className="w-1 bg-gray-800 hover:bg-emerald-500 transition-colors" />
-          <Panel minSize="30%" maxSize="80%" defaultSize="45%">
+          <Separator className="w-1 bg-gray-800 hover:bg-emerald-500" />
+          <Panel defaultSize={50}>
             <Group orientation="vertical">
-              <Panel minSize="10%" defaultSize="55%" maxSize="90%">
-                <CodeEditor code={code} setCode={setCode} language={language} />
+              {/* EDITOR PANEL */}
+              <Panel defaultSize={60}>
+                {/* LANGUAGE TABS */}
+                <div className="flex bg-[#2d2d2d] border-b border-gray-800">
+                  {LANGUAGES.map((lang) => (
+                    <button
+                      key={lang.id}
+                      onClick={() => setSelectedLang(lang)}
+                      className={`px-4 py-2 text-[10px] font-mono uppercase tracking-widest transition-all ${
+                        selectedLang.id === lang.id
+                          ? "bg-[#1e1e1e] text-emerald-400 border-t-2 border-emerald-500"
+                          : "text-gray-500 hover:text-gray-300"
+                      }`}
+                    >
+                      {lang.label}
+                    </button>
+                  ))}
+                </div>
+                <CodeEditor
+                  code={codes[selectedLang.id]}
+                  setCode={handleCodeChange}
+                  language={selectedLang.id}
+                />
               </Panel>
-              <Separator className="h-1 bg-gray-800 hover:bg-emerald-500 transition-colors" />
-              <Panel minSize="10%" defaultSize="45%" maxSize="90%">
-                {/* PASSED TABS AND SETTER HERE */}
+              <Separator className="h-1 bg-gray-800 hover:bg-emerald-500" />
+              <Panel defaultSize={40}>
                 <TerminalOutput
                   output={output}
                   testCases={problem?.testCases}
