@@ -6,6 +6,7 @@ import {
   fetchProblemsThunk,
   updateProblemThunk,
   deleteProblemThunk,
+  fetchProblemByIdThunk,
 } from "./problem.actions";
 import { ProblemsState } from "@/types/problem.types";
 
@@ -107,6 +108,23 @@ const problemsSlice = createSlice({
       .addCase(deleteProblemThunk.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload ?? "Failed to delete problem";
+      })
+      .addCase(fetchProblemByIdThunk.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+        // We clear currentProblem so the user doesn't see the previous
+        // problem's data while the new one is loading
+        state.currentProblem = null;
+      })
+      .addCase(fetchProblemByIdThunk.fulfilled, (state, action) => {
+        state.isLoading = false;
+        // action.payload.data is the problem object from your Backend
+        state.currentProblem = action.payload.data;
+      })
+      .addCase(fetchProblemByIdThunk.rejected, (state, action) => {
+        state.isLoading = false;
+        // action.payload is the error message from your rejectWithValue
+        state.error = action.payload ?? "Failed to load problem";
       });
   },
 });

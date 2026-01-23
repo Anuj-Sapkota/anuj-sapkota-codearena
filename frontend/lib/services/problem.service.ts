@@ -29,11 +29,12 @@ export const problemService = {
   /**
    * Public: Get detailed problem data by slug
    */
-  getBySlug: async (slug: string) => {
-    const response = await api.get(`/problems/${slug}`);
+  getById: async (
+    id: string | number,
+  ): Promise<{ success: boolean; data: Problem }> => {
+    const response = await api.get(`/problems/${id}`);
     return response.data;
   },
-
   /**
    * Admin: Update problem details or test cases
    * FIXED: Removed '/update' from URL to match backend router.put("/:id")
