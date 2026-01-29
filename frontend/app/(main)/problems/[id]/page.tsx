@@ -20,8 +20,9 @@ import {
   updateCode,
   changeLanguage,
   setActiveTab,
-  runCodeThunk,
 } from "@/lib/store/features/workspace/workspace.slice";
+
+import { runCodeThunk } from "@/lib/store/features/workspace/workspace.actions";
 import { fetchProblemByIdThunk } from "@/lib/store/features/problems/problem.actions";
 
 // Define the shape of the test case displayed in the Terminal
@@ -49,9 +50,9 @@ export default function WorkspacePage({
 
   // Typed Selectors
   const { currentProblem, isLoading: problemLoading } = useSelector(
-    (state: RootState) => state.problems
+    (state: RootState) => state.problem,
   );
-  
+
   const { codes, selectedLanguage, isRunning, output, activeTab, results } =
     useSelector((state: RootState) => state.workspace);
 
@@ -64,11 +65,11 @@ export default function WorkspacePage({
 
       if (fetchProblemByIdThunk.fulfilled.match(action)) {
         const problemData = action.payload.data;
-        
+
         // Populate editor safely. If starterCode is a string (JSON), parse it.
         // If it's already an object, use it directly.
         let starter = problemData.starterCode;
-        
+
         // Fix for the "Property does not exist on type string" error:
         if (typeof starter === "string") {
           try {
@@ -84,7 +85,7 @@ export default function WorkspacePage({
             python: starter?.python || "",
             java: starter?.java || "",
             cpp: starter?.cpp || "",
-          })
+          }),
         );
       } else if (fetchProblemByIdThunk.rejected.match(action)) {
         toast.error("Failed to load problem environment.");
@@ -103,13 +104,15 @@ export default function WorkspacePage({
         sourceCode: codes[selectedLanguage.id],
         langId: selectedLanguage.judge0Id,
         problemId: problem.problemId.toString(),
-      })
+      }),
     );
 
     if (runCodeThunk.fulfilled.match(resultAction)) {
       const { allPassed, totalPassed, totalCases } = resultAction.payload;
       if (allPassed) {
-        toast.success(`ACCEPTED: ${totalPassed}/${totalCases} PASSED`, { icon: "🚀" });
+        toast.success(`ACCEPTED: ${totalPassed}/${totalCases} PASSED`, {
+          icon: "🚀",
+        });
       } else {
         toast.error(`FAILED: ${totalPassed}/${totalCases} PASSED`);
       }
@@ -117,27 +120,35 @@ export default function WorkspacePage({
   };
 
   // Transform Test Cases for UI
-  const displayTestCases: DisplayTestCase[] = (problem?.testCases || []).map((tc, index) => {
-    const executionResult = results?.[index];
-    const actual = executionResult?.stdout?.trim() || "";
-    const expected = tc.expectedOutput?.toString().trim() || "";
-    
-    const hasRun = results && results.length > 0;
-    const isCorrect = executionResult?.status?.id === 3 && actual === expected;
+  const displayTestCases: DisplayTestCase[] = (problem?.testCases || []).map(
+    (tc, index) => {
+      const executionResult = results?.[index];
+      const actual = executionResult?.stdout?.trim() || "";
+      const expected = tc.expectedOutput?.toString().trim() || "";
 
-    return {
-      ...tc,
-      actualOutput:
-        actual || executionResult?.stderr || executionResult?.compile_output || "---",
-      status: !hasRun ? "IDLE" : isCorrect ? "PASSED" : "FAILED",
-    };
-  });
+      const hasRun = results && results.length > 0;
+      const isCorrect =
+        executionResult?.status?.id === 3 && actual === expected;
+
+      return {
+        ...tc,
+        actualOutput:
+          actual ||
+          executionResult?.stderr ||
+          executionResult?.compile_output ||
+          "---",
+        status: !hasRun ? "IDLE" : isCorrect ? "PASSED" : "FAILED",
+      };
+    },
+  );
 
   if (problemLoading) {
     return (
       <div className="h-screen bg-[#1a1a1a] flex flex-col items-center justify-center">
         <div className="w-12 h-12 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mb-4" />
-        <p className="text-emerald-500 font-mono text-xs tracking-widest uppercase">Syncing_Environment...</p>
+        <p className="text-emerald-500 font-mono text-xs tracking-widest uppercase">
+          Syncing_Environment...
+        </p>
       </div>
     );
   }
@@ -153,7 +164,10 @@ export default function WorkspacePage({
       <div className="flex-1 overflow-hidden">
         <Group orientation="horizontal">
           <Panel defaultSize={45} minSize={30}>
-            <div ref={descriptionRef} className="h-full overflow-y-auto custom-scrollbar">
+            <div
+              ref={descriptionRef}
+              className="h-full overflow-y-auto custom-scrollbar"
+            >
               <ProblemDescription problem={problem} />
             </div>
           </Panel>
@@ -181,7 +195,7 @@ export default function WorkspacePage({
                   </div>
                   <CodeEditor
                     code={codes[selectedLanguage.id] || ""}
-                    setCode={(val) => dispatch(updateCode(val))}
+                    setCode={(val: string) => dispatch(updateCode(val))}
                     language={selectedLanguage.id}
                   />
                 </div>
