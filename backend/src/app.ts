@@ -25,8 +25,6 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-console.log("Reached Services");
-
 // Auth
 app.use("/api/auth", authRoute);
 

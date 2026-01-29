@@ -13,7 +13,7 @@ export default function ProblemControls({ search, setSearch, onOpenModal, onOpen
     <div className="flex flex-col space-y-6">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-gray-200 pb-8">
         <div>
-          <h1 className="text-4xl font-black text-darkest tracking-tight uppercase">Challenge Registry.</h1>
+          <h1 className="text-4xl font-black text-darkest tracking-tight uppercase"> Problem Management.</h1>
           <p className="text-muted text-sm font-medium mt-1 uppercase tracking-widest">Problem & Test-Case Architecture</p>
         </div>
         <button onClick={onOpenModal} className="bg-primary-1 hover:bg-primary-2 text-white px-8 py-3 rounded-md font-black uppercase text-xs tracking-widest border border-primary-2 transition-all active:scale-95 shadow-lg shadow-primary-1/10 flex items-center justify-center">

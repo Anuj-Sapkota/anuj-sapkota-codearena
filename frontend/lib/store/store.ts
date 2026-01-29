@@ -5,11 +5,14 @@ import persistReducer from "redux-persist/es/persistReducer";
 import authReducer from "@/lib/store/features/auth/auth.slice";
 import categoryReducer from "@/lib/store/features/category/category.slice";
 import problemReducer from "@/lib/store/features/problems/problem.slice"
+import workspaceReducer from "@/lib/store/features/workspace/workspace.slice"
+
 //setting up the root reducer
 const rootReducer = combineReducers({
   auth: authReducer,
   category: categoryReducer,
   problem: problemReducer,
+  workspace: workspaceReducer,
 });
 
 //setting up the persist configuration

@@ -2,7 +2,7 @@ import { Dispatch, SetStateAction } from "react";
 import { Category } from "./category.types";
 
 export interface TestCase {
-  id?: number;
+  testCaseId: number; // Consistently using testCaseId to match your Backend/Prisma
   input: string;
   expectedOutput: string;
   isSample: boolean;
@@ -16,10 +16,15 @@ export interface Problem {
   difficulty: "EASY" | "MEDIUM" | "HARD";
   timeLimit: number;
   functionName: string;
-  starterCode: string;
+  starterCode: {
+    javascript?: string;
+    python?: string;
+    java?: string;
+    cpp?: string;
+  };
   memoryLimit: number;
   categories: Category[];
-  testCases?: TestCase[];
+  testCases: TestCase[]; // Removed the '?' as Workspace needs these
   status: "SOLVED" | "ATTEMPTED" | "UNSOLVED";
   isSolved?: boolean;
   _count?: {
@@ -29,10 +34,8 @@ export interface Problem {
   updatedAt: string;
 }
 
-
 export interface ProblemsState {
   problems: Problem[];
-  // New meta object to track server-side pagination state
   meta: {
     total: number;
     page: number;
@@ -43,37 +46,24 @@ export interface ProblemsState {
   error: string | null;
 }
 
-// DTOs for Actions
 export interface CreateProblemDTO {
   title: string;
   content: string;
   difficulty: "EASY" | "MEDIUM" | "HARD";
   timeLimit: number;
   functionName: string;
-  starterCode: Record<string,string>;
+  starterCode: Record<string, string>;
   memoryLimit: number;
   categoryIds: number[];
-  testCases: Omit<TestCase, "id">[];
+  testCases: Omit<TestCase, "testCaseId">[];
 }
 
+// UI specific types
 export type DifficultyFilter = "all" | "EASY" | "MEDIUM" | "HARD";
 export type SortOption = "newest" | "title_asc" | "difficulty_high";
-
-export interface FilterState {
-  sortBy: SortOption;
-  difficulty: DifficultyFilter;
-}
-
-export interface ProblemMeta {
-  total: number;
-  page: number;
-  pages: number;
-  totalSolved?: number; // The "?" makes it safe if the backend hasn't sent it yet
-}
-
 
 export interface TabProps {
   formData: CreateProblemDTO;
   setFormData: Dispatch<SetStateAction<CreateProblemDTO>>;
-  categories?: Category[]; // Only used in BasicConfigTab
+  categories?: Category[];
 }
