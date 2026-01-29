@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { runCodeThunk } from "./workspace.actions";
-import { WorkspaceState } from "@/types/workspace.types";
+import { runCodeThunk, fetchSubmissionHistoryThunk } from "./workspace.actions";
+import { WorkspaceState, SubmissionRecord } from "@/types/workspace.types";
 
 const LANGUAGES = [
   { id: "javascript", label: "JavaScript", judge0Id: 63 },
@@ -13,9 +13,14 @@ const initialState: WorkspaceState = {
   codes: { javascript: "", python: "", java: "", cpp: "" },
   selectedLanguage: LANGUAGES[0],
   isRunning: false,
+  isFetchingHistory: false,
   output: "",
   results: [],
+  submissions: [],
+  metrics: null,
   activeTab: "testcase",
+  descriptionTab: "description",
+  selectedSubmission: null,
 };
 
 const workspaceSlice = createSlice({
@@ -23,7 +28,6 @@ const workspaceSlice = createSlice({
   initialState,
   reducers: {
     initCodes: (state, action: PayloadAction<Record<string, string>>) => {
-      // Logic to handle if starterCode arrives as a string or object
       const incoming = action.payload;
       state.codes = {
         javascript: incoming.javascript || "",
@@ -39,37 +43,88 @@ const workspaceSlice = createSlice({
       const lang = LANGUAGES.find((l) => l.id === action.payload);
       if (lang) state.selectedLanguage = lang;
     },
-    setActiveTab: (state, action: PayloadAction<"testcase" | "result">) => {
+    setActiveTab: (
+      state,
+      action: PayloadAction<"testcase" | "result" | "submissions">,
+    ) => {
       state.activeTab = action.payload;
+    },
+    setDescriptionTab: (
+      state,
+      action: PayloadAction<"description" | "submissions" | "detail">,
+    ) => {
+      state.descriptionTab = action.payload;
+    },
+    setSelectedSubmission: (
+      state,
+      action: PayloadAction<SubmissionRecord | null>,
+    ) => {
+      state.selectedSubmission = action.payload;
     },
   },
   extraReducers: (builder) => {
     builder
+      // --- RUN / SUBMIT CODE LOGIC ---
       .addCase(runCodeThunk.pending, (state) => {
         state.isRunning = true;
         state.output = "> Running code against test cases...";
         state.activeTab = "result";
         state.results = [];
+        state.metrics = null;
       })
       .addCase(runCodeThunk.fulfilled, (state, action) => {
         state.isRunning = false;
-        state.results = action.payload.results;
+        state.results = action.payload.results || [];
+        state.metrics = action.payload.metrics || null;
 
-        // Grab primary output from first test case
-        const first = action.payload.results[0];
-        state.output =
-          first?.stdout ||
-          first?.stderr ||
-          first?.compile_output ||
-          "> No output.";
+        // AUTOMATION: If it was a final submission
+        if (action.meta.arg.isFinal && action.payload.newSubmission) {
+          // 1. Manually add the new submission to the history list (at the top)
+          state.submissions = [action.payload.newSubmission, ...state.submissions];
+          
+          // 2. Set as selected and switch to detail view
+          state.selectedSubmission = action.payload.newSubmission;
+          state.descriptionTab = "detail";
+        }
+
+        const first = action.payload.results?.[0];
+        if (first) {
+          state.output =
+            first.compile_output ||
+            first.stderr ||
+            first.stdout ||
+            "> Execution finished.";
+        } else {
+          state.output = "> No results returned.";
+        }
       })
-      .addCase(runCodeThunk.rejected, (state) => {
+      .addCase(runCodeThunk.rejected, (state, action) => {
         state.isRunning = false;
-        state.output = "> Execution Error: Connection to judge lost.";
+        state.output = (action.payload as string) || "> Execution Error.";
+        state.metrics = null;
+      })
+
+      // --- SUBMISSION HISTORY LOGIC ---
+      .addCase(fetchSubmissionHistoryThunk.pending, (state) => {
+        state.isFetchingHistory = true;
+      })
+      .addCase(fetchSubmissionHistoryThunk.fulfilled, (state, action) => {
+        state.isFetchingHistory = false;
+        state.submissions = action.payload;
+      })
+      .addCase(fetchSubmissionHistoryThunk.rejected, (state) => {
+        state.isFetchingHistory = false;
       });
   },
 });
 
-export const { initCodes, updateCode, changeLanguage, setActiveTab } =
-  workspaceSlice.actions;
+export const {
+  initCodes,
+  updateCode,
+  changeLanguage,
+  setActiveTab,
+  setDescriptionTab,
+  setSelectedSubmission,
+} = workspaceSlice.actions;
+
 export default workspaceSlice.reducer;

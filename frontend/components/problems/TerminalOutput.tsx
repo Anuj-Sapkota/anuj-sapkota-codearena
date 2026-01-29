@@ -1,15 +1,9 @@
 "use client";
 
+import { TerminalOutputProps } from "@/types/workspace.types";
 import React from "react";
 
-interface TerminalProps {
-  output: string;
-  testCases: any[];
-  activeTab: "testcase" | "result";
-  setActiveTab: (tab: "testcase" | "result") => void;
-}
-
-export const TerminalOutput = ({ output, testCases, activeTab, setActiveTab }: TerminalProps) => {
+export const TerminalOutput = ({ output, testCases, activeTab, setActiveTab }: TerminalOutputProps) => {
   return (
     <div className="h-full flex flex-col bg-[#1e1e1e] font-mono">
       {/* TABS */}

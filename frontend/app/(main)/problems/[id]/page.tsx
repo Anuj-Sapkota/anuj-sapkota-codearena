@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, use, useRef } from "react";
+import React, { useEffect, use, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Panel, Group, Separator } from "react-resizable-panels";
 import { toast } from "sonner";
@@ -14,22 +14,22 @@ import { ProblemHeader } from "@/components/problems/ProblemHeader";
 
 // Types & Redux
 import { RootState, AppDispatch } from "@/lib/store/store";
-import { Problem, TestCase } from "@/types/problem.types"; // Ensure these interfaces are exported
+import { Problem, TestCase } from "@/types/problem.types";
 import {
   initCodes,
   updateCode,
   changeLanguage,
   setActiveTab,
+  setDescriptionTab, // Added
+  setSelectedSubmission, // Added
 } from "@/lib/store/features/workspace/workspace.slice";
 
-import { runCodeThunk } from "@/lib/store/features/workspace/workspace.actions";
+import {
+  runCodeThunk,
+  fetchSubmissionHistoryThunk,
+} from "@/lib/store/features/workspace/workspace.actions";
 import { fetchProblemByIdThunk } from "@/lib/store/features/problems/problem.actions";
-
-// Define the shape of the test case displayed in the Terminal
-export interface DisplayTestCase extends TestCase {
-  actualOutput: string;
-  status: "PASSED" | "FAILED" | "IDLE";
-}
+import { DisplayTestCase } from "@/types/workspace.types";
 
 const LANGUAGES = [
   { id: "javascript", label: "JavaScript", judge0Id: 63 },
@@ -48,29 +48,32 @@ export default function WorkspacePage({
   const router = useRouter();
   const descriptionRef = useRef<HTMLDivElement>(null);
 
-  // Typed Selectors
+  const [isSubmittingMode, setIsSubmittingMode] = useState(false);
+
   const { currentProblem, isLoading: problemLoading } = useSelector(
     (state: RootState) => state.problem,
   );
 
-  const { codes, selectedLanguage, isRunning, output, activeTab, results } =
-    useSelector((state: RootState) => state.workspace);
+  const {
+    codes,
+    selectedLanguage,
+    isRunning,
+    output,
+    activeTab,
+    results,
+    metrics,
+    submissions,
+    isFetchingHistory,
+  } = useSelector((state: RootState) => state.workspace);
 
-  // Cast currentProblem to Problem type safely
   const problem = currentProblem as Problem | null;
 
   useEffect(() => {
     const loadWorkspace = async () => {
       const action = await dispatch(fetchProblemByIdThunk(resolvedParams.id));
-
       if (fetchProblemByIdThunk.fulfilled.match(action)) {
         const problemData = action.payload.data;
-
-        // Populate editor safely. If starterCode is a string (JSON), parse it.
-        // If it's already an object, use it directly.
         let starter = problemData.starterCode;
-
-        // Fix for the "Property does not exist on type string" error:
         if (typeof starter === "string") {
           try {
             starter = JSON.parse(starter);
@@ -78,7 +81,6 @@ export default function WorkspacePage({
             starter = {};
           }
         }
-
         dispatch(
           initCodes({
             javascript: starter?.javascript || "",
@@ -88,50 +90,80 @@ export default function WorkspacePage({
           }),
         );
       } else if (fetchProblemByIdThunk.rejected.match(action)) {
-        toast.error("Failed to load problem environment.");
+        toast.error("Failed to load environment.");
         router.push("/problems");
       }
     };
-
     loadWorkspace();
   }, [resolvedParams.id, dispatch, router]);
 
-  const handleRun = async () => {
+  useEffect(() => {
+    if (activeTab === "submissions" && problem?.problemId) {
+      dispatch(fetchSubmissionHistoryThunk(problem.problemId.toString()));
+    }
+  }, [activeTab, problem?.problemId, dispatch]);
+
+  const handleExecute = async (isFinal: boolean) => {
     if (!problem?.problemId) return;
+    setIsSubmittingMode(isFinal);
 
-    const resultAction = await dispatch(
-      runCodeThunk({
-        sourceCode: codes[selectedLanguage.id],
-        langId: selectedLanguage.judge0Id,
-        problemId: problem.problemId.toString(),
-      }),
-    );
+    try {
+      const resultAction = await dispatch(
+        runCodeThunk({
+          sourceCode: codes[selectedLanguage.id],
+          langId: selectedLanguage.judge0Id,
+          problemId: problem.problemId.toString(),
+          isFinal,
+        }),
+      );
 
-    if (runCodeThunk.fulfilled.match(resultAction)) {
-      const { allPassed, totalPassed, totalCases } = resultAction.payload;
-      if (allPassed) {
-        toast.success(`ACCEPTED: ${totalPassed}/${totalCases} PASSED`, {
-          icon: "🚀",
-        });
-      } else {
-        toast.error(`FAILED: ${totalPassed}/${totalCases} PASSED`);
+      if (runCodeThunk.fulfilled.match(resultAction)) {
+        const {
+          allPassed,
+          totalPassed,
+          totalCases,
+          metrics: resMetrics,
+          newSubmission,
+        } = resultAction.payload;
+
+        // REDIRECT LOGIC: If it's a submission and we got the record back
+        if (isFinal && newSubmission) {
+          dispatch(setSelectedSubmission(newSubmission));
+          dispatch(setDescriptionTab("detail"));
+
+          toast.success(`SUBMITTED: ${totalPassed}/${totalCases} PASSED`, {
+            icon: "🚀",
+          });
+        } else if (allPassed) {
+          toast.success(`ACCEPTED: ${totalPassed}/${totalCases} PASSED`, {
+            icon: "🏆",
+          });
+        } else {
+          toast.error(`FAILED: ${totalPassed}/${totalCases} PASSED`);
+        }
       }
+    } catch (error) {
+      toast.error("An error occurred during execution.");
+    } finally {
+      setIsSubmittingMode(false);
     }
   };
 
-  // Transform Test Cases for UI
   const displayTestCases: DisplayTestCase[] = (problem?.testCases || []).map(
     (tc, index) => {
       const executionResult = results?.[index];
       const actual = executionResult?.stdout?.trim() || "";
       const expected = tc.expectedOutput?.toString().trim() || "";
-
       const hasRun = results && results.length > 0;
       const isCorrect =
         executionResult?.status?.id === 3 && actual === expected;
 
       return {
-        ...tc,
+        // Change 'testCaseId: tc.id' to just 'id: tc.id'
+        id: tc.testCaseId|| tc.testCaseId || index,
+        input: tc.input,
+        expectedOutput: tc.expectedOutput,
+        isSample: tc.isSample,
         actualOutput:
           actual ||
           executionResult?.stderr ||
@@ -141,6 +173,7 @@ export default function WorkspacePage({
       };
     },
   );
+
 
   if (problemLoading) {
     return (
@@ -156,8 +189,10 @@ export default function WorkspacePage({
   return (
     <div className="h-screen flex flex-col bg-[#1a1a1a] overflow-hidden">
       <ProblemHeader
-        handleRun={handleRun}
-        isRunning={isRunning}
+        handleRun={() => handleExecute(false)}
+        handleSubmit={() => handleExecute(true)}
+        isRunning={isRunning && !isSubmittingMode}
+        isSubmitting={isRunning && isSubmittingMode}
         scrollContainerRef={descriptionRef}
       />
 
@@ -168,6 +203,7 @@ export default function WorkspacePage({
               ref={descriptionRef}
               className="h-full overflow-y-auto custom-scrollbar"
             >
+              {/* This component now handles Tab switching internally via Redux */}
               <ProblemDescription problem={problem} />
             </div>
           </Panel>
@@ -178,7 +214,7 @@ export default function WorkspacePage({
             <Group orientation="vertical">
               <Panel defaultSize={60} minSize={20}>
                 <div className="flex flex-col h-full bg-[#1e1e1e]">
-                  <div className="flex bg-[#2d2d2d] border-b border-gray-800">
+                  <div className="flex bg-[#2d2d2d] border-b border-gray-800 shrink-0">
                     {LANGUAGES.map((lang) => (
                       <button
                         key={lang.id}
@@ -193,11 +229,13 @@ export default function WorkspacePage({
                       </button>
                     ))}
                   </div>
-                  <CodeEditor
-                    code={codes[selectedLanguage.id] || ""}
-                    setCode={(val: string) => dispatch(updateCode(val))}
-                    language={selectedLanguage.id}
-                  />
+                  <div className="flex-1 overflow-hidden">
+                    <CodeEditor
+                      code={codes[selectedLanguage.id] || ""}
+                      setCode={(val: string) => dispatch(updateCode(val))}
+                      language={selectedLanguage.id}
+                    />
+                  </div>
                 </div>
               </Panel>
 
@@ -209,6 +247,9 @@ export default function WorkspacePage({
                   testCases={displayTestCases}
                   activeTab={activeTab}
                   setActiveTab={(tab) => dispatch(setActiveTab(tab))}
+                  metrics={metrics}
+                  submissions={submissions}
+                  isFetchingHistory={isFetchingHistory}
                 />
               </Panel>
             </Group>
