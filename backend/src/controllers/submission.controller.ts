@@ -22,8 +22,8 @@ export const handleSubmission = async (
 ) => {
   const { source_code, language_id, problemId, isFinal } = req.body;
   // Use 'sub' to match your specific middleware requirement
-  const userId =
-    (req as any).user?.userId || (req as any).user?.id || (req as any).sub;
+  const userId =  (req as any).user.sub;
+  console.log("User ID", userId);
 
   try {
     const problem = await prisma.problem.findUnique({
@@ -34,6 +34,7 @@ export const handleSubmission = async (
     if (!problem)
       return res
         .status(404)
+
         .json({ success: false, message: "Problem not found" });
 
     // Execute Judge0 Logic

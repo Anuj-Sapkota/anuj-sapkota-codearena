@@ -80,8 +80,11 @@ const workspaceSlice = createSlice({
         // AUTOMATION: If it was a final submission
         if (action.meta.arg.isFinal && action.payload.newSubmission) {
           // 1. Manually add the new submission to the history list (at the top)
-          state.submissions = [action.payload.newSubmission, ...state.submissions];
-          
+          state.submissions = [
+            action.payload.newSubmission,
+            ...state.submissions,
+          ];
+
           // 2. Set as selected and switch to detail view
           state.selectedSubmission = action.payload.newSubmission;
           state.descriptionTab = "detail";
