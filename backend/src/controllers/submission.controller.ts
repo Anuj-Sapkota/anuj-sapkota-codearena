@@ -1,89 +1,151 @@
-import type { Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 import * as Judge0Service from "../services/judge0.service.js";
 import { prisma } from "../lib/prisma.js";
-import { wrapUserCode } from "../utils/code-wrapper.util.js"; // Import your new utility
+import { wrapUserCode } from "../utils/code-wrapper.util.js";
 
-export const handleSubmission = async (req: Request, res: Response) => {
-  const { source_code, language_id, problemId } = req.body;
+// Helper function at the top of submission.controller.ts
+const calculateMetrics = (results: any[]) => {
+  const peakTime = Math.max(...results.map((r) => parseFloat(r.time || "0")));
+  const peakMemory = Math.max(...results.map((r) => r.memory || 0));
 
-  if (!source_code || !language_id || !problemId) {
-    return res.status(400).json({
-      success: false,
-      message: "Missing source_code, language_id, or problemId",
-    });
-  }
+  return {
+    runtime: `${(peakTime * 1000).toFixed(0)}ms`,
+    memory: `${(peakMemory / 1024).toFixed(1)}MB`,
+    rawTime: peakTime,
+    rawMemory: peakMemory,
+  };
+};
+export const handleSubmission = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const { source_code, language_id, problemId, isFinal } = req.body;
+  // Use 'sub' to match your specific middleware requirement
+  const userId =  (req as any).user.sub;
+  console.log("User ID", userId);
 
   try {
-    // 1. Fetch the problem and its test cases
     const problem = await prisma.problem.findUnique({
       where: { problemId: Number(problemId) },
       include: { testCases: true },
     });
 
-    if (!problem || !problem.testCases.length) {
+    if (!problem)
       return res
         .status(404)
-        .json({
-          success: false,
-          message: "No test cases found for this problem",
-        });
-    }
 
-    // Identify the function name (fallback to 'solution' if not defined in DB)
-    const functionName = problem.functionName || "solution";
+        .json({ success: false, message: "Problem not found" });
 
-    // 2. Map and execute all test cases in parallel
+    // Execute Judge0 Logic
     const results = await Promise.all(
       problem.testCases.map(async (tc) => {
-        // Use your utility to wrap the user code with the driver script
         const wrappedCode = wrapUserCode(
           source_code,
           language_id,
           tc.input,
-          functionName,
+          problem.functionName || "solution",
         );
-
-        // Send the wrapped code to Judge0
-        // Note the empty string "" in the 3rd position for stdin
         const execution = await Judge0Service.submitCode(
           wrappedCode,
           language_id,
-          "", // STDIN = FOR FUTURE--------
+          "",
           problem.timeLimit,
           problem.memoryLimit,
         );
-        // Normalize outputs for comparison
-        const actual = execution.stdout?.trim() || "";
-        const expected = tc.expectedOutput.trim();
-
         return {
-          stdout: actual,
-          stderr: execution.stderr,
-          compile_output: execution.compile_output,
-          status: execution.status,
-          // Comparison check: Status must be 'Accepted' (3) AND output must match
-          isCorrect: execution.status.id === 3 && actual === expected, // 3==> accepted
+          ...execution,
+          isCorrect:
+            execution.status.id === 3 &&
+            execution.stdout?.trim() === tc.expectedOutput.trim(),
           isSample: tc.isSample,
         };
       }),
     );
 
-    // 3. Calculate final metrics
-    const totalCases = results.length;
+    const metrics = calculateMetrics(results);
+    const allPassed = results.every((r) => r.isCorrect);
     const totalPassed = results.filter((r) => r.isCorrect).length;
+
+    let newSubmission = null;
+
+    if (isFinal && userId) {
+      newSubmission = await prisma.$transaction(async (tx) => {
+        const submission = await tx.submission.create({
+          data: {
+            userId: Number(userId),
+            problemId: Number(problemId),
+            code: source_code,
+            languageId: Number(language_id),
+            status: allPassed ? "ACCEPTED" : "WRONG_ANSWER",
+            totalPassed,
+            totalCases: results.length,
+            time: metrics.rawTime,
+            memory: Math.round(metrics.rawMemory),
+          },
+        });
+
+        if (allPassed) {
+          await tx.userProblemStatus.upsert({
+            where: {
+              userId_problemId: {
+                userId: Number(userId),
+                problemId: Number(problemId),
+              },
+            },
+            update: { status: "SOLVED" },
+            create: {
+              userId: Number(userId),
+              problemId: Number(problemId),
+              status: "SOLVED",
+            },
+          });
+        }
+        return submission;
+      });
+    }
 
     return res.status(200).json({
       success: true,
       results,
+      allPassed,
       totalPassed,
-      totalCases,
-      allPassed: totalPassed === totalCases,
+      totalCases: results.length,
+      metrics: { runtime: metrics.runtime, memory: metrics.memory },
+      newSubmission, // Crucial for Frontend Redirect
     });
   } catch (error: any) {
-    console.error("Submission Controller Error:", error.message);
-    return res.status(500).json({
-      success: false,
-      message: error.message || "Internal Server Error",
+    next(error);
+  }
+};
+
+// submission.controller.ts
+export const getSubmissionHistory = async (req: Request, res: Response) => {
+  const { problemId } = req.params;
+  const userId = (req as any).sub;
+
+  try {
+    const history = await prisma.submission.findMany({
+      where: {
+        userId: Number(userId),
+        problemId: Number(problemId),
+      },
+      orderBy: { createdAt: "desc" }, // Newest first
+      select: {
+        id: true,
+        status: true,
+        runtime: true,
+        memory: true,
+        createdAt: true,
+        languageId: true,
+        code: true, // Optional: if you want them to be able to click and see old code
+      },
     });
+
+    res.status(200).json({ success: true, history });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch history" });
   }
 };

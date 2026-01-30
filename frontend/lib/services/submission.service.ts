@@ -1,19 +1,24 @@
-import api from "../api"; // Adjust the path to where your api.ts is located
+import api from "../api";
 
 export const submissionService = {
-  /**
-   * Submits code to Judge0 via the backend
-   * Uses the centralized 'api' instance to ensure credentials (cookies) are sent
-   */
-  submitCode: async (source_code: string, language_id: number, problemId: string) => {
-    // Note: Since api.ts already has baseURL: config.apiUrl, 
-    // we only need the relative path here.
+  submitCode: async (
+    sourceCode: string, // Changed name to match Thunk
+    langId: number, // Changed name to match Thunk
+    problemId: string,
+    isFinal: boolean = false,
+  ) => {
     const response = await api.post("/submissions/submit", {
-      source_code,
-      language_id,
+      source_code: sourceCode, // Map to snake_case for backend
+      language_id: langId, // Map to snake_case for backend
       problemId,
+      isFinal,
     });
-    
+
+    return response.data;
+  },
+
+  getHistory: async (problemId: string) => {
+    const response = await api.get(`/submissions/history/${problemId}`);
     return response.data;
   },
 };
