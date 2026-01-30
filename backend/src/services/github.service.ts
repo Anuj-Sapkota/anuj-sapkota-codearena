@@ -31,6 +31,8 @@ export const getUserRepos = async (userId: number) => {
       name: repo.name,
       full_name: repo.full_name,
       private: repo.private,
+      updated_at: repo.updated_at,
+      pushed_at: repo.pushed_at,
     }));
   } catch (error) {
     throw new ServiceError("Failed to fetch GitHub repositories", 500);
