@@ -281,6 +281,71 @@ export const changePassword = async (
     next(err);
   }
 };
+
+import jwt from "jsonwebtoken";
+import passport from "passport";
+
+const initiateGithubAuth = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    // 1. Check if user is already logged in by looking at the cookie
+    const token = req.cookies.accessToken;
+    let state: string | undefined = undefined;
+
+    if (token) {
+      try {
+        // 2. Decode the token to get the userId
+        const decoded = jwt.verify(token, config.jwt.jwtSecret) as any;
+
+        // 3. Encode the userId into a base64 string (the "sticky note")
+        state = Buffer.from(JSON.stringify({ userId: decoded.sub })).toString(
+          "base64",
+        );
+      } catch (err) {
+        state = undefined; // Invalid token? Treat as guest
+      }
+    }
+
+    // 4. Trigger Passport and pass the state
+    passport.authenticate("github", {
+      session: false,
+      scope: ["user:email", "repo"],
+      state: state, // This goes to GitHub and comes back to us
+    })(req, res, next);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Also do the same for Google if you want linking there
+const initiateGoogleAuth = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const token = req.cookies.accessToken;
+  let state: string | undefined = undefined;
+
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, config.jwt.jwtSecret) as any;
+      state = Buffer.from(JSON.stringify({ userId: decoded.sub })).toString(
+        "base64",
+      );
+    } catch (err) {
+      state = undefined;
+    }
+  }
+
+  passport.authenticate("google", {
+    session: false,
+    scope: ["profile", "email"],
+    state: state,
+  })(req, res, next);
+};
 export default {
   registerUser,
   loginUser,
@@ -294,4 +359,6 @@ export default {
   deleteAccount,
   setInitialPassword,
   changePassword,
+  initiateGithubAuth,
+  initiateGoogleAuth,
 };

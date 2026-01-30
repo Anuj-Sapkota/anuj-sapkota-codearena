@@ -3,66 +3,42 @@ import authController from "../controllers/auth.controller.js";
 import { authenticateRequest } from "../middlewares/auth.middleware.js";
 import passport from "passport";
 import { verifyTurnstile } from "../middlewares/turnstile.middleware.js";
-import { authorizeRequest } from "../middlewares/authorize.middleware.js";
 
 const router = express.Router();
-//-----------------------Standard Routes -------------------------------
 
-//signup
+// --- Standard Routes ---
 router.post("/register", verifyTurnstile, authController.registerUser);
-
-//sign in
-router.post("/login", authController.loginUser); // add turnstile----for DEVELOPMENT ONLY
-
-//logout user
+router.post("/login", authController.loginUser);
 router.post("/logout", authenticateRequest, authController.logoutUser);
-
-//refresh token
 router.post("/refresh", authController.refreshToken);
-
-//self
 router.get("/me", authenticateRequest, authController.getMe);
 
-//-------Password Recovery Routes---------------
-//forgot password
+// --- Password Recovery ---
 router.post("/forgot-password", authController.forgotPassword);
-
-//reset password
 router.post("/reset-password/:token", authController.resetPassword);
 
-//-------------------OAuth Routes -----------------------------
-//google signin
-router.get(
-  "/google",
-  passport.authenticate("google", { scope: ["profile", "email"] })
-);
+// --- OAuth Routes (The Fix is Here) ---
+// Instead of calling passport directly, we call our controller to handle the "state"
+router.get("/google", authController.initiateGoogleAuth);
+router.get("/github", authController.initiateGithubAuth);
 
+// Callbacks stay the same, but the Passport Strategy (updated previously) will read the state
 router.get(
   "/google/callback",
-  passport.authenticate("google", { session: false, failureFlash: "/login" }),
-  authController.oauthSignIn
+  passport.authenticate("google", { session: false, failureRedirect: "/login" }),
+  authController.oauthSignIn,
 );
-router.get("/github", passport.authenticate("github", { session: false }));
 
-// callback
 router.get(
   "/github/callback",
-  passport.authenticate("github", { session: false }),
-  authController.oauthSignIn
+  passport.authenticate("github", { session: false, failureRedirect: "/login" }),
+  authController.oauthSignIn,
 );
-//unlink
+
+// --- Account Settings ---
 router.post("/unlink", authenticateRequest, authController.unlinkOAuth);
-
-//set-inti
-router.post(
-  "/set-initial-password", 
-  authenticateRequest,
-  authController.setInitialPassword
-);
-
-//delete the account
+router.post("/set-initial-password", authenticateRequest, authController.setInitialPassword);
 router.delete("/delete-account", authenticateRequest, authController.deleteAccount);
-
-//change password
 router.post("/change-password", authenticateRequest, authController.changePassword);
+
 export default router;
