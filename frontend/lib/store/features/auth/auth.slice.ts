@@ -39,7 +39,7 @@ export const authSlice = createSlice({
       state,
       action: {
         payload: { provider: "google" | "github"; value: string | null };
-      }
+      },
     ) => {
       if (state.user) {
         if (action.payload.provider === "google") {
@@ -89,9 +89,13 @@ export const authSlice = createSlice({
       })
       .addCase(updateThunk.fulfilled, (state, action) => {
         state.isLoading = false;
-        if (state.user) {
-          const { data } = action.payload;
-          state.user = { ...state.user, ...data };
+        const updatedUserData = action.payload.data?.user;
+
+        if (state.user && updatedUserData) {
+          state.user = {
+            ...state.user,
+            ...updatedUserData,
+          };
         }
       })
       .addCase(updateThunk.rejected, (state, action) => {
