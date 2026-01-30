@@ -2,17 +2,34 @@
 
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/lib/store/store";
-import { setSelectedSubmission, setDescriptionTab } from "@/lib/store/features/workspace/workspace.slice";
+import {
+  setSelectedSubmission,
+  setDescriptionTab,
+} from "@/lib/store/features/workspace/workspace.slice";
 import { SubmissionRecord } from "@/types/workspace.types";
 // Importing from React Icons
 import { FaCheckCircle, FaTimesCircle, FaChevronRight } from "react-icons/fa";
 import { MdHistory, MdAccessTime, MdMemory } from "react-icons/md";
+import { fetchSubmissionHistoryThunk } from "@/lib/store/features/workspace/workspace.actions";
+import { useEffect } from "react";
 
 export const SubmissionList = () => {
   const dispatch = useDispatch<AppDispatch>();
+  const { currentProblem } = useSelector((state: RootState) => state.problem);
+  const { user } = useSelector((state: RootState) => state.auth);
   const { submissions, isFetchingHistory } = useSelector(
-    (state: RootState) => state.workspace
+    (state: RootState) => state.workspace,
   );
+
+  useEffect(() => {
+    // 2. Use the numeric ID, not the slug from the URL
+    if (currentProblem?.problemId && user) {
+      console.log("I AM INSIDE THE USE EFFECT_________________________________________")
+      dispatch(
+        fetchSubmissionHistoryThunk(currentProblem.problemId.toString()),
+      );
+    }
+  }, [dispatch, currentProblem?.problemId, user]);
 
   const handleSelectSubmission = (submission: SubmissionRecord) => {
     dispatch(setSelectedSubmission(submission));
@@ -33,7 +50,9 @@ export const SubmissionList = () => {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-slate-400">
         <MdHistory className="text-5xl mb-4 opacity-20" />
-        <p className="font-mono text-[10px] uppercase tracking-widest">No_Submissions_Found</p>
+        <p className="font-mono text-[10px] uppercase tracking-widest">
+          No_Submissions_Found
+        </p>
       </div>
     );
   }
@@ -60,26 +79,30 @@ export const SubmissionList = () => {
               ) : (
                 <FaTimesCircle className="text-xl text-red-500" />
               )}
-              
+
               <div>
                 <div className="flex items-center gap-2">
-                  <span className={`text-xs font-black uppercase italic ${
-                    sub.status === "ACCEPTED" ? "text-emerald-600" : "text-red-600"
-                  }`}>
+                  <span
+                    className={`text-xs font-black uppercase italic ${
+                      sub.status === "ACCEPTED"
+                        ? "text-emerald-600"
+                        : "text-red-600"
+                    }`}
+                  >
                     {sub.status}
                   </span>
                   <span className="text-[10px] text-slate-400 font-mono">
                     • {new Date(sub.createdAt).toLocaleDateString()}
                   </span>
                 </div>
-                
+
                 <div className="flex gap-4 mt-1.5">
                   <span className="text-[10px] font-mono text-slate-500 flex items-center gap-1">
-                    <MdAccessTime className="text-xs" /> 
+                    <MdAccessTime className="text-xs" />
                     {(sub.time ? sub.time * 1000 : 0).toFixed(0)}ms
                   </span>
                   <span className="text-[10px] font-mono text-slate-500 flex items-center gap-1">
-                    <MdMemory className="text-xs" /> 
+                    <MdMemory className="text-xs" />
                     {(sub.memory ? sub.memory / 1024 : 0).toFixed(1)}MB
                   </span>
                 </div>

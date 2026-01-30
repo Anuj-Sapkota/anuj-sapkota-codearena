@@ -9,7 +9,7 @@ import {
   FaCloudUploadAlt,
   FaGithub,
 } from "react-icons/fa";
-import { useSelector, UseSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import { RootState } from "@/lib/store/store";
 
 interface ProblemHeaderProps {

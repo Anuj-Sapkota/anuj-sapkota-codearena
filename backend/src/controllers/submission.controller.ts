@@ -22,7 +22,7 @@ export const handleSubmission = async (
 ) => {
   const { source_code, language_id, problemId, isFinal } = req.body;
   // Use 'sub' to match your specific middleware requirement
-  const userId =  (req as any).user.sub;
+  const userId = (req as any).user.sub;
   console.log("User ID", userId);
 
   try {
@@ -119,10 +119,10 @@ export const handleSubmission = async (
   }
 };
 
-// submission.controller.ts
+// --- submission.controller.ts ---
 export const getSubmissionHistory = async (req: Request, res: Response) => {
   const { problemId } = req.params;
-  const userId = (req as any).sub;
+  const userId = (req as any).user.sub;
 
   try {
     const history = await prisma.submission.findMany({
@@ -130,22 +130,25 @@ export const getSubmissionHistory = async (req: Request, res: Response) => {
         userId: Number(userId),
         problemId: Number(problemId),
       },
-      orderBy: { createdAt: "desc" }, // Newest first
+      orderBy: { createdAt: "desc" },
       select: {
         id: true,
         status: true,
-        runtime: true,
+        time: true, // CHANGED: was runtime
         memory: true,
         createdAt: true,
         languageId: true,
-        code: true, // Optional: if you want them to be able to click and see old code
+        code: true,
+        totalPassed: true, // Useful for the UI
+        totalCases: true, // Useful for the UI
       },
     });
 
     res.status(200).json({ success: true, history });
-  } catch (error) {
+  } catch (error: any) {
+    console.error("PRISMA DATABASE ERROR:", error.message);
     res
       .status(500)
-      .json({ success: false, message: "Failed to fetch history" });
+      .json({ success: false, message: "Database error fetching history" });
   }
 };
