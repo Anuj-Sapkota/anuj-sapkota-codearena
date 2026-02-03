@@ -38,14 +38,19 @@ const RegisterForm = ({ onSuccess, onSwitch }: AuthModalProps) => {
 
   const onSubmit = async (data: RegisterCredentials) => {
     try {
-      // Logic: Yup already checked password matching/length if defined in registerSchema
-      await dispatch(registerThunk(data)).unwrap();
+      const { user } = await dispatch(registerThunk(data)).unwrap();
 
       toast.success("Account created! Welcome to the arena.");
-      onSuccess();
+      onSuccess(user);
       router.push(ROUTES.MAIN.EXPLORE);
-    } catch (err: unknown) {
-      toast.error(handleAxiosError(err, "Registration failed"));
+    } catch (err: any) {
+      // If err is a string (from rejectWithValue), show it directly.
+      // Otherwise, fallback to the utility.
+      const errorMessage =
+        typeof err === "string"
+          ? err
+          : handleAxiosError(err, "Registration failed");
+      toast.error(errorMessage);
     }
   };
 

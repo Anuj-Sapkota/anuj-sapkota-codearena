@@ -77,48 +77,45 @@ const workspaceSlice = createSlice({
         state.results = action.payload.results || [];
         state.metrics = action.payload.metrics || null;
 
-        // AUTOMATION: If it was a final submission
         if (action.meta.arg.isFinal && action.payload.newSubmission) {
-          // 1. Manually add the new submission to the history list (at the top)
+          // Add new submission to top of list
           state.submissions = [
             action.payload.newSubmission,
             ...state.submissions,
           ];
-
-          // 2. Set as selected and switch to detail view
           state.selectedSubmission = action.payload.newSubmission;
           state.descriptionTab = "detail";
         }
 
         const first = action.payload.results?.[0];
-        if (first) {
-          state.output =
-            first.compile_output ||
-            first.stderr ||
-            first.stdout ||
-            "> Execution finished.";
-        } else {
-          state.output = "> No results returned.";
-        }
+        state.output =
+          first?.compile_output ||
+          first?.stderr ||
+          first?.stdout ||
+          "> Execution finished.";
       })
       .addCase(runCodeThunk.rejected, (state, action) => {
         state.isRunning = false;
         state.output = (action.payload as string) || "> Execution Error.";
-        state.metrics = null;
       })
 
-      // --- SUBMISSION HISTORY LOGIC ---
+      // --- SUBMISSION HISTORY LOGIC (FETCH ON REFRESH) ---
       .addCase(fetchSubmissionHistoryThunk.pending, (state) => {
         state.isFetchingHistory = true;
+        // Optional: Clear old submissions when starting a new fetch for a new problem
+        state.submissions = [];
       })
       .addCase(fetchSubmissionHistoryThunk.fulfilled, (state, action) => {
         state.isFetchingHistory = false;
+        // action.payload must be the array of submissions
         state.submissions = action.payload;
       })
       .addCase(fetchSubmissionHistoryThunk.rejected, (state) => {
         state.isFetchingHistory = false;
+        state.submissions = []; // Clear on error
       });
   },
+  // ...
 });
 
 export const {

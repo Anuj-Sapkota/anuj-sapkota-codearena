@@ -55,7 +55,7 @@ const register = async ({
   ) {
     throw new ServiceError(
       `Password must be between ${MIN_PASSWORD_LENGTH} and ${MAX_PASSWORD_LENGTH} characters`,
-      400
+      400,
     );
   }
 
@@ -87,7 +87,7 @@ const login = async ({
   if (!user.password_hash) {
     throw new ServiceError(
       "This account is registered via OAuth. Please sign in with Google/GitHub.",
-      401
+      401,
     );
   }
 
@@ -107,28 +107,50 @@ const getUserByUserID = async (userId: number): Promise<AuthUser> => {
   return formatAuthResponse(user);
 };
 // --- OAUTH FLOW ---
+/**
+ * Handles OAuth logic: Linking, Login, Auto-linking by Email, and Registration.
+ * Added: Conflict check and accessToken storage for GitHub Push functionality.
+ */
 const findOrCreateOAuthUser = async (
   profile: any,
   provider: string,
-  currentUser?: any
+  accessToken: string, // Added to support "Push to GitHub" later
+  currentUser?: any,
 ): Promise<AuthUser> => {
   const email = profile.emails?.[0]?.value;
-  const socialId = profile.id;
+  const socialId = profile.id.toString(); // Ensure ID is a string
   const profilePic = profile.photos?.[0]?.value || null;
 
-  // Key Fix: Determine exactly which database column we are dealing with
+  // Determine which database columns to update
   const providerField = provider === "google" ? "google_id" : "github_id";
+  const tokenField = provider === "github" ? "github_access_token" : null;
 
   // 1. SCENARIO: ACCOUNT LINKING (User is already logged in)
   if (currentUser) {
-    // Extract ID based on how your middleware/Passport stores the user object
     const userId =
       currentUser.userId || currentUser.user?.userId || currentUser.sub;
+
+    // --- CONFLICT CHECK ---
+    // Check if this specific Social ID is already claimed by another user record
+    const conflictUser = await prisma.user.findFirst({
+      where: {
+        [providerField]: socialId,
+        NOT: { userId: Number(userId) },
+      },
+    });
+
+    if (conflictUser) {
+      throw new ServiceError(
+        `This ${provider} account is already linked to another CodeArena user.`,
+        409,
+      );
+    }
 
     const updatedUser = await prisma.user.update({
       where: { userId: Number(userId) },
       data: {
-        [providerField]: socialId, // Fixed: Only updates the specific provider column
+        [providerField]: socialId,
+        ...(tokenField && { [tokenField]: accessToken }), // Save GitHub token if provider is GitHub
         profile_pic_url: currentUser.profile_pic_url || profilePic,
       },
     });
@@ -137,12 +159,19 @@ const findOrCreateOAuthUser = async (
 
   // 2. SCENARIO: LOGIN (Check if THIS specific Social ID is already linked)
   let user = await prisma.user.findFirst({
-    where: {
-      [providerField]: socialId, // Fixed: Removed the OR bug. Now Google only checks google_id.
-    },
+    where: { [providerField]: socialId },
   });
 
-  if (user) return formatAuthResponse(user);
+  if (user) {
+    // Optional: Refresh the access token on every login to keep it valid
+    if (tokenField) {
+      user = await prisma.user.update({
+        where: { userId: user.userId },
+        data: { [tokenField]: accessToken },
+      });
+    }
+    return formatAuthResponse(user);
+  }
 
   // 3. SCENARIO: AUTO-LINKING (Check if email exists but social ID doesn't)
   if (!email) throw new ServiceError("Email not found in OAuth profile", 400);
@@ -153,7 +182,8 @@ const findOrCreateOAuthUser = async (
     user = await prisma.user.update({
       where: { userId: user.userId },
       data: {
-        [providerField]: socialId, // Fixed: Dynamic column update
+        [providerField]: socialId,
+        ...(tokenField && { [tokenField]: accessToken }),
       },
     });
     return formatAuthResponse(user);
@@ -161,7 +191,9 @@ const findOrCreateOAuthUser = async (
 
   // 4. SCENARIO: NEW USER (Registration)
   const fullName =
-    provider === "google" ? profile.displayName : profile.username;
+    provider === "google"
+      ? profile.displayName
+      : profile.displayName || profile.username;
   const username = generateUsername(fullName || email.split("@")[0]);
 
   user = await prisma.user.create({
@@ -170,7 +202,8 @@ const findOrCreateOAuthUser = async (
       username,
       email,
       auth_provider: provider,
-      [providerField]: socialId, // Fixed: Saves to the correct column on creation
+      [providerField]: socialId,
+      ...(tokenField && { [tokenField]: accessToken }),
       profile_pic_url: profilePic,
       bio: "",
     },
@@ -181,7 +214,7 @@ const findOrCreateOAuthUser = async (
 // --- UNLINK OAUTH ---
 const unlinkProvider = async (
   userId: number,
-  provider: "google" | "github"
+  provider: "google" | "github",
 ) => {
   const user = await prisma.user.findUnique({ where: { userId } });
 
@@ -194,7 +227,7 @@ const unlinkProvider = async (
   if (!hasPassword && !hasOtherOAuth) {
     throw new ServiceError(
       "Cannot unlink your only login method. Set a password first.",
-      400
+      400,
     );
   }
 
@@ -259,7 +292,7 @@ const setInitialPassword = async (userId: number, newPassword: string) => {
 
 // --- PASSWORD RECOVERY: GENERATE TOKEN ---
 const generateResetToken = async (
-  email: string
+  email: string,
 ): Promise<{ token: string; userEmail: string }> => {
   const user = await prisma.user.findUnique({ where: { email } });
 
@@ -267,7 +300,7 @@ const generateResetToken = async (
   if (!user) {
     throw new ServiceError(
       "If an account exists, a reset link has been sent.",
-      200
+      200,
     );
   }
 
@@ -288,7 +321,7 @@ const generateResetToken = async (
 // --- PASSWORD RECOVERY: RESET ACTION ---
 const verifyAndResetPassword = async (
   token: string,
-  newPassword: string
+  newPassword: string,
 ): Promise<boolean> => {
   const user = await prisma.user.findFirst({
     where: {
@@ -316,7 +349,7 @@ const verifyAndResetPassword = async (
 const changeUserPassword = async (
   userId: number,
   oldPass: string,
-  newPass: string
+  newPass: string,
 ) => {
   const user = await prisma.user.findUnique({
     where: { userId },
@@ -332,7 +365,7 @@ const changeUserPassword = async (
   if (!isMatch) {
     throw new ServiceError(
       "The current password you entered is incorrect.",
-      401
+      401,
     );
   }
 
