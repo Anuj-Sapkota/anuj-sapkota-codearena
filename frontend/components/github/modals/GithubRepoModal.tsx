@@ -13,6 +13,7 @@ import { FileExplorerStep } from "../FileExplorerStep";
 import { RepoListStep } from "../RepoListStep";
 import { ModalHeader } from "../ModalHeader";
 import { PushSuccessView } from "../PushSuccessView";
+import { GithubContent, GithubRepo } from "@/types/github.types";
 
 export const GithubRepoModal = ({
   isOpen,
@@ -32,11 +33,11 @@ export const GithubRepoModal = ({
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedRepo, setSelectedRepo] = useState<string | null>(null);
   const [currentPath, setCurrentPath] = useState<string>("");
-  const [contents, setContents] = useState<any[]>([]);
+  const [contents, setContents] = useState<GithubContent[]>([]);
   const [isFetchingContents, setIsFetchingContents] = useState(false);
 
   // --- REPO LIST STATE ---
-  const [repos, setRepos] = useState<any[]>([]);
+  const [repos, setRepos] = useState<GithubRepo[]>([]);
   const [loadingRepos, setLoadingRepos] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -57,7 +58,7 @@ export const GithubRepoModal = ({
       setLoadingRepos(true);
       dispatch(fetchGithubReposThunk())
         .unwrap()
-        .then(setRepos)
+        .then((data) => setRepos(data as GithubRepo[]))
         .finally(() => setLoadingRepos(false));
     }
   }, [isOpen, dispatch]);
@@ -70,8 +71,7 @@ export const GithubRepoModal = ({
         71: "py",
         54: "cpp",
         62: "java",
-        74: "ts",
-      };
+      };  
       const ext = langMap[selectedSubmission.languageId] || "txt";
       setFileName(`solution.${ext}`);
       setCommitMsg(`Solved ${currentProblem.title} on CodeArena`);
@@ -88,10 +88,12 @@ export const GithubRepoModal = ({
       const data = await dispatch(
         fetchRepoContentsThunk({ owner, repo, path }),
       ).unwrap();
-      setContents(data);
+      setContents(data as GithubContent[]);
       setCurrentPath(path);
-    } catch (err: any) {
-      toast.error(err || "Failed to load directory");
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Failed to load directory";
+      toast.error(message);
     } finally {
       setIsFetchingContents(false);
     }
@@ -115,16 +117,19 @@ export const GithubRepoModal = ({
       toast.success("Folder created successfully");
       setNewFolderName("");
       setIsCreatingFolder(false);
-      loadDirectory(currentPath); // Refresh
-    } catch (err: any) {
-      toast.error(err || "Failed to create folder");
+      loadDirectory(currentPath);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Failed to create folder";
+      toast.error(message);
     } finally {
       setIsFolderLoading(false);
     }
   };
 
   const handlePush = async () => {
-    if (!selectedRepo || !fileName) return;
+    if (!selectedRepo || !fileName || !selectedSubmission) return;
+
     setIsPushing(true);
     try {
       const fullPath = currentPath ? `${currentPath}/${fileName}` : fileName;
@@ -137,22 +142,33 @@ export const GithubRepoModal = ({
         }),
       ).unwrap();
       setPushSuccessUrl(result.url);
-    } catch (err: any) {
-      toast.error(err || "Push failed");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Push failed";
+      toast.error(message);
     } finally {
       setIsPushing(false);
     }
   };
 
+  // Helper to reset modal state when closing
+  const handleClose = () => {
+    setStep(1);
+    setPushSuccessUrl(null);
+    setSelectedRepo(null);
+    setCurrentPath("");
+    onClose();
+  };
+
   if (!isOpen) return null;
+
   if (pushSuccessUrl) {
-    return <PushSuccessView url={pushSuccessUrl} onClose={onClose} />;
+    return <PushSuccessView url={pushSuccessUrl} onClose={handleClose} />;
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 font-sans">
+    <div className="fixed inset-0 z-100 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 font-sans">
       <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        <ModalHeader step={step} path={currentPath} onClose={onClose} />
+        <ModalHeader step={step} path={currentPath} onClose={handleClose} />
 
         <div className="flex-1 overflow-hidden flex flex-col bg-slate-50">
           {step === 1 ? (
@@ -186,17 +202,16 @@ export const GithubRepoModal = ({
           )}
         </div>
 
-        {/* Footer */}
         <div className="p-6 bg-white border-t border-slate-100 flex justify-between">
           <button
-            onClick={() => (step === 2 ? setStep(1) : onClose())}
+            onClick={() => (step === 2 ? setStep(1) : handleClose())}
             className="text-[10px] font-black uppercase text-slate-400 hover:text-slate-800 flex items-center gap-2 transition-colors"
           >
-            {step === 2 && <FaChevronLeft />}{" "}
+            {step === 2 && <FaChevronLeft />}
             {step === 2 ? "Go_Back" : "Cancel"}
           </button>
           <button
-            disabled={!selectedRepo || isPushing}
+            disabled={!selectedRepo || isPushing || !selectedSubmission}
             onClick={
               step === 1
                 ? () => {

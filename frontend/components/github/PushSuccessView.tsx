@@ -6,7 +6,7 @@ interface PushSuccessViewProps {
 }
 
 export const PushSuccessView = ({ url, onClose }: PushSuccessViewProps) => (
-  <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4">
+  <div className="fixed inset-0 z-110 flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4">
     <div className="bg-white w-full max-w-sm rounded-3xl p-8 text-center shadow-2xl animate-in zoom-in duration-300">
       <div className="w-20 h-20 bg-emerald-500 text-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-emerald-200">
         <FaRocket size={32} />
