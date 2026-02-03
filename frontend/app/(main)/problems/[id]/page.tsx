@@ -14,14 +14,14 @@ import { ProblemHeader } from "@/components/problems/ProblemHeader";
 
 // Types & Redux
 import { RootState, AppDispatch } from "@/lib/store/store";
-import { Problem, TestCase } from "@/types/problem.types";
+import { Problem } from "@/types/problem.types";
 import {
   initCodes,
   updateCode,
   changeLanguage,
   setActiveTab,
-  setDescriptionTab, // Added
-  setSelectedSubmission, // Added
+  setDescriptionTab,
+  setSelectedSubmission,
 } from "@/lib/store/features/workspace/workspace.slice";
 
 import {
@@ -103,14 +103,29 @@ export default function WorkspacePage({
     }
   }, [activeTab, problem?.problemId, dispatch]);
 
+  /**
+   * FIXED: Added validation to prevent sending empty chunks to the execution engine.
+   * This prevents the "TypeError [ERR_INVALID_ARG_TYPE]" crash.
+   */
   const handleExecute = async (isFinal: boolean) => {
     if (!problem?.problemId) return;
+
+    const currentCode = codes[selectedLanguage.id];
+
+    // 1. FRONTEND VALIDATION GUARD
+    if (!currentCode || currentCode.trim().length === 0) {
+      // Use "result" instead of "console" to match your TypeScript definition
+      dispatch(setActiveTab("result"));
+      toast.error("Compile Error: No code provided.");
+      return;
+    }
+
     setIsSubmittingMode(isFinal);
 
     try {
       const resultAction = await dispatch(
         runCodeThunk({
-          sourceCode: codes[selectedLanguage.id],
+          sourceCode: currentCode,
           langId: selectedLanguage.judge0Id,
           problemId: problem.problemId.toString(),
           isFinal,
@@ -118,19 +133,12 @@ export default function WorkspacePage({
       );
 
       if (runCodeThunk.fulfilled.match(resultAction)) {
-        const {
-          allPassed,
-          totalPassed,
-          totalCases,
-          metrics: resMetrics,
-          newSubmission,
-        } = resultAction.payload;
+        const { allPassed, totalPassed, totalCases, newSubmission } =
+          resultAction.payload;
 
-        // REDIRECT LOGIC: If it's a submission and we got the record back
         if (isFinal && newSubmission) {
           dispatch(setSelectedSubmission(newSubmission));
           dispatch(setDescriptionTab("detail"));
-
           toast.success(`SUBMITTED: ${totalPassed}/${totalCases} PASSED`, {
             icon: "🚀",
           });
@@ -143,6 +151,8 @@ export default function WorkspacePage({
         }
       }
     } catch (error) {
+      // 2. SYSTEM ERROR LOGGING
+      console.error("Execution error:", error);
       toast.error("An error occurred during execution.");
     } finally {
       setIsSubmittingMode(false);
@@ -155,12 +165,13 @@ export default function WorkspacePage({
       const actual = executionResult?.stdout?.trim() || "";
       const expected = tc.expectedOutput?.toString().trim() || "";
       const hasRun = results && results.length > 0;
+
+      // Judge0 status 3 = Accepted
       const isCorrect =
         executionResult?.status?.id === 3 && actual === expected;
 
       return {
-        // Change 'testCaseId: tc.id' to just 'id: tc.id'
-        id: tc.testCaseId|| tc.testCaseId || index,
+        id: tc.testCaseId || index,
         input: tc.input,
         expectedOutput: tc.expectedOutput,
         isSample: tc.isSample,
@@ -173,7 +184,6 @@ export default function WorkspacePage({
       };
     },
   );
-
 
   if (problemLoading) {
     return (
@@ -203,7 +213,6 @@ export default function WorkspacePage({
               ref={descriptionRef}
               className="h-full overflow-y-auto custom-scrollbar"
             >
-              {/* This component now handles Tab switching internally via Redux */}
               <ProblemDescription problem={problem} />
             </div>
           </Panel>
