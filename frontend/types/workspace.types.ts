@@ -31,6 +31,8 @@ export interface SubmissionRecord {
   languageId: number; // Useful for syntax highlighting when viewing old code
   totalPassed?: number; // Optional: show "12/15 passed" in history
   totalCases?: number;
+  failMessage?: string;
+  stderr?: string;
 }
 
 export interface WorkspaceState {
@@ -79,4 +81,11 @@ export interface TerminalOutputProps {
   metrics: { runtime: string; memory: string } | null;
   submissions: SubmissionRecord[]; // No more 'any'
   isFetchingHistory: boolean;
+}
+
+export interface MetricTileProps {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
+  isAccepted: boolean;
 }

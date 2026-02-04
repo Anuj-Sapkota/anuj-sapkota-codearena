@@ -11,7 +11,8 @@ import {
 } from "react-icons/fa";
 import { useSelector } from "react-redux";
 import { RootState } from "@/lib/store/store";
-import { GithubRepoModal } from "@/components/github/modals/GithubRepoModal"; 
+import { GithubRepoModal } from "@/components/github/modals/GithubRepoModal";
+
 interface ProblemHeaderProps {
   handleRun: () => void;
   handleSubmit: () => void;
@@ -29,7 +30,7 @@ export const ProblemHeader = ({
 }: ProblemHeaderProps) => {
   const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isRepoModalOpen, setIsRepoModalOpen] = useState(false); // State for the modal
+  const [isRepoModalOpen, setIsRepoModalOpen] = useState(false);
 
   const { user } = useSelector((state: RootState) => state.auth);
   const { selectedSubmission } = useSelector(
@@ -37,7 +38,13 @@ export const ProblemHeader = ({
   );
 
   const isGithubConnected = !!user?.github_id;
-  const hasSubmission = !!selectedSubmission;
+
+  /**
+   * FIX: Only show the GitHub button if the submission is specifically "ACCEPTED".
+   * This prevents users from pushing failing code or starter boilerplate.
+   */
+  const isAccepted = selectedSubmission?.status === "ACCEPTED";
+  const shouldShowGithub = !!selectedSubmission && isAccepted;
 
   useEffect(() => {
     const container = scrollContainerRef?.current;
@@ -53,11 +60,10 @@ export const ProblemHeader = ({
 
   const handleGithubClick = () => {
     if (!isGithubConnected) {
-      // Redirect to your backend auth route
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+      const backendUrl =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
       window.location.href = `${backendUrl}/auth/github`;
     } else {
-      // Open the Repository selection modal
       setIsRepoModalOpen(true);
     }
   };
@@ -92,17 +98,17 @@ export const ProblemHeader = ({
         </button>
 
         <div className="flex items-center gap-3">
-          {/* GitHub Push Button */}
+          {/* GitHub Push Button - Now conditionally rendered based on 'isAccepted' */}
           <AnimatePresence>
-            {hasSubmission && (
+            {shouldShowGithub && (
               <motion.button
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
                 onClick={handleGithubClick}
                 className={`flex items-center justify-center gap-2 font-bold transition-all active:scale-95 border hover:bg-zinc-700 text-white shadow-md ${
-                  isGithubConnected 
-                    ? "border-emerald-500/50 bg-zinc-800" 
+                  isGithubConnected
+                    ? "border-emerald-500/50 bg-zinc-800"
                     : "border-zinc-600 bg-zinc-800"
                 } ${
                   isScrolled
@@ -110,9 +116,11 @@ export const ProblemHeader = ({
                     : "px-4 py-2 rounded-lg text-xs"
                 }`}
               >
-                <FaGithub 
-                  size={isScrolled ? 16 : 14} 
-                  className={isGithubConnected ? "text-emerald-500" : "text-white"}
+                <FaGithub
+                  size={isScrolled ? 16 : 14}
+                  className={
+                    isGithubConnected ? "text-emerald-500" : "text-white"
+                  }
                 />
                 {!isScrolled && (
                   <span>
@@ -176,10 +184,9 @@ export const ProblemHeader = ({
         </div>
       </header>
 
-      {/* GitHub Modal Integration */}
-      <GithubRepoModal 
-        isOpen={isRepoModalOpen} 
-        onClose={() => setIsRepoModalOpen(false)} 
+      <GithubRepoModal
+        isOpen={isRepoModalOpen}
+        onClose={() => setIsRepoModalOpen(false)}
       />
     </>
   );

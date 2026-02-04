@@ -1,23 +1,35 @@
+"use client";
+
 import { useMemo } from "react";
-import { SubmissionRecord } from "@/types/workspace.types";
+import { MetricTileProps, SubmissionRecord } from "@/types/workspace.types";
 import { Editor } from "@monaco-editor/react";
+import { cleanError } from "@/utils/error-cleaner.util";
+import { useSelector } from "react-redux";
+import { RootState } from "@/lib/store/store";
+import { FaArrowLeft, FaCode } from "react-icons/fa";
+import { MdAccessTime, MdMemory, MdLanguage } from "react-icons/md";
 
 export const SubmissionDetail = ({
   submission,
+  onBack,
 }: {
   submission: SubmissionRecord;
+  onBack: () => void;
 }) => {
+  const isAccepted = submission.status === "ACCEPTED";
+  const { output } = useSelector((state: RootState) => state.workspace);
+
   const stats = useMemo(() => {
+    if (!isAccepted) return { runtimePercent: 0, memoryPercent: 0 };
     const seed = submission.id
       .split("")
       .reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const runtimePercent = (seed % 40) + 55;
-    const memoryPercent = ((seed * 13) % 40) + 45;
+    return {
+      runtimePercent: (seed % 40) + 55,
+      memoryPercent: ((seed * 13) % 40) + 45,
+    };
+  }, [submission.id, isAccepted]);
 
-    return { runtimePercent, memoryPercent };
-  }, [submission.id]);
-
-  // Map your Judge0 language IDs to Monaco language strings
   const getLanguage = (id: number) => {
     const languages: Record<number, string> = {
       63: "javascript",
@@ -29,107 +41,120 @@ export const SubmissionDetail = ({
   };
 
   return (
-    <div className="space-y-8 animate-in slide-in-from-right-4 duration-500 p-1">
-      <header className="flex items-center justify-between border-b pb-4">
-        <h2
-          className={`text-3xl font-black italic uppercase tracking-tighter ${
-            submission.status === "ACCEPTED"
-              ? "text-emerald-600"
-              : "text-red-600"
-          }`}
-        >
-          {submission.status}_
-        </h2>
-        <span className="text-[10px] text-slate-400 font-mono bg-slate-100 px-2 py-1 rounded">
-          {new Date(submission.createdAt).toLocaleString()}
-        </span>
-      </header>
+    <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 p-1">
+      {/* NAVIGATION */}
+      <button
+        onClick={onBack}
+        className="flex items-center gap-2 text-slate-400 hover:text-slate-800 transition-colors text-xs font-bold uppercase tracking-widest group cursor-pointer"
+      >
+        <FaArrowLeft className="transition-transform group-hover:-translate-x-1" />
+        Back to Submissions
+      </button>
 
-      {/* Stats Cards */}
-      <div className="grid gap-6">
-        {/* Runtime Card */}
-        <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex justify-between items-end mb-2">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              Runtime_Performance
-            </span>
-            <span className="text-lg font-mono font-bold text-slate-800">
-              {(submission.time ? submission.time * 1000 : 0).toFixed(0)} ms
-            </span>
+      {/* HEADER SECTION */}
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-3">
+          <h2
+            className={`text-3xl font-black tracking-tighter uppercase ${
+              isAccepted ? "text-emerald-600" : "text-red-500"
+            }`}
+          >
+            {submission.status.replace("_", " ")}
+          </h2>
+          {isAccepted && (
+            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+          )}
+        </div>
+        <p className="text-[15px] text-slate-400 font-mono font-medium">
+          {new Date(submission.createdAt).toLocaleString()}
+        </p>
+      </div>
+
+      {/* ERROR BOX: Redesigned for better readability */}
+      {!isAccepted && (
+        <div className="bg-red-50 border-l-4 border-red-500 rounded-r-xl p-5">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-2 text-red-700 font-black text-xs uppercase tracking-widest">
+              <span className="bg-red-500 text-white px-2 py-0.5 rounded text-[10px]">Error</span>
+              Execution_Failure_Logs
+            </div>
+            <pre className="text-red-600 text-[13px] font-mono whitespace-pre-wrap leading-relaxed bg-white/50 p-3 rounded-lg border border-red-100">
+              {cleanError(submission.failMessage || output) ||
+                "System could not capture specific error trace."}
+            </pre>
           </div>
-          <div className="relative h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+        </div>
+      )}
+
+      {/* METRICS DASHBOARD */}
+      <div className="grid grid-cols-3 gap-4">
+        <MetricTile
+          icon={<MdAccessTime />}
+          label="Runtime"
+          value={isAccepted && submission.time ? `${(submission.time * 1000).toFixed(0)} ms` : "—"}
+          isAccepted={isAccepted}
+        />
+        <MetricTile
+          icon={<MdMemory />}
+          label="Memory"
+          value={isAccepted && submission.memory ? `${(submission.memory / 1024).toFixed(1)} MB` : "—"}
+          isAccepted={isAccepted}
+        />
+        <MetricTile
+          icon={<MdLanguage />}
+          label="Language"
+          value={getLanguage(submission.languageId)}
+          isAccepted={true}
+        />
+      </div>
+
+      {/* PERFORMANCE CHART */}
+      {isAccepted && (
+        <div className="bg-white border-2 border-slate-100 rounded-2xl p-6 space-y-4 shadow-sm">
+          <div className="flex justify-between items-end">
+            <div className="space-y-1">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Efficiency_Report</p>
+              <p className="text-sm text-slate-700 font-medium">
+                Your solution is faster than <span className="text-emerald-600 font-black">{stats.runtimePercent}%</span> of peers
+              </p>
+            </div>
+            <span className="text-2xl">🚀</span>
+          </div>
+          <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden p-0.5">
             <div
-              className="absolute top-0 left-0 h-full bg-emerald-500 transition-all duration-1000 ease-out"
+              className="h-full bg-linear-to-r from-emerald-400 to-emerald-600 rounded-full transition-all duration-1000 ease-out shadow-[0_0_12px_rgba(16,185,129,0.3)]"
               style={{ width: `${stats.runtimePercent}%` }}
             />
           </div>
-          <p className="text-[10px] text-slate-500 mt-2 italic">
-            Your code is faster than{" "}
-            <span className="text-emerald-600 font-bold">
-              {stats.runtimePercent}%
-            </span>{" "}
-            of submissions.
-          </p>
         </div>
+      )}
 
-        {/* Memory Card */}
-        <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex justify-between items-end mb-2">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              Memory_Usage
-            </span>
-            <span className="text-lg font-mono font-bold text-slate-800">
-              {(submission.memory ? submission.memory / 1024 : 0).toFixed(1)} MB
+      {/* CODE EDITOR SECTION */}
+      <div className="rounded-2xl border-2 border-slate-100 overflow-hidden bg-[#1e1e1e] shadow-xl">
+        <div className="bg-[#2d2d2d] px-5 py-3 border-b border-white/5 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <FaCode className="text-emerald-400 text-xs" />
+            <span className="text-[10px] text-gray-300 font-black uppercase tracking-widest">
+              Source_Snapshot
             </span>
           </div>
-          <div className="relative h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-            <div
-              className="absolute top-0 left-0 h-full bg-blue-500 transition-all duration-1000 ease-out"
-              style={{ width: `${stats.memoryPercent}%` }}
-            />
-          </div>
-          <p className="text-[10px] text-slate-500 mt-2 italic">
-            Lower than{" "}
-            <span className="text-blue-600 font-bold">
-              {stats.memoryPercent}%
-            </span>{" "}
-            of similar solutions.
-          </p>
         </div>
-      </div>
-
-      {/* Source Code - Monaco Read-Only */}
-      <div className="relative group rounded-xl border border-slate-200 overflow-hidden shadow-sm bg-white">
-        <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 flex justify-between items-center">
-          <span className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">
-            Source_Code_Output
-          </span>
-          <span className="text-[10px] text-slate-400 font-mono uppercase px-2 py-0.5 bg-white border border-slate-200 rounded">
-            {getLanguage(submission.languageId)}
-          </span>
-        </div>
-        
-        <div className="h-[400px] w-full">
+        <div className="h-[400px]">
           <Editor
             height="100%"
             language={getLanguage(submission.languageId)}
             value={submission.code}
-            theme="vs-dark" // Light mode
+            theme="vs-dark"
             options={{
               readOnly: true,
               minimap: { enabled: false },
-              scrollBeyondLastLine: false,
-              fontSize: 13,
-              fontFamily: "var(--font-mono)",
+              fontSize: 14,
+              fontFamily: "'Fira Code', 'Cascadia Code', monospace",
               lineNumbers: "on",
+              padding: { top: 20 },
+              scrollBeyondLastLine: false,
+              cursorStyle: "line",
               renderLineHighlight: "none",
-              scrollbar: {
-                vertical: "hidden",
-                horizontal: "auto"
-              },
-              domReadOnly: true,
-              automaticLayout: true,
-              padding: { top: 20, bottom: 20 }
             }}
           />
         </div>
@@ -137,3 +162,16 @@ export const SubmissionDetail = ({
     </div>
   );
 };
+
+// Sub-component for clean metric tiles
+const MetricTile = ({ icon, label, value, isAccepted }: MetricTileProps) => (
+  <div className="bg-white border-2 border-slate-100 p-4 rounded-2xl flex flex-col gap-1 shadow-sm transition-hover hover:border-slate-200">
+    <div className="flex items-center gap-2 text-slate-400">
+      <span className="text-lg">{icon}</span>
+      <span className="text-[9px] font-black uppercase tracking-[0.15em]">{label}</span>
+    </div>
+    <span className={`text-lg font-black font-mono tracking-tight ${isAccepted ? 'text-slate-800' : 'text-slate-300'}`}>
+      {value}
+    </span>
+  </div>
+);

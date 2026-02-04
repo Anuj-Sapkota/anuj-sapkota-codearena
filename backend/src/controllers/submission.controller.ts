@@ -21,9 +21,7 @@ export const handleSubmission = async (
   next: NextFunction,
 ) => {
   const { source_code, language_id, problemId, isFinal } = req.body;
-  // Use 'sub' to match your specific middleware requirement
   const userId = (req as any).user.sub;
-  console.log("User ID", userId);
 
   try {
     const problem = await prisma.problem.findUnique({
@@ -34,10 +32,8 @@ export const handleSubmission = async (
     if (!problem)
       return res
         .status(404)
-
         .json({ success: false, message: "Problem not found" });
 
-    // Execute Judge0 Logic
     const results = await Promise.all(
       problem.testCases.map(async (tc) => {
         const wrappedCode = wrapUserCode(
@@ -46,18 +42,31 @@ export const handleSubmission = async (
           tc.input,
           problem.functionName || "solution",
         );
+
+        // This call must be using base64_encoded=true inside Judge0Service
         const execution = await Judge0Service.submitCode(
           wrappedCode,
           language_id,
-          "",
+          tc.input,
           problem.timeLimit,
           problem.memoryLimit,
         );
+
+        const statusId = execution?.status?.id;
+
+        // --- THE DETECTIVE'S FIX: DECODE BASE64 ---
+        const actualOutput = execution.stdout
+          ? Buffer.from(execution.stdout, "base64").toString("utf-8").trim()
+          : "";
+
+        // Compare decoded output with plain text test case
+        const isCorrect =
+          statusId === 3 && actualOutput === tc.expectedOutput.trim();
+
         return {
           ...execution,
-          isCorrect:
-            execution.status.id === 3 &&
-            execution.stdout?.trim() === tc.expectedOutput.trim(),
+          isCorrect,
+          decodedOutput: actualOutput, // Helpful for frontend debugging
           isSample: tc.isSample,
         };
       }),
@@ -66,6 +75,25 @@ export const handleSubmission = async (
     const metrics = calculateMetrics(results);
     const allPassed = results.every((r) => r.isCorrect);
     const totalPassed = results.filter((r) => r.isCorrect).length;
+
+    // --- ERROR TRACKING ---
+    // Find the first result that isn't "Accepted" (status 3)
+    const firstFailure = results.find((r) => r.status?.id !== 3);
+
+    // Prioritize compile_output for C++/Java, then stderr for JS/Python
+    const failMessage =
+      firstFailure?.compile_output ||
+      firstFailure?.stderr ||
+      firstFailure?.message ||
+      null;
+
+    let finalStatus = allPassed ? "ACCEPTED" : "WRONG_ANSWER";
+
+    if (results.find((r) => r.status?.id === 6)) {
+      finalStatus = "COMPILATION_ERROR";
+    } else if (results.find((r) => r.status?.id >= 7 && r.status?.id <= 12)) {
+      finalStatus = "RUNTIME_ERROR";
+    }
 
     let newSubmission = null;
 
@@ -77,11 +105,13 @@ export const handleSubmission = async (
             problemId: Number(problemId),
             code: source_code,
             languageId: Number(language_id),
-            status: allPassed ? "ACCEPTED" : "WRONG_ANSWER",
+            status: finalStatus,
             totalPassed,
             totalCases: results.length,
             time: metrics.rawTime,
             memory: Math.round(metrics.rawMemory),
+            // --- SAVE THE ERROR MESSAGE ---
+            failMessage: failMessage,
           },
         });
 
@@ -112,13 +142,12 @@ export const handleSubmission = async (
       totalPassed,
       totalCases: results.length,
       metrics: { runtime: metrics.runtime, memory: metrics.memory },
-      newSubmission, // Crucial for Frontend Redirect
+      newSubmission,
     });
   } catch (error: any) {
     next(error);
   }
 };
-
 // --- submission.controller.ts ---
 export const getSubmissionHistory = async (req: Request, res: Response) => {
   const { problemId } = req.params;

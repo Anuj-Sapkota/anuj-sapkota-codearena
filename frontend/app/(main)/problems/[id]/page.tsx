@@ -14,14 +14,14 @@ import { ProblemHeader } from "@/components/problems/ProblemHeader";
 
 // Types & Redux
 import { RootState, AppDispatch } from "@/lib/store/store";
-import { Problem, TestCase } from "@/types/problem.types";
+import { Problem } from "@/types/problem.types";
 import {
   initCodes,
   updateCode,
   changeLanguage,
   setActiveTab,
-  setDescriptionTab, // Added
-  setSelectedSubmission, // Added
+  setDescriptionTab,
+  setSelectedSubmission,
 } from "@/lib/store/features/workspace/workspace.slice";
 
 import {
@@ -30,6 +30,7 @@ import {
 } from "@/lib/store/features/workspace/workspace.actions";
 import { fetchProblemByIdThunk } from "@/lib/store/features/problems/problem.actions";
 import { DisplayTestCase } from "@/types/workspace.types";
+import { cleanError } from "@/utils/error-cleaner.util";
 
 const LANGUAGES = [
   { id: "javascript", label: "JavaScript", judge0Id: 63 },
@@ -105,12 +106,21 @@ export default function WorkspacePage({
 
   const handleExecute = async (isFinal: boolean) => {
     if (!problem?.problemId) return;
+
+    const currentCode = codes[selectedLanguage.id];
+
+    if (!currentCode || currentCode.trim().length === 0) {
+      dispatch(setActiveTab("result"));
+      toast.error("Code cannot be empty.");
+      return;
+    }
+
     setIsSubmittingMode(isFinal);
 
     try {
       const resultAction = await dispatch(
         runCodeThunk({
-          sourceCode: codes[selectedLanguage.id],
+          sourceCode: currentCode,
           langId: selectedLanguage.judge0Id,
           problemId: problem.problemId.toString(),
           isFinal,
@@ -118,31 +128,61 @@ export default function WorkspacePage({
       );
 
       if (runCodeThunk.fulfilled.match(resultAction)) {
-        const {
-          allPassed,
-          totalPassed,
-          totalCases,
-          metrics: resMetrics,
-          newSubmission,
-        } = resultAction.payload;
+        console.log(
+          "BACKEND_SUBMISSION_DATA:",
+          resultAction.payload.newSubmission,
+        ); //---------------------____DEBUG____------------------------
+        const { allPassed, newSubmission } =
+          resultAction.payload;
 
-        // REDIRECT LOGIC: If it's a submission and we got the record back
+        // --- CASE: FINAL SUBMISSION (Submit Button) ---
         if (isFinal && newSubmission) {
-          dispatch(setSelectedSubmission(newSubmission));
+          // 1. EXTRACT THE ERROR: Find the first result that has stderr or compile_output
+          const errorResult = results?.find(
+            (r: any) => r.stderr || r.compile_output || r.message,
+          );
+          const actualError =
+            errorResult?.stderr ||
+            errorResult?.compile_output ||
+            errorResult?.message ||
+            "";
+
+          // 2. PATCH THE SUBMISSION: Add the error to the object manually
+          const patchedSubmission = {
+            ...newSubmission,
+            failMessage: actualError, // Now SubmissionDetail will find it!
+          };
+
+          // 3. DISPATCH THE PATCHED VERSION
+          dispatch(setSelectedSubmission(patchedSubmission));
           dispatch(setDescriptionTab("detail"));
 
-          toast.success(`SUBMITTED: ${totalPassed}/${totalCases} PASSED`, {
-            icon: "🚀",
-          });
-        } else if (allPassed) {
-          toast.success(`ACCEPTED: ${totalPassed}/${totalCases} PASSED`, {
-            icon: "🏆",
-          });
-        } else {
-          toast.error(`FAILED: ${totalPassed}/${totalCases} PASSED`);
+          if (newSubmission.status === "ACCEPTED") {
+            toast.success(`SUBMITTED`, {
+              icon: "🚀",
+            });
+          } else {
+            dispatch(setActiveTab("result"));
+            toast.error(
+              `SUBMISSION FAILED`,
+            );
+          }
+        }
+
+        // --- CASE: RUN CODE (Run Button) ---
+        else {
+          dispatch(setActiveTab("result"));
+          if (allPassed) {
+            toast.success("Accepted", {
+              icon: "🏆",
+            });
+          } else {
+            toast.error(`FAILED`);
+          }
         }
       }
     } catch (error) {
+      console.error("Execution error:", error);
       toast.error("An error occurred during execution.");
     } finally {
       setIsSubmittingMode(false);
@@ -155,25 +195,25 @@ export default function WorkspacePage({
       const actual = executionResult?.stdout?.trim() || "";
       const expected = tc.expectedOutput?.toString().trim() || "";
       const hasRun = results && results.length > 0;
+
       const isCorrect =
         executionResult?.status?.id === 3 && actual === expected;
 
+      // Apply the error cleaner to any stderr or compile_output
+      const errorMessage = cleanError(
+        executionResult?.stderr || executionResult?.compile_output,
+      );
+
       return {
-        // Change 'testCaseId: tc.id' to just 'id: tc.id'
-        id: tc.testCaseId|| tc.testCaseId || index,
+        id: tc.testCaseId || index,
         input: tc.input,
         expectedOutput: tc.expectedOutput,
         isSample: tc.isSample,
-        actualOutput:
-          actual ||
-          executionResult?.stderr ||
-          executionResult?.compile_output ||
-          "---",
+        actualOutput: actual || errorMessage || "---",
         status: !hasRun ? "IDLE" : isCorrect ? "PASSED" : "FAILED",
       };
     },
   );
-
 
   if (problemLoading) {
     return (
@@ -203,7 +243,6 @@ export default function WorkspacePage({
               ref={descriptionRef}
               className="h-full overflow-y-auto custom-scrollbar"
             >
-              {/* This component now handles Tab switching internally via Redux */}
               <ProblemDescription problem={problem} />
             </div>
           </Panel>
@@ -219,10 +258,10 @@ export default function WorkspacePage({
                       <button
                         key={lang.id}
                         onClick={() => dispatch(changeLanguage(lang.id))}
-                        className={`px-4 py-2 text-[10px] font-mono uppercase tracking-widest transition-all ${
+                        className={`px-4 py-2 text-[12px] font-bold cursor-pointer font-mono uppercase tracking-widest transition-all ${
                           selectedLanguage.id === lang.id
                             ? "bg-[#1e1e1e] text-emerald-400 border-t-2 border-emerald-500"
-                            : "text-gray-500 hover:text-gray-300"
+                            : "text-gray-400 hover:text-gray-100"
                         }`}
                       >
                         {lang.label}

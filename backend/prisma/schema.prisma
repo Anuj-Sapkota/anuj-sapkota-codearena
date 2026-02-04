@@ -103,10 +103,11 @@ model Submission {
   totalPassed Int @default(0) // How many test cases passed
   totalCases  Int @default(0) // Total cases at the time of submission
 
-  memory    Int?
-  time      Float?
-  token     String?  @unique
-  createdAt DateTime @default(now())
+  memory      Int?
+  time        Float?
+  token       String?  @unique
+  failMessage String?
+  createdAt   DateTime @default(now())
 
   problem Problem @relation(fields: [problemId], references: [problemId])
   user    User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
