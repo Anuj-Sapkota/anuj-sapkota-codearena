@@ -31,6 +31,8 @@ export interface SubmissionRecord {
   languageId: number; // Useful for syntax highlighting when viewing old code
   totalPassed?: number; // Optional: show "12/15 passed" in history
   totalCases?: number;
+  failMessage?: string;
+  stderr?: string;
 }
 
 export interface WorkspaceState {

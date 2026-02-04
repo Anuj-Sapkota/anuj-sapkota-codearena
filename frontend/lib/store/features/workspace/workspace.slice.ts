@@ -78,7 +78,6 @@ const workspaceSlice = createSlice({
         state.metrics = action.payload.metrics || null;
 
         if (action.meta.arg.isFinal && action.payload.newSubmission) {
-          // Add new submission to top of list
           state.submissions = [
             action.payload.newSubmission,
             ...state.submissions,
@@ -87,12 +86,21 @@ const workspaceSlice = createSlice({
           state.descriptionTab = "detail";
         }
 
-        const first = action.payload.results?.[0];
-        state.output =
-          first?.compile_output ||
-          first?.stderr ||
-          first?.stdout ||
-          "> Execution finished.";
+        // NEW LOGIC: Look for a failed test case to extract the error
+        const errorResult = action.payload.results?.find(
+          (r) => r.status?.id !== 3,
+        );
+
+        if (errorResult) {
+          // Prioritize compile_output for C++, then stderr for JS/Python
+          state.output =
+            errorResult.compile_output ||
+            errorResult.stderr ||
+            errorResult.message ||
+            "> Execution Failed";
+        } else {
+          state.output = "> Execution finished.";
+        }
       })
       .addCase(runCodeThunk.rejected, (state, action) => {
         state.isRunning = false;

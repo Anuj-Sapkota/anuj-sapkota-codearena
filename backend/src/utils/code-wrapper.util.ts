@@ -12,9 +12,13 @@ ${userCode}
 try {
   const inputData = ${input}; 
   const result = ${functionName}(inputData);
-  process.stdout.write(JSON.stringify(result));
+  
+  // FIX: JSON.stringify(undefined) is undefined. 
+  // We use "null" or an empty string as a fallback to prevent ERR_INVALID_ARG_TYPE.
+  const output = JSON.stringify(result);
+  process.stdout.write(typeof output === 'undefined' ? "null" : output);
 } catch (err) {
-  process.stderr.write(err.message);
+  process.stderr.write(err.stack || err.message);
 }
     `;
   }
@@ -29,14 +33,15 @@ import sys
 
 if __name__ == "__main__":
     try:
-        # Check if the user used a class (LeetCode style) or a standalone function
         input_data = ${input}
         if 'Solution' in globals():
             sol = Solution()
-            # Handles calls like sol.twoSum(data)
-            result = getattr(sol, "${functionName}")(input_data)
+            method = getattr(sol, "${functionName}")
+            result = method(input_data)
         else:
             result = ${functionName}(input_data)
+        
+        # Python's json.dumps handles None/undefined safely as "null"
         print(json.dumps(result), end="")
     except Exception as e:
         sys.stderr.write(str(e))
@@ -45,9 +50,9 @@ if __name__ == "__main__":
 
   // --- JAVA (OpenJDK 17) ---
   if (languageId === 62) {
+    // Note: Java result might need String.valueOf to avoid issues with null objects
     return `
 import java.util.*;
-import java.util.stream.*;
 
 ${userCode}
 
@@ -55,10 +60,8 @@ public class Main {
     public static void main(String[] args) {
         try {
             Solution sol = new Solution();
-            // This assumes the input is a simple integer/array literal
-            // For complex inputs, you'd need a JSON parser like Jackson/Gson
             var result = sol.${functionName}(${input});
-            System.out.print(result);
+            System.out.print(String.valueOf(result));
         } catch (Exception e) {
             System.err.print(e.getMessage());
         }
@@ -82,6 +85,8 @@ ${userCode}
 int main() {
     Solution sol;
     try {
+        // C++ is strictly typed, so result will rarely be "undefined" 
+        // but we wrap for consistency
         auto result = sol.${functionName}(${input});
         cout << result;
     } catch (const exception& e) {
@@ -93,4 +98,4 @@ int main() {
   }
 
   return userCode;
-};  
+};

@@ -30,6 +30,7 @@ import {
 } from "@/lib/store/features/workspace/workspace.actions";
 import { fetchProblemByIdThunk } from "@/lib/store/features/problems/problem.actions";
 import { DisplayTestCase } from "@/types/workspace.types";
+import { cleanError } from "@/utils/error-cleaner.util";
 
 const LANGUAGES = [
   { id: "javascript", label: "JavaScript", judge0Id: 63 },
@@ -103,20 +104,14 @@ export default function WorkspacePage({
     }
   }, [activeTab, problem?.problemId, dispatch]);
 
-  /**
-   * FIXED: Added validation to prevent sending empty chunks to the execution engine.
-   * This prevents the "TypeError [ERR_INVALID_ARG_TYPE]" crash.
-   */
   const handleExecute = async (isFinal: boolean) => {
     if (!problem?.problemId) return;
 
     const currentCode = codes[selectedLanguage.id];
 
-    // 1. FRONTEND VALIDATION GUARD
     if (!currentCode || currentCode.trim().length === 0) {
-      // Use "result" instead of "console" to match your TypeScript definition
       dispatch(setActiveTab("result"));
-      toast.error("Compile Error: No code provided.");
+      toast.error("Code cannot be empty.");
       return;
     }
 
@@ -133,25 +128,60 @@ export default function WorkspacePage({
       );
 
       if (runCodeThunk.fulfilled.match(resultAction)) {
-        const { allPassed, totalPassed, totalCases, newSubmission } =
+        console.log(
+          "BACKEND_SUBMISSION_DATA:",
+          resultAction.payload.newSubmission,
+        ); //---------------------____DEBUG____------------------------
+        const { allPassed, newSubmission } =
           resultAction.payload;
 
+        // --- CASE: FINAL SUBMISSION (Submit Button) ---
         if (isFinal && newSubmission) {
-          dispatch(setSelectedSubmission(newSubmission));
+          // 1. EXTRACT THE ERROR: Find the first result that has stderr or compile_output
+          const errorResult = results?.find(
+            (r: any) => r.stderr || r.compile_output || r.message,
+          );
+          const actualError =
+            errorResult?.stderr ||
+            errorResult?.compile_output ||
+            errorResult?.message ||
+            "";
+
+          // 2. PATCH THE SUBMISSION: Add the error to the object manually
+          const patchedSubmission = {
+            ...newSubmission,
+            failMessage: actualError, // Now SubmissionDetail will find it!
+          };
+
+          // 3. DISPATCH THE PATCHED VERSION
+          dispatch(setSelectedSubmission(patchedSubmission));
           dispatch(setDescriptionTab("detail"));
-          toast.success(`SUBMITTED: ${totalPassed}/${totalCases} PASSED`, {
-            icon: "🚀",
-          });
-        } else if (allPassed) {
-          toast.success(`ACCEPTED: ${totalPassed}/${totalCases} PASSED`, {
-            icon: "🏆",
-          });
-        } else {
-          toast.error(`FAILED: ${totalPassed}/${totalCases} PASSED`);
+
+          if (newSubmission.status === "ACCEPTED") {
+            toast.success(`SUBMITTED`, {
+              icon: "🚀",
+            });
+          } else {
+            dispatch(setActiveTab("result"));
+            toast.error(
+              `SUBMISSION FAILED`,
+            );
+          }
+        }
+
+        // --- CASE: RUN CODE (Run Button) ---
+        else {
+          dispatch(setActiveTab("result"));
+          if (allPassed) {
+            toast.success("Accepted", {
+              icon: "🏆",
+            });
+          } else {
+            toast.error(`FAILED`);
+          }
         }
       }
     } catch (error) {
-      // 2. SYSTEM ERROR LOGGING
       console.error("Execution error:", error);
       toast.error("An error occurred during execution.");
     } finally {
@@ -166,20 +196,20 @@ export default function WorkspacePage({
       const expected = tc.expectedOutput?.toString().trim() || "";
       const hasRun = results && results.length > 0;
 
-      // Judge0 status 3 = Accepted
       const isCorrect =
         executionResult?.status?.id === 3 && actual === expected;
+
+      // Apply the error cleaner to any stderr or compile_output
+      const errorMessage = cleanError(
+        executionResult?.stderr || executionResult?.compile_output,
+      );
 
       return {
         id: tc.testCaseId || index,
         input: tc.input,
         expectedOutput: tc.expectedOutput,
         isSample: tc.isSample,
-        actualOutput:
-          actual ||
-          executionResult?.stderr ||
-          executionResult?.compile_output ||
-          "---",
+        actualOutput: actual || errorMessage || "---",
         status: !hasRun ? "IDLE" : isCorrect ? "PASSED" : "FAILED",
       };
     },
