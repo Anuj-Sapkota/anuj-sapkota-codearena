@@ -82,3 +82,10 @@ export interface TerminalOutputProps {
   submissions: SubmissionRecord[]; // No more 'any'
   isFetchingHistory: boolean;
 }
+
+export interface MetricTileProps {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
+  isAccepted: boolean;
+}

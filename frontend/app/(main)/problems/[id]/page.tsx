@@ -258,10 +258,10 @@ export default function WorkspacePage({
                       <button
                         key={lang.id}
                         onClick={() => dispatch(changeLanguage(lang.id))}
-                        className={`px-4 py-2 text-[10px] font-mono uppercase tracking-widest transition-all ${
+                        className={`px-4 py-2 text-[12px] font-bold cursor-pointer font-mono uppercase tracking-widest transition-all ${
                           selectedLanguage.id === lang.id
                             ? "bg-[#1e1e1e] text-emerald-400 border-t-2 border-emerald-500"
-                            : "text-gray-500 hover:text-gray-300"
+                            : "text-gray-400 hover:text-gray-100"
                         }`}
                       >
                         {lang.label}

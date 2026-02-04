@@ -49,7 +49,7 @@ export const ProblemDescription = ({ problem }: { problem: any }) => {
           <button
             key={tab.id}
             onClick={() => dispatch(setDescriptionTab(tab.id as any))}
-            className={`flex items-center gap-2 px-6 py-4 text-[10px] font-black uppercase tracking-[0.15em] transition-all relative ${
+            className={`flex cursor-pointer items-center gap-2 px-6 py-4 text-[10px] font-black uppercase tracking-[0.15em] transition-all relative ${
               isActive(tab.id)
                 ? "text-emerald-400 bg-[#27272a]"
                 : "text-slate-500 hover:text-slate-300 hover:bg-[#27272a]/50"

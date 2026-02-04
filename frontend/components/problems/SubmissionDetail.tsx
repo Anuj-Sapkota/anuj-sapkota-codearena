@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { SubmissionRecord } from "@/types/workspace.types";
+import { MetricTileProps, SubmissionRecord } from "@/types/workspace.types";
 import { Editor } from "@monaco-editor/react";
 import { cleanError } from "@/utils/error-cleaner.util";
 import { useSelector } from "react-redux";
@@ -122,7 +122,7 @@ export const SubmissionDetail = ({
           </div>
           <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden p-0.5">
             <div
-              className="h-full bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full transition-all duration-1000 ease-out shadow-[0_0_12px_rgba(16,185,129,0.3)]"
+              className="h-full bg-linear-to-r from-emerald-400 to-emerald-600 rounded-full transition-all duration-1000 ease-out shadow-[0_0_12px_rgba(16,185,129,0.3)]"
               style={{ width: `${stats.runtimePercent}%` }}
             />
           </div>
@@ -164,7 +164,7 @@ export const SubmissionDetail = ({
 };
 
 // Sub-component for clean metric tiles
-const MetricTile = ({ icon, label, value, isAccepted }: any) => (
+const MetricTile = ({ icon, label, value, isAccepted }: MetricTileProps) => (
   <div className="bg-white border-2 border-slate-100 p-4 rounded-2xl flex flex-col gap-1 shadow-sm transition-hover hover:border-slate-200">
     <div className="flex items-center gap-2 text-slate-400">
       <span className="text-lg">{icon}</span>
