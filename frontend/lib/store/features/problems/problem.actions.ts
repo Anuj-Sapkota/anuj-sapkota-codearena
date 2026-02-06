@@ -7,7 +7,7 @@ import { problemService } from "@/lib/services/problem.service";
  * Interface for frontend state/input
  */
 export interface FetchProblemsParams {
-  page: number;
+  page?: number;
   limit?: number;
   search?: string;
   difficulty?: string;
@@ -27,7 +27,6 @@ export interface SerializedFetchProblemsParams extends Omit<
 > {
   categoryIds?: string;
 }
-
 export const fetchProblemsThunk = createAsyncThunk<
   {
     success: boolean;
@@ -38,13 +37,13 @@ export const fetchProblemsThunk = createAsyncThunk<
   { rejectValue: string }
 >("problems/fetchAll", async (params, { rejectWithValue }) => {
   try {
-    // Create the serialized object without using 'any'
     const formattedParams: SerializedFetchProblemsParams = {
       ...params,
+      page: params.page || 1, // Ensure page is at least 1 if not provided
+      limit: params.limit || 8,
       categoryIds: params.categoryIds?.length
         ? params.categoryIds.join(",")
         : undefined,
-      limit: params.limit || 8,
     };
 
     return await problemService.getAll(formattedParams);

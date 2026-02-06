@@ -89,3 +89,13 @@ export interface MetricTileProps {
   value: string | number;
   isAccepted: boolean;
 }
+
+export interface TestCaseResult {
+  status_id?: number;
+  stdout?: string | null;
+  stderr?: string | null;          // Runtime errors
+  compile_output?: string | null;  // Syntax/Compilation errors
+  message?: string | null;         // Sandbox/Internal errors
+  time?: string;
+  memory?: number;
+}

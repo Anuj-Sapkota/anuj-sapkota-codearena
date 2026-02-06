@@ -9,6 +9,7 @@ import AdminHeader from "@/components/admin/AdminHeader";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { FaBars } from "react-icons/fa";
 import { fetchCategoriesThunk } from "@/lib/store/features/category/category.actions";
+import { fetchProblemsThunk } from "@/lib/store/features/problems/problem.actions"; // Import this
 
 export default function AdminLayout({
   children,
@@ -26,9 +27,18 @@ export default function AdminLayout({
     }
   }, [user, isLoading, router]);
 
+  /**
+   * GLOBAL ADMIN DATA FETCHING
+   * These run once whenever the admin section is accessed or refreshed.
+   * This ensures that modals for Challenges/Contests always have the 
+   * global registries ready to go.
+   */
   useEffect(() => {
-    // This runs once when any /admin/... route is accessed
+    // Fetch Categories for the whole admin panel
     dispatch(fetchCategoriesThunk());
+    
+    // Fetch Problems repository (Increase limit to ensure you get enough for selection)
+    dispatch(fetchProblemsThunk({ page: 1, limit: 100 }));
   }, [dispatch]);
 
   if (isLoading)

@@ -4,7 +4,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { FiSearch, FiBell, FiUser, FiLogOut, FiSettings } from "react-icons/fi";
+import {
+  FiSearch,
+  FiBell,
+  FiUser,
+  FiLogOut,
+  FiSettings,
+  FiChevronDown,
+} from "react-icons/fi";
 import { useSelector, useDispatch } from "react-redux";
 
 import Logo from "@/public/logo.png";
@@ -17,15 +24,14 @@ import { NAV_ITEMS, ROUTES } from "@/constants/routes";
 
 export default function Navbar() {
   const { isAuthenticated, user } = useSelector(
-    (state: RootState) => state.auth
+    (state: RootState) => state.auth,
   );
-  //---------------------Hooks-----------------------
   const dispatch = useDispatch<AppDispatch>();
   const pathname = usePathname();
 
   const [showProfileOptions, setShowProfileOptions] = useState(false);
   const [activeModal, setActiveModal] = useState<"login" | "register" | null>(
-    null
+    null,
   );
 
   const modalRef = useRef<HTMLDivElement>(null);
@@ -46,46 +52,47 @@ export default function Navbar() {
   const closeModals = () => setActiveModal(null);
 
   return (
-    <nav className="bg-white/90 border-b border-gray-100 px-8 flex items-center justify-between h-16 sticky top-0 z-50 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_4px_6px_-2px_rgba(0,0,0,0.05)]">
+    <nav className="bg-white border-b border-slate-200 px-8 flex items-center justify-between h-16 sticky top-0 z-50">
       {/* LEFT SIDE */}
       <div className="flex items-center h-full">
-        <Link
-          href={ROUTES.HOME}
-          className="flex items-center hover:opacity-80 transition-opacity"
-        >
-          <Image src={Logo} alt="logo" className="w-24 object-contain" />
+        <Link href={ROUTES.HOME} className="flex items-center">
+          <Image
+            src={Logo}
+            alt="logo"
+            className="w-20 object-contain brightness-90"
+          />
         </Link>
 
-        <div className="h-4 w-px bg-gray-200 mx-8" />
-        {/* Pages names */}
-        <ul className="flex items-center gap-10 h-full">
+        {/* Subtle Vertical Divider */}
+        <div className="h-6 w-px bg-slate-200 mx-8" />
+
+        <ul className="flex items-center gap-8 h-full">
           {NAV_ITEMS.map((item) => {
-            // A route is active if the current path matches exactly
-            // OR if it's a sub-page of that route (e.g., /problems/1)
             const isActive =
               pathname === item.path || pathname.startsWith(`${item.path}/`);
 
             return (
-              <li key={item.path} className="relative flex items-center h-full">
+              <li
+                key={item.path}
+                className="relative flex items-center h-full group"
+              >
                 <Link
                   href={item.path}
-                  className={`text-sm font-bold tracking-tight transition-all duration-300 cursor-pointer ${
+                  className={`text-[13px] font-bold transition-colors duration-200 ${
                     isActive
-                      ? "text-primary-1 scale-105"
-                      : "text-slate-500 hover:text-primary-1"
+                      ? "text-primary-1"
+                      : "text-slate-500 hover:text-slate-900"
                   }`}
                 >
                   {item.name}
                 </Link>
 
-                {/* Active Indicator (Underline) */}
+                {/* Stylish Active Underline */}
                 {isActive && (
-                  <div
-                    className="absolute bottom-0 left-0 right-0 h-[3px] bg-primary-1 rounded-t-full 
-                           shadow-[0_-4px_10px_rgba(var(--primary-rgb),0.4)] 
-                           animate-in fade-in slide-in-from-bottom-2 duration-300"
-                  />
+                  <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary-1" />
                 )}
+                {/* Hover Underline */}
+                <div className="absolute bottom-0 left-0 w-0 h-[2px] bg-slate-200 transition-all group-hover:w-full" />
               </li>
             );
           })}
@@ -94,109 +101,98 @@ export default function Navbar() {
 
       {/* RIGHT SIDE */}
       <div className="flex items-center gap-6">
-        {/* Search Bar - Elevated Shadow */}
+        {/* Modern Search Bar */}
         <div className="relative group hidden lg:block">
-          <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary-1 transition-colors" />
+          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary-1 transition-colors" />
           <input
             type="text"
-            placeholder="Search everything..."
-            className="bg-gray-50 border border-gray-100 text-gray-900 text-sm rounded-2xl py-2 pl-10 pr-4 w-48 focus:w-64 focus:outline-none focus:bg-white focus:ring-4 focus:ring-primary-1/10 focus:border-primary-1/50 transition-all duration-500 shadow-inner"
+            placeholder="Search problems..."
+            className="bg-slate-50 border border-slate-200 text-slate-900 text-sm py-1.5 pl-9 pr-4 w-44 focus:w-60 focus:outline-none focus:border-primary-1/50 focus:bg-white transition-all duration-300 rounded-sm"
           />
         </div>
 
         {isAuthenticated ? (
           <div className="flex items-center gap-4">
-            {/* Notification Bell - Gold/Yellow Theme */}
-            <button className="relative p-2.5 rounded-xl text-amber-400 hover:text-amber-500 hover:bg-amber-50 transition-all duration-300 group">
-              <FiBell
-                size={22}
-                className="fill-current group-hover:rotate-12 transition-transform"
-              />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 border-2 border-white rounded-full"></span>
+            <button className="relative p-2 text-slate-400 hover:text-slate-900 transition-colors">
+              <FiBell size={20} />
+              <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-primary-1 rounded-full"></span>
             </button>
 
             <div className="relative" ref={modalRef}>
               <button
                 onClick={() => setShowProfileOptions(!showProfileOptions)}
-                className={`flex items-center gap-2 p-1 pr-3 rounded-full transition-all duration-300 border ${
+                className={`flex items-center gap-2 px-2 py-1 transition-all border ${
                   showProfileOptions
-                    ? "bg-white border-primary-1/20 shadow-lg -translate-y-px" // elevate when profile options is shown
-                    : "bg-gray-50 border-transparent hover:border-gray-200 shadow-sm"
-                }`}
+                    ? "border-slate-300 bg-slate-50"
+                    : "border-transparent hover:border-slate-200"
+                } rounded-sm`}
               >
-                <div className="w-8 h-8 rounded-full overflow-hidden">
+                <div className="w-7 h-7 bg-slate-100 rounded-sm overflow-hidden flex items-center justify-center border border-slate-200">
                   {user?.profile_pic_url ? (
                     <Image
                       src={user.profile_pic_url}
                       alt="profile"
-                      width={256}
-                      height={256}
-                      className="object-cover w-full h-full"
+                      width={40}
+                      height={40}
+                      className="object-cover"
                     />
                   ) : (
-                    <FiUser
-                      size={18}
-                      className="m-auto mt-1.5 text-slate-500"
-                    />
+                    <FiUser size={14} className="text-slate-400" />
                   )}
                 </div>
-                <div className="flex flex-col items-start leading-none">
-                  <span className="text-[11px] font-black text-slate-400 uppercase tracking-tighter">
-                    Account
-                  </span>
-                  <span className="text-xs font-bold text-slate-700">Menu</span>
-                </div>
+                <span className="text-sm font-bold text-slate-700">
+                  {user?.username || "Account"}
+                </span>
+                <FiChevronDown
+                  size={14}
+                  className={`text-slate-400 transition-transform ${showProfileOptions ? "rotate-180" : ""}`}
+                />
               </button>
 
-              {/* Enhanced Dropdown with Premium Shadow */}
+              {/* Clean Dropdown */}
               {showProfileOptions && (
-                <div className="absolute right-0 mt-4 w-64 bg-white border border-gray-100 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] py-3 overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-300">
-                  <div className="px-3 space-y-1">
-                    <Link 
-                      href={ROUTES.MAIN.PROFILE}
-                      className="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-primary-1/5 hover:text-primary-1 rounded-2xl transition-all text-sm font-bold"
-                    >
-                      <FiUser size={18} className="opacity-70" /> My Profile
-                    </Link>
-                    <Link
-                      href={ROUTES.MAIN.SETTINGS}
-                      className="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-primary-1/5 hover:text-primary-1 rounded-2xl transition-all text-sm font-bold"
-                    >
-                      <FiSettings size={18} className="opacity-70" /> Settings
-                    </Link>
-                  </div>
-
-                  <div className="mx-4 mt-3 pt-3 border-t border-gray-100">
-                    <button
-                      onClick={() => dispatch(logoutThunk())} //logout
-                      className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl text-red-500 hover:bg-red-50 transition-all text-sm font-black"
-                    >
-                      <FiLogOut size={18} /> LOGOUT
-                    </button>
-                  </div>
+                <div className="absolute right-0 mt-2 w-52 bg-white border border-slate-200 shadow-xl py-1 z-[60] rounded-sm">
+                  <Link
+                    href={ROUTES.MAIN.PROFILE}
+                    className="flex items-center gap-3 px-4 py-2.5 text-slate-600 hover:bg-slate-50 hover:text-primary-1 text-sm font-medium"
+                  >
+                    <FiUser size={16} /> My Profile
+                  </Link>
+                  <Link
+                    href={ROUTES.MAIN.SETTINGS}
+                    className="flex items-center gap-3 px-4 py-2.5 text-slate-600 hover:bg-slate-50 hover:text-primary-1 text-sm font-medium"
+                  >
+                    <FiSettings size={16} /> Settings
+                  </Link>
+                  <div className="my-1 border-t border-slate-100" />
+                  <button
+                    onClick={() => dispatch(logoutThunk())}
+                    className="flex items-center gap-3 w-full px-4 py-2.5 text-rose-500 hover:bg-rose-50 text-sm font-bold transition-colors text-left"
+                  >
+                    <FiLogOut size={16} /> Logout
+                  </button>
                 </div>
               )}
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <button
               onClick={() => setActiveModal("login")}
-              className="text-slate-500 text-sm font-bold hover:text-slate-900 transition-colors px-4 py-2"
+              className="text-slate-500 text-sm font-bold hover:text-slate-900 transition-colors px-2"
             >
-              Sign In
+              Log In
             </button>
             <button
               onClick={() => setActiveModal("register")}
-              className="bg-primary-1 text-white font-extrabold px-6 py-2.5 rounded-2xl text-sm shadow-[0_10px_20px_-5px_rgba(var(--primary-rgb),0.3)] hover:shadow-[0_15px_25px_-5px_rgba(var(--primary-rgb),0.4)] hover:scale-[1.02] active:scale-95 transition-all"
+              className="bg-slate-900 text-white text-sm font-bold px-5 py-2 hover:bg-slate-800 transition-all rounded-sm shadow-sm active:scale-95"
             >
-              Get Started
+              Join
             </button>
           </div>
         )}
       </div>
 
-      {/* AUTH MODALS */}
       <Modal isOpen={activeModal === "login"} onClose={closeModals}>
         <LoginForm
           onSuccess={closeModals}

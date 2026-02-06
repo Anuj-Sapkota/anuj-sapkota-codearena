@@ -29,7 +29,7 @@ import {
   fetchSubmissionHistoryThunk,
 } from "@/lib/store/features/workspace/workspace.actions";
 import { fetchProblemByIdThunk } from "@/lib/store/features/problems/problem.actions";
-import { DisplayTestCase } from "@/types/workspace.types";
+import { DisplayTestCase, TestCaseResult } from "@/types/workspace.types";
 import { cleanError } from "@/utils/error-cleaner.util";
 
 const LANGUAGES = [
@@ -132,14 +132,13 @@ export default function WorkspacePage({
           "BACKEND_SUBMISSION_DATA:",
           resultAction.payload.newSubmission,
         ); //---------------------____DEBUG____------------------------
-        const { allPassed, newSubmission } =
-          resultAction.payload;
+        const { allPassed, newSubmission } = resultAction.payload;
 
         // --- CASE: FINAL SUBMISSION (Submit Button) ---
         if (isFinal && newSubmission) {
           // 1. EXTRACT THE ERROR: Find the first result that has stderr or compile_output
           const errorResult = results?.find(
-            (r: any) => r.stderr || r.compile_output || r.message,
+            (r: TestCaseResult) => r.stderr || r.compile_output || r.message,
           );
           const actualError =
             errorResult?.stderr ||
@@ -163,9 +162,7 @@ export default function WorkspacePage({
             });
           } else {
             dispatch(setActiveTab("result"));
-            toast.error(
-              `SUBMISSION FAILED`,
-            );
+            toast.error(`SUBMISSION FAILED`);
           }
         }
 

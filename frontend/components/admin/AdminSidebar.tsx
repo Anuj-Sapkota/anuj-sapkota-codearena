@@ -13,6 +13,7 @@ import {
   FaTimes,
 } from "react-icons/fa";
 import { FiLogOut } from "react-icons/fi";
+import { LuSwords } from "react-icons/lu";
 import { useDispatch } from "react-redux";
 
 interface AdminSidebarProps {
@@ -23,6 +24,7 @@ const navItems = [
   { name: "Dashboard", href: "/admin", icon: FaChartBar },
   { name: "Categories", href: "/admin/categories", icon: FaTags },
   { name: "Problems", href: "/admin/problems", icon: FaCode },
+  { name: "Challenges", href: "/admin/challenges", icon: LuSwords },
   { name: "Users", href: "/admin/users", icon: FaUsers },
 ];
 
