@@ -89,10 +89,10 @@ export default function Navbar() {
 
                 {/* Stylish Active Underline */}
                 {isActive && (
-                  <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary-1" />
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-1" />
                 )}
                 {/* Hover Underline */}
-                <div className="absolute bottom-0 left-0 w-0 h-[2px] bg-slate-200 transition-all group-hover:w-full" />
+                <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-slate-200 transition-all group-hover:w-full" />
               </li>
             );
           })}
@@ -151,7 +151,7 @@ export default function Navbar() {
 
               {/* Clean Dropdown */}
               {showProfileOptions && (
-                <div className="absolute right-0 mt-2 w-52 bg-white border border-slate-200 shadow-xl py-1 z-[60] rounded-sm">
+                <div className="absolute right-0 mt-2 w-52 bg-white border border-slate-200 shadow-xl py-1 z-60 rounded-sm">
                   <Link
                     href={ROUTES.MAIN.PROFILE}
                     className="flex items-center gap-3 px-4 py-2.5 text-slate-600 hover:bg-slate-50 hover:text-primary-1 text-sm font-medium"

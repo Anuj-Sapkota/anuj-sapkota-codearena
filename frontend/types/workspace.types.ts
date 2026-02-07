@@ -6,11 +6,18 @@ export interface Judge0Result {
   time: string;
   memory: number;
   status: {
-    id: number; // 3: Accepted, 4: Wrong Answer, 6: Compilation Error, etc.
+    id: number;
     description: string;
   };
-}
+  isCorrect?: boolean;
+  decodedOutput?: string;
+  isSample?: boolean;
 
+  // --- ADD THESE TO UNIFY WITH DISPLAY TEST CASES ---
+  input?: string;
+  expectedOutput?: string;
+  actualOutput?: string; // Fallback name for decodedOutput
+}
 export interface ExecutionMetrics {
   runtime: string;
   memory: string;
@@ -43,7 +50,7 @@ export interface WorkspaceState {
     judge0Id: number;
   };
   isRunning: boolean;
-  output: string;
+  output: RunCodeResponse | string | null;
   metrics: ExecutionMetrics | null;
   results: Judge0Result[];
   activeTab: "testcase" | "result" | "submissions";
@@ -74,12 +81,12 @@ export interface DisplayTestCase {
 }
 
 export interface TerminalOutputProps {
-  output: string;
+  output: RunCodeResponse | string | null;
   testCases: DisplayTestCase[];
   activeTab: "testcase" | "result" | "submissions";
   setActiveTab: (tab: "testcase" | "result" | "submissions") => void;
-  metrics: { runtime: string; memory: string } | null;
-  submissions: SubmissionRecord[]; // No more 'any'
+  metrics: ExecutionMetrics | null;
+  submissions: SubmissionRecord[];
   isFetchingHistory: boolean;
 }
 
@@ -93,9 +100,16 @@ export interface MetricTileProps {
 export interface TestCaseResult {
   status_id?: number;
   stdout?: string | null;
-  stderr?: string | null;          // Runtime errors
-  compile_output?: string | null;  // Syntax/Compilation errors
-  message?: string | null;         // Sandbox/Internal errors
+  stderr?: string | null; // Runtime errors
+  compile_output?: string | null; // Syntax/Compilation errors
+  message?: string | null; // Sandbox/Internal errors
   time?: string;
   memory?: number;
+}
+
+  export interface ProblemTestCase {
+  input: string;
+  expectedOutput: string;
+  isSample: boolean;
+  explanation?: string;
 }

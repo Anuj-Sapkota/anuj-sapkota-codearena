@@ -79,6 +79,7 @@ export default function WorkspacePage({
           try {
             starter = JSON.parse(starter);
           } catch (e) {
+            console.log(e)
             starter = {};
           }
         }
@@ -188,15 +189,16 @@ export default function WorkspacePage({
 
   const displayTestCases: DisplayTestCase[] = (problem?.testCases || []).map(
     (tc, index) => {
+      // 1. Get the result from the Redux store (set by runCodeThunk)
       const executionResult = results?.[index];
-      const actual = executionResult?.stdout?.trim() || "";
-      const expected = tc.expectedOutput?.toString().trim() || "";
+
+      // 2. TRUST THE BACKEND: Use the 'isCorrect' boolean we calculated in the controller
+      const isCorrect = executionResult?.isCorrect === true;
+
+      // 3. Use the decodedOutput we sent from the backend
+      const actual = executionResult?.decodedOutput || "";
       const hasRun = results && results.length > 0;
 
-      const isCorrect =
-        executionResult?.status?.id === 3 && actual === expected;
-
-      // Apply the error cleaner to any stderr or compile_output
       const errorMessage = cleanError(
         executionResult?.stderr || executionResult?.compile_output,
       );
@@ -206,11 +208,13 @@ export default function WorkspacePage({
         input: tc.input,
         expectedOutput: tc.expectedOutput,
         isSample: tc.isSample,
+        // Use the clean decoded output if it exists, otherwise error, otherwise placeholder
         actualOutput: actual || errorMessage || "---",
+        // Set status based on the backend's 'isCorrect'
         status: !hasRun ? "IDLE" : isCorrect ? "PASSED" : "FAILED",
       };
     },
-  );
+  );  
 
   if (problemLoading) {
     return (
@@ -240,7 +244,7 @@ export default function WorkspacePage({
               ref={descriptionRef}
               className="h-full overflow-y-auto custom-scrollbar"
             >
-              <ProblemDescription problem={problem} />
+              <ProblemDescription problem={problem!} />
             </div>
           </Panel>
 

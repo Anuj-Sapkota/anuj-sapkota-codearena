@@ -14,7 +14,7 @@ const initialState: WorkspaceState = {
   selectedLanguage: LANGUAGES[0],
   isRunning: false,
   isFetchingHistory: false,
-  output: "",
+  output: null,
   results: [],
   submissions: [],
   metrics: null,
