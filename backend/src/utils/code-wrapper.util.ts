@@ -4,6 +4,10 @@ export const wrapUserCode = (
   input: string,
   functionName: string,
 ) => {
+  // Helper to convert "[1,2,3]" -> "{1,2,3}" for C++/Java array initialization
+  const formatInput = (str: string) =>
+    str.replace(/\[/g, "{").replace(/\]/g, "}");
+
   // --- JAVASCRIPT (Node.js 18+) ---
   if (languageId === 63) {
     return `
@@ -12,9 +16,6 @@ ${userCode}
 try {
   const inputData = ${input}; 
   const result = ${functionName}(inputData);
-  
-  // FIX: JSON.stringify(undefined) is undefined. 
-  // We use "null" or an empty string as a fallback to prevent ERR_INVALID_ARG_TYPE.
   const output = JSON.stringify(result);
   process.stdout.write(typeof output === 'undefined' ? "null" : output);
 } catch (err) {
@@ -26,10 +27,10 @@ try {
   // --- PYTHON (3.10+) ---
   if (languageId === 71) {
     return `
-${userCode}
-
 import json
 import sys
+
+${userCode}
 
 if __name__ == "__main__":
     try:
@@ -40,8 +41,6 @@ if __name__ == "__main__":
             result = method(input_data)
         else:
             result = ${functionName}(input_data)
-        
-        # Python's json.dumps handles None/undefined safely as "null"
         print(json.dumps(result), end="")
     except Exception as e:
         sys.stderr.write(str(e))
@@ -50,18 +49,22 @@ if __name__ == "__main__":
 
   // --- JAVA (OpenJDK 17) ---
   if (languageId === 62) {
-    // Note: Java result might need String.valueOf to avoid issues with null objects
+    const javaInput = formatInput(input);
     return `
 import java.util.*;
 
-${userCode}
+// User code (class Solution) must be outside the public Main class
+${userCode.replace(/public class/g, "class")}
 
 public class Main {
     public static void main(String[] args) {
         try {
             Solution sol = new Solution();
-            var result = sol.${functionName}(${input});
-            System.out.print(String.valueOf(result));
+            // Specifically handling the move-zeroes int array type
+            int[] nums = new int[]${javaInput};
+            int[] result = sol.${functionName}(nums);
+            // Print result as [1,3,12,0,0] without spaces for backend comparison
+            System.out.print(Arrays.toString(result).replace(" ", ""));
         } catch (Exception e) {
             System.err.print(e.getMessage());
         }
@@ -72,6 +75,7 @@ public class Main {
 
   // --- C++ (GCC 13) ---
   if (languageId === 54) {
+    const cppInput = formatInput(input);
     return `
 #include <iostream>
 #include <vector>
@@ -80,15 +84,20 @@ public class Main {
 
 using namespace std;
 
+// User code (class Solution) provided here
 ${userCode}
 
 int main() {
-    Solution sol;
     try {
-        // C++ is strictly typed, so result will rarely be "undefined" 
-        // but we wrap for consistency
-        auto result = sol.${functionName}(${input});
-        cout << result;
+        Solution sol;
+        vector<int> nums = ${cppInput};
+        vector<int> result = sol.${functionName}(nums);
+        
+        cout << "[";
+        for (size_t i = 0; i < result.size(); ++i) {
+            cout << result[i] << (i == result.size() - 1 ? "" : ",");
+        }
+        cout << "]";
     } catch (const exception& e) {
         cerr << e.what();
     }

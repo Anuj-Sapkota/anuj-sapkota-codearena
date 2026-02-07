@@ -11,8 +11,10 @@ import {
 import { SubmissionDetail } from "./SubmissionDetail";
 import { SubmissionList } from "./SubmissionList";
 import { MdDescription, MdList } from "react-icons/md";
+import { Problem } from "@/types/problem.types";
+import { Category } from "@/types/category.types";
 
-export const ProblemDescription = ({ problem }: { problem: any }) => {
+export const ProblemDescription = ({ problem }: { problem: Problem }) => {
   const dispatch = useDispatch<AppDispatch>();
   const { descriptionTab, selectedSubmission } = useSelector(
     (state: RootState) => state.workspace,
@@ -41,14 +43,21 @@ export const ProblemDescription = ({ problem }: { problem: any }) => {
   return (
     <div className="flex flex-col h-full bg-[#fcfdfe]">
       {/* DASHBOARD TABS */}
+      {/* DASHBOARD TABS */}
       <div className="flex bg-[#18181b] border-b border-black px-2 shrink-0">
-        {[
-          { id: "description", label: "Description", icon: <MdDescription /> },
-          { id: "submissions", label: "Submissions", icon: <MdList /> },
-        ].map((tab) => (
+        {(
+          [
+            {
+              id: "description",
+              label: "Description",
+              icon: <MdDescription />,
+            },
+            { id: "submissions", label: "Submissions", icon: <MdList /> },
+          ] as const
+        ).map((tab) => (
           <button
             key={tab.id}
-            onClick={() => dispatch(setDescriptionTab(tab.id as any))}
+            onClick={() => dispatch(setDescriptionTab(tab.id))}
             className={`flex cursor-pointer items-center gap-2 px-6 py-4 text-[10px] font-black uppercase tracking-[0.15em] transition-all relative ${
               isActive(tab.id)
                 ? "text-emerald-400 bg-[#27272a]"
@@ -91,9 +100,9 @@ export const ProblemDescription = ({ problem }: { problem: any }) => {
 
                 {/* DYNAMIC CATEGORIES - Mapping from your Category[] relation */}
                 {problem.categories && problem.categories.length > 0 ? (
-                  problem.categories.map((cat: any) => (
+                  problem.categories.map((cat: Category) => (
                     <span
-                      key={cat.id || cat.name}
+                      key={cat.categoryId || cat.name}
                       className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[9px] font-black rounded uppercase tracking-widest border border-slate-200"
                     >
                       {cat.name.replace(/\s+/g, "_").toUpperCase()}

@@ -82,23 +82,14 @@ export const getAllProblems = async (req: Request, res: Response) => {
   }
 };
 
-export const getSingleProblem = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const getSingleProblem = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
+    // Check if the requester is an admin (based on your auth middleware)
+    const isAdmin = (req as any).user?.role === 'ADMIN'; 
 
-    if (!id) {
-      throw new ServiceError("Problem id is required for lookup", 400);
-    }
-
-    const problem = await getProblemById(Number(id));
-    res.status(200).json({
-      success: true,
-      data: problem,
-    });
+    const problem = await getProblemById(Number(id), isAdmin);
+    res.status(200).json({ success: true, data: problem });
   } catch (err) {
     next(err);
   }

@@ -73,17 +73,20 @@ model Problem {
   content    String @db.Text
   difficulty String // EASY, MEDIUM, HARD
 
-  // --- ADDED FOR DYNAMIC WRAPPING ---
-  functionName String @default("solution") // e.g., "isValid" or "twoSum"
+  functionName String @default("solution")
   starterCode  Json
 
   timeLimit   Float @default(1.0)
   memoryLimit Int   @default(128)
 
+  // Relations
   categories   Category[]
   testCases    TestCase[]
   submissions  Submission[]
   userStatuses UserProblemStatus[]
+
+  // NEW: Relation to Challenges via Join Table
+  challenges ChallengeProblem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -127,4 +130,39 @@ model UserProblemStatus {
 
   @@unique([userId, problemId]) // This is key: one record per user per problem
   @@map("user_problem_status")
+}
+
+model Challenge {
+  challengeId Int     @id @default(autoincrement())
+  title       String
+  slug        String  @unique
+  description String? @db.Text
+  bannerUrl   String?
+
+  // Rules
+  isPublic  Boolean   @default(false)
+  startTime DateTime?
+  endTime   DateTime?
+
+  // Many-to-many through join table
+  problems ChallengeProblem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("challenges")
+}
+
+model ChallengeProblem {
+  challenge   Challenge @relation(fields: [challengeId], references: [challengeId], onDelete: Cascade)
+  challengeId Int
+
+  problem   Problem @relation(fields: [problemId], references: [problemId], onDelete: Cascade)
+  problemId Int
+
+  order  Int @default(0) // Problem sequence: 1, 2, 3...
+  points Int @default(100) // Optional: specific points for this challenge
+
+  @@id([challengeId, problemId]) // Composite Primary Key
+  @@map("challenge_problems")
 }
