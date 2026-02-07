@@ -22,12 +22,10 @@ export const submitCode = async (
         memory_limit: memoryLimit * 1024,
       },
     );
-
-    // This data comes back as Base64, which your NEW controller 
+    // This data comes back as Base64, which your NEW controller
     // is already set up to decode correctly.
     return response.data;
   } catch (error) {
-    console.error("Judge0 Error:", error);
     throw new Error("Execution engine failed.");
   }
 };

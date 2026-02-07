@@ -129,7 +129,7 @@ export const getAllProblemsService = async (query: {
       include: {
         categories: { select: { name: true, categoryId: true } },
         _count: { select: { submissions: true } },
-        // Check for ALL user submissions to determine Solved vs Attempted
+        testCases: true, // <--- ADD THIS LINE RIGHT HERE
         submissions: query.userId
           ? {
               where: { userId: query.userId },
@@ -168,20 +168,18 @@ export const getAllProblemsService = async (query: {
     },
   };
 };
-export const getProblemById = async (id: number) => {
+export const getProblemById = async (id: number, isAdmin: boolean = false) => {
   const problem = await prisma.problem.findUnique({
     where: { problemId: id },
     include: {
       categories: true,
-      testCases: {
-        where: { isSample: true }, // Only return sample cases to the client
-      },
+      testCases: isAdmin 
+        ? true  // Admins see all test cases
+        : { where: { isSample: true } }, // Users only see samples
     },
   });
 
-  if (!problem) {
-    throw new ServiceError("Problem not found", 404);
-  }
+  if (!problem) throw new ServiceError("Problem not found", 404);
   return problem;
 };
 

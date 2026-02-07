@@ -43,7 +43,6 @@ export const handleSubmission = async (
           problem.functionName || "solution",
         );
 
-        // This call must be using base64_encoded=true inside Judge0Service
         const execution = await Judge0Service.submitCode(
           wrappedCode,
           language_id,
@@ -54,19 +53,34 @@ export const handleSubmission = async (
 
         const statusId = execution?.status?.id;
 
-        // --- THE DETECTIVE'S FIX: DECODE BASE64 ---
         const actualOutput = execution.stdout
           ? Buffer.from(execution.stdout, "base64").toString("utf-8").trim()
           : "";
 
-        // Compare decoded output with plain text test case
-        const isCorrect =
-          statusId === 3 && actualOutput === tc.expectedOutput.trim();
+        // --- 🔍 ROBUST COMPARISON LOGIC ---
+        // This helper removes all brackets, spaces, and extra commas
+        // to compare only the raw values.
+        const clean = (str: string) =>
+          str.replace(/[\[\]\s]/g, "").replace(/,,+/g, ",");
+
+        const normalizedActual = clean(actualOutput);
+        const normalizedExpected = clean(tc.expectedOutput);
+
+        const isMatch =
+          normalizedActual === normalizedExpected && normalizedActual !== "";
+        const isCorrect = statusId === 3 && isMatch;
+
+        // Diagnostic log to see why it fails even with clean comparison
+        console.log(`CASE ${tc.id} | Status: ${statusId} | Match: ${isMatch}`);
+        if (!isMatch) {
+          console.log(`  Expected Clean: ${normalizedExpected}`);
+          console.log(`  Actual Clean:   ${normalizedActual}`);
+        }
 
         return {
           ...execution,
           isCorrect,
-          decodedOutput: actualOutput, // Helpful for frontend debugging
+          decodedOutput: actualOutput,
           isSample: tc.isSample,
         };
       }),
@@ -76,11 +90,8 @@ export const handleSubmission = async (
     const allPassed = results.every((r) => r.isCorrect);
     const totalPassed = results.filter((r) => r.isCorrect).length;
 
-    // --- ERROR TRACKING ---
-    // Find the first result that isn't "Accepted" (status 3)
-    const firstFailure = results.find((r) => r.status?.id !== 3);
+    const firstFailure = results.find((r) => !r.isCorrect);
 
-    // Prioritize compile_output for C++/Java, then stderr for JS/Python
     const failMessage =
       firstFailure?.compile_output ||
       firstFailure?.stderr ||
@@ -110,7 +121,6 @@ export const handleSubmission = async (
             totalCases: results.length,
             time: metrics.rawTime,
             memory: Math.round(metrics.rawMemory),
-            // --- SAVE THE ERROR MESSAGE ---
             failMessage: failMessage,
           },
         });
