@@ -1,5 +1,4 @@
 import axios from "axios";
-
 import config from "@/config";
 import { ROUTES } from "@/constants/routes";
 
@@ -14,14 +13,22 @@ api.interceptors.response.use(
   (error) => {
     // If the server returns 401, it means the cookie is invalid or expired
     if (error.response?.status === 401) {
+      const pathname = window.location.pathname;
+
+      // 1. Define exact public paths
       const publicPages: string[] = [
         ROUTES.HOME,
         ROUTES.AUTH.LOGIN,
         ROUTES.AUTH.REGISTER,
-        ROUTES.MAIN.EXPLORE
+        ROUTES.MAIN.EXPLORE,
+        "/password/forgot"
       ];
-      const isPublicPage = publicPages.includes(window.location.pathname);
 
+      const isPublicPage = 
+          publicPages.includes(pathname) || 
+          pathname.startsWith("/password/reset/"); 
+
+      // 3. Only redirect if it is strictly NOT a public page
       if (!isPublicPage) {
         console.warn("Unauthorized access to protected route. Redirecting...");
         window.location.href = ROUTES.AUTH.LOGIN;
@@ -31,4 +38,4 @@ api.interceptors.response.use(
   }
 );
 
-export default api;
+export default api; 
