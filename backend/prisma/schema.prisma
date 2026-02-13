@@ -68,11 +68,11 @@ model TestCase {
 }
 
 model Problem {
-  problemId  Int    @id @default(autoincrement())
-  title      String
-  content    String @db.Text
-  difficulty String // EASY, MEDIUM, HARD
-
+  problemId    Int    @id @default(autoincrement())
+  title        String
+  content      String @db.Text
+  difficulty   String // EASY, MEDIUM, HARD
+  points       Int    @default(50)
   functionName String @default("solution")
   starterCode  Json
 
@@ -98,6 +98,7 @@ model Submission {
   id         String @id @default(uuid())
   problemId  Int
   userId     Int
+  challengeId  Int?
   code       String @db.Text
   languageId Int
   status     String // "ACCEPTED", "WRONG_ANSWER", "COMPILATION_ERROR"
@@ -111,6 +112,7 @@ model Submission {
   token       String?  @unique
   failMessage String?
   createdAt   DateTime @default(now())
+  
 
   problem Problem @relation(fields: [problemId], references: [problemId])
   user    User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
@@ -132,12 +134,23 @@ model UserProblemStatus {
   @@map("user_problem_status")
 }
 
+// Define a proper Enum for strict type safety
+enum ChallengeDifficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
 model Challenge {
   challengeId Int     @id @default(autoincrement())
   title       String
   slug        String  @unique
   description String? @db.Text
   bannerUrl   String?
+
+  // NEW: Grading and Categorization
+  difficulty ChallengeDifficulty @default(MEDIUM)
+  points     Int                 @default(100)
 
   // Rules
   isPublic  Boolean   @default(false)
@@ -160,9 +173,8 @@ model ChallengeProblem {
   problem   Problem @relation(fields: [problemId], references: [problemId], onDelete: Cascade)
   problemId Int
 
-  order  Int @default(0) // Problem sequence: 1, 2, 3...
-  points Int @default(100) // Optional: specific points for this challenge
+  order Int @default(0)
 
-  @@id([challengeId, problemId]) // Composite Primary Key
+  @@id([challengeId, problemId])
   @@map("challenge_problems")
 }

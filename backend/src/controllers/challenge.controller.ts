@@ -67,15 +67,16 @@ export const getSingleChallenge = async (
   next: NextFunction,
 ) => {
   try {
-    const { slug } = req.params; 
-    
+    const { slug } = req.params;
+    const userId = (req as any).user?.sub;
+    console.log("UserId:", userId);
     // Type Guard: Narrowing string | undefined -> string
     if (!slug || typeof slug !== "string") {
       throw new ServiceError("SLUG_IDENTIFIER_REQUIRED", 400);
     }
 
-    const challenge = await getChallengeBySlugService(slug);
-    
+    const challenge = await getChallengeBySlugService(slug, userId);
+
     res.status(200).json({
       success: true,
       data: challenge,
@@ -88,17 +89,20 @@ export const getSingleChallenge = async (
 /**
  * PATCH /api/challenges/:challengeId
  */
-export const updateChallenge = async (req: Request, res: Response, next: NextFunction) => {
+export const updateChallenge = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
-    const { challengeId } = req.params; 
-    
-    if (!challengeId)
-    {
+    const { challengeId } = req.params;
+
+    if (!challengeId) {
       throw new ServiceError("CHALLENGE_ID_REQUIRED", 400);
     }
     // Convert the URL string "12" into number 12
     const numericId = parseInt(challengeId, 10);
-    
+
     if (isNaN(numericId)) {
       throw new ServiceError("INVALID_CHALLENGE_ID_FORMAT", 400);
     }
@@ -115,7 +119,6 @@ export const updateChallenge = async (req: Request, res: Response, next: NextFun
   }
 };
 
-
 /**
  * DELETE /api/challenges/:challengeId
  */
@@ -126,7 +129,7 @@ export const deleteChallenge = async (
 ) => {
   try {
     const { challengeId } = req.params;
-    
+
     if (!challengeId) {
       throw new ServiceError("CHALLENGE_ID_REQUIRED", 400);
     }

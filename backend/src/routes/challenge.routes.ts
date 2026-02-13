@@ -59,6 +59,6 @@ router.delete(
  * @desc    Fetch a single challenge by its unique slug (for the UI)
  * @access  Public
  */
-router.get("/:slug", getSingleChallenge);
+router.get("/:slug", authenticateRequest, getSingleChallenge);
 
 export default router;

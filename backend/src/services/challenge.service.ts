@@ -95,7 +95,10 @@ export const getAllChallengesService = async ({
 /**
  * Retrieves a single challenge via its unique slug (Public Use).
  */
-export const getChallengeBySlugService = async (slug: string) => {
+export const getChallengeBySlugService = async (
+  slug: string,
+  userId: number,
+) => {
   const challenge = await prisma.challenge.findUnique({
     where: { slug },
     include: {
@@ -106,13 +109,38 @@ export const getChallengeBySlugService = async (slug: string) => {
     },
   });
 
-  if (!challenge) {
-    throw new ServiceError(`CHALLENGE_NOT_FOUND`, 404);
-  }
+  if (!challenge) throw new Error("CHALLENGE_NOT_FOUND");
 
-  return challenge;
+  // Fetch all accepted submissions for this user specifically for THIS challenge
+  const challengeSubmissions = await prisma.submission.findMany({
+    where: {
+      userId: Number(userId),
+      challengeId: challenge.challengeId,
+      status: "ACCEPTED",
+    },
+    select: { problemId: true },
+  });
+
+  const solvedIds = new Set(challengeSubmissions.map((s) => s.problemId));
+
+  // Map the problems with an 'isSolved' flag localized to this challenge
+  const problemsWithStatus = challenge.problems.map((cp) => ({
+    ...cp,
+    isSolved: solvedIds.has(cp.problemId),
+  }));
+
+  const solvedCount = problemsWithStatus.filter((p) => p.isSolved).length;
+  const totalCount = problemsWithStatus.length;
+  return {
+    ...challenge,
+    problems: problemsWithStatus,
+    stats: {
+      solvedCount,
+      totalCount,
+      percentage: totalCount > 0 ? (solvedCount / totalCount) * 100 : 0,
+    },
+  };
 };
-
 /**
  * Updates challenge via Numeric ID (Administrative Use).
  */

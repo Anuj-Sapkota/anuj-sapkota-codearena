@@ -20,7 +20,7 @@ export const handleSubmission = async (
   res: Response,
   next: NextFunction,
 ) => {
-  const { source_code, language_id, problemId, isFinal } = req.body;
+  const { source_code, language_id, problemId, isFinal, challengeId } = req.body;
   const userId = (req as any).user.sub;
 
   try {
@@ -114,6 +114,7 @@ export const handleSubmission = async (
           data: {
             userId: Number(userId),
             problemId: Number(problemId),
+            challengeId: challengeId ? Number(challengeId) : null,
             code: source_code,
             languageId: Number(language_id),
             status: finalStatus,

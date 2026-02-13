@@ -1,4 +1,6 @@
-import { createSlice } from "@reduxjs/toolkit";
+"use client";
+
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { Challenge } from "@/types/challenge.types";
 import {
   fetchChallengesThunk,
@@ -42,11 +44,35 @@ const challengeSlice = createSlice({
     resetCurrentChallenge: (state) => {
       state.currentChallenge = null;
     },
+    // Useful for local updates if you want to increment stats without a full re-fetch
+    updateLocalProgress: (
+      state,
+      action: PayloadAction<{ problemId: number }>,
+    ) => {
+      if (state.currentChallenge) {
+        const problem = state.currentChallenge.problems?.find(
+          (p) => p.problemId === action.payload.problemId,
+        );
+        if (problem && !problem.isSolved) {
+          problem.isSolved = true;
+          // Recalculate stats locally for instant feedback
+          const solvedCount =
+            state.currentChallenge.problems?.filter((p) => p.isSolved).length ||
+            0;
+          const totalCount = state.currentChallenge.problems?.length || 0;
+          state.currentChallenge.stats = {
+            solvedCount,
+            totalCount,
+            percentage: totalCount > 0 ? (solvedCount / totalCount) * 100 : 0,
+          };
+        }
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
       /**
-       * FETCH ALL CHALLENGES
+       * FETCH ALL CHALLENGES (Exploration Page)
        */
       .addCase(fetchChallengesThunk.pending, (state) => {
         state.isLoading = true;
@@ -63,7 +89,7 @@ const challengeSlice = createSlice({
       })
 
       /**
-       * CREATE CHALLENGE
+       * CREATE CHALLENGE (Admin)
        */
       .addCase(createChallengeThunk.pending, (state) => {
         state.isLoading = true;
@@ -89,12 +115,16 @@ const challengeSlice = createSlice({
       .addCase(updateChallengeThunk.fulfilled, (state, action) => {
         state.isLoading = false;
         const index = state.items.findIndex(
-          (item) => item.challengeId === action.payload.data.challengeId
+          (item) => item.challengeId === action.payload.data.challengeId,
         );
         if (index !== -1) {
           state.items[index] = action.payload.data;
         }
-        if (state.currentChallenge?.challengeId === action.payload.data.challengeId) {
+        // Update current view if the updated challenge is the one being viewed
+        if (
+          state.currentChallenge?.challengeId ===
+          action.payload.data.challengeId
+        ) {
           state.currentChallenge = action.payload.data;
         }
       })
@@ -112,7 +142,9 @@ const challengeSlice = createSlice({
       })
       .addCase(deleteChallengeThunk.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.items = state.items.filter((item) => item.challengeId !== action.payload.id);
+        state.items = state.items.filter(
+          (item) => item.challengeId !== action.payload.id,
+        );
         state.meta.total -= 1;
       })
       .addCase(deleteChallengeThunk.rejected, (state, action) => {
@@ -121,7 +153,7 @@ const challengeSlice = createSlice({
       })
 
       /**
-       * FETCH BY SLUG
+       * FETCH BY SLUG (The Detail View with Progress Stats)
        */
       .addCase(fetchChallengeBySlugThunk.pending, (state) => {
         state.isLoading = true;
@@ -129,6 +161,7 @@ const challengeSlice = createSlice({
       })
       .addCase(fetchChallengeBySlugThunk.fulfilled, (state, action) => {
         state.isLoading = false;
+        // This is the critical part: action.payload.data now contains { ..., stats, problems: [...isSolved] }
         state.currentChallenge = action.payload.data;
       })
       .addCase(fetchChallengeBySlugThunk.rejected, (state, action) => {
@@ -138,5 +171,10 @@ const challengeSlice = createSlice({
   },
 });
 
-export const { clearChallengeError, resetCurrentChallenge } = challengeSlice.actions;
+export const {
+  clearChallengeError,
+  resetCurrentChallenge,
+  updateLocalProgress,
+} = challengeSlice.actions;
+
 export default challengeSlice.reducer;
