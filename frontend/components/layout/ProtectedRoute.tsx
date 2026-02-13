@@ -1,45 +1,55 @@
 "use client";
 
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useMemo } from "react";
 import { useSelector } from "react-redux";
-import { useRouter, usePathname } from "next/navigation"; // Add usePathname
-
+import { useRouter, usePathname } from "next/navigation";
 import { RootState } from "@/lib/store/store";
-import { ROUTES } from "@/constants/routes";
 
-interface ProtectedRouteProps {
-  children: ReactNode;
-}
-
-export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading } = useSelector(
-    (state: RootState) => state.auth,
-  );
+export default function ProtectedRoute({ children }: { children: ReactNode }) {
+  const { isAuthenticated, isLoading } = useSelector((state: RootState) => state.auth);
   const router = useRouter();
-  const pathname = usePathname(); // Get the current URL
+  const pathname = usePathname() || "";
+
+  // 1. "Paranoid" Public Check
+  const isPublicPath = useMemo(() => {
+    // Convert to lowercase to avoid case-sensitivity issues
+    const path = pathname.toLowerCase();
+    
+    // Explicitly allow the reset path via loose matching
+    if (path.includes("password/reset") || path.includes("password/forgot")) {
+      return true;
+    }
+
+    const staticPaths = ["/", "/login", "/register", "/explore"];
+    return staticPaths.includes(path);
+  }, [pathname]);
 
   useEffect(() => {
-    // 1. If the app is currently fetching the user profile, DO NOTHING.
+    // DEBUG: Open your browser console (F12) to see these values!
+    if (pathname.includes("password")) {
+      console.log(`[ProtectedRoute] Path: ${pathname} | IsPublic: ${isPublicPath} | Authed: ${isAuthenticated}`);
+    }
+
+    // Do nothing while loading
     if (isLoading) return;
 
-    const publicPaths = [ROUTES.HOME, "/explore", "/register", "/login"];
-    const isPublicPath = publicPaths.includes(pathname);
-
-    // 2. ONLY redirect if we are SURE loading is finished AND isAuthenticated is still false
+    // Redirect ONLY if strictly necessary
     if (!isAuthenticated && !isPublicPath) {
-      console.error("REDIRECT TRIGGERED BY PROTECTED ROUTE AT:", pathname);
-      router.push(ROUTES.HOME);
+      console.warn("!!! ProtectedRoute is triggering the redirect !!!");
+      router.replace("/");
     }
-  }, [isAuthenticated, isLoading, router, pathname]);
+  }, [isAuthenticated, isLoading, isPublicPath, router, pathname]);
 
-  // 4. If it's a public path, show it regardless of auth status
-  const publicPaths = [ROUTES.HOME, ROUTES.MAIN.EXPLORE, "/register"];
-  if (publicPaths.includes(pathname)) {
+  // 2. Bypass Logic: If it's public, return children IMMEDIATELY
+  if (isPublicPath) {
     return <>{children}</>;
   }
 
-  // 5. If it's private, only show if authenticated
-  if (!isAuthenticated) return null;
+  // 3. Loading State
+  if (isLoading) {
+    return null; // Or a spinner
+  }
 
-  return <>{children}</>;
+  // 4. Auth Check
+  return isAuthenticated ? <>{children}</> : null;
 }

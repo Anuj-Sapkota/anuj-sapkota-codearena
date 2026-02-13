@@ -21,9 +21,8 @@ export const submitCode = async (
         cpu_time_limit: timeLimit,
         memory_limit: memoryLimit * 1024,
       },
-    );
-    // This data comes back as Base64, which your NEW controller
-    // is already set up to decode correctly.
+    );  
+    // This data comes back as Base64
     return response.data;
   } catch (error) {
     throw new Error("Execution engine failed.");

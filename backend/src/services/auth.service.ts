@@ -65,6 +65,7 @@ const register = async ({
       username: generatedUsername,
       email,
       password_hash: await hashPassword(password),
+      has_password: true,
     },
   });
 
@@ -296,7 +297,7 @@ const generateResetToken = async (
 ): Promise<{ token: string; userEmail: string }> => {
   const user = await prisma.user.findUnique({ where: { email } });
 
-  // Security
+  // Security: Avoid email enumeration by not revealing if user exists
   if (!user) {
     throw new ServiceError(
       "If an account exists, a reset link has been sent.",
@@ -311,14 +312,13 @@ const generateResetToken = async (
     where: { userId: user.userId },
     data: {
       resetToken: token,
-      resetTokenExp: expiry,
+      resetTokenExpiry: expiry, // Fixed name here
     },
   });
 
   return { token, userEmail: user.email };
 };
 
-// --- PASSWORD RECOVERY: RESET ACTION ---
 const verifyAndResetPassword = async (
   token: string,
   newPassword: string,
@@ -326,7 +326,7 @@ const verifyAndResetPassword = async (
   const user = await prisma.user.findFirst({
     where: {
       resetToken: token,
-      resetTokenExp: { gt: new Date() },
+      resetTokenExpiry: { gt: new Date() }, // Fixed name here
     },
   });
 
@@ -338,14 +338,14 @@ const verifyAndResetPassword = async (
     where: { userId: user.userId },
     data: {
       password_hash: await hashPassword(newPassword),
+      has_password: true, // Ensuring this flag is set correctly now
       resetToken: null,
-      resetTokenExp: null,
+      resetTokenExpiry: null, // Fixed name here
     },
   });
 
   return true;
 };
-
 const changeUserPassword = async (
   userId: number,
   oldPass: string,
