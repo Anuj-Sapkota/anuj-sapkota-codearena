@@ -35,7 +35,7 @@ export default function ChallengeDetailsPage() {
         <LoadingSpinner />
       </div>
     );
-    
+
   if (error || !currentChallenge)
     return (
       <div className="p-20 text-center text-rose-500 font-bold uppercase tracking-widest">
@@ -44,7 +44,13 @@ export default function ChallengeDetailsPage() {
     );
 
   // Extract stats for cleaner JSX
-  const stats = currentChallenge.stats || { solvedCount: 0, totalCount: 0, percentage: 0 };
+  const stats = currentChallenge.stats || {
+    solvedCount: 0,
+    totalCount: 0,
+    percentage: 0,
+  };
+
+  console.log("Stats", stats);
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20">
@@ -78,17 +84,18 @@ export default function ChallengeDetailsPage() {
                 Your_Challenge_Progress
               </p>
               <h3 className="text-2xl font-black italic text-slate-800">
-                {stats.percentage.toFixed(0)}% <span className="text-slate-300">COMPLETE</span>
+                {stats.percentage.toFixed(0)}%{" "}
+                <span className="text-slate-300">COMPLETE</span>
               </h3>
             </div>
             <p className="text-xs font-bold text-slate-500">
               {stats.solvedCount} / {stats.totalCount} Tasks Finished
             </p>
           </div>
-          
+
           {/* Progress Bar Container */}
           <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-            <div 
+            <div
               className="h-full bg-emerald-500 transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(16,185,129,0.3)]"
               style={{ width: `${stats.percentage}%` }}
             />
@@ -141,7 +148,9 @@ export default function ChallengeDetailsPage() {
                 )
               }
               className={`group bg-white border p-5 rounded-sm flex items-center justify-between transition-all cursor-pointer shadow-sm hover:translate-x-1 ${
-                cp.isSolved ? "border-emerald-100" : "border-slate-200 hover:border-primary-1"
+                cp.isSolved
+                  ? "border-emerald-100"
+                  : "border-slate-200 hover:border-primary-1"
               }`}
             >
               <div className="flex items-center gap-5">
@@ -154,9 +163,11 @@ export default function ChallengeDetailsPage() {
                     {(index + 1).toString().padStart(2, "0")}
                   </span>
                 )}
-                
+
                 <div>
-                  <h3 className={`font-bold transition-colors ${cp.isSolved ? "text-slate-500 italic line-through" : "text-slate-800 group-hover:text-primary-1"}`}>
+                  <h3
+                    className={`font-bold transition-colors ${cp.isSolved ? "text-slate-500 italic line-through" : "text-slate-800 group-hover:text-primary-1"}`}
+                  >
                     {cp.problem.title}
                   </h3>
                   <div className="flex items-center gap-3 mt-1">
@@ -171,21 +182,23 @@ export default function ChallengeDetailsPage() {
               </div>
 
               <div className="flex items-center gap-4">
-                <button 
+                <button
                   className={`px-6 py-2 text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 rounded-sm ${
-                    cp.isSolved 
-                    ? "bg-slate-100 text-slate-400 cursor-default" 
-                    : "bg-slate-900 text-white group-hover:bg-primary-1"
+                    cp.isSolved
+                      ? "bg-slate-100 text-slate-400 cursor-default"
+                      : "bg-slate-900 text-white group-hover:bg-primary-1"
                   }`}
                 >
-                  {cp.isSolved ? "Completed" : "Solve"} <FaChevronRight size={8} />
+                  {cp.isSolved ? "Completed" : "Solve"}{" "}
+                  <FaChevronRight size={8} />
                 </button>
               </div>
             </div>
           ))}
 
           {/* EMPTY STATE */}
-          {(!currentChallenge.problems || currentChallenge.problems.length === 0) && (
+          {(!currentChallenge.problems ||
+            currentChallenge.problems.length === 0) && (
             <div className="bg-white border-2 border-dashed border-slate-200 p-20 text-center rounded-sm">
               <FaLock className="mx-auto text-slate-200 mb-4" size={40} />
               <p className="text-slate-400 font-bold uppercase text-xs tracking-widest">

@@ -7,48 +7,55 @@ import { RunCodeResponse, SubmissionRecord } from "@/types/workspace.types";
  * Thunk for Running or Submitting Code
  * Passing isFinal: true will trigger the backend to save the result
  */
+// lib/store/features/workspace/workspace.actions.ts
+
 export const runCodeThunk = createAsyncThunk<
   RunCodeResponse,
-  { sourceCode: string; langId: number; problemId: string; isFinal?: boolean },
+  {
+    sourceCode: string;
+    langId: number;
+    problemId: string;
+    isFinal?: boolean;
+    challengeId?: string | null;
+  },
   { rejectValue: string }
 >(
   "workspace/runCode",
-  async ({ sourceCode, langId, problemId, isFinal = false }, { rejectWithValue }) => {
+  async (
+    { sourceCode, langId, problemId, isFinal = false, challengeId },
+    { rejectWithValue },
+  ) => {
     try {
-      // Pass the isFinal flag to your service
       const response = await submissionService.submitCode(
-        sourceCode, 
-        langId, 
-        problemId, 
-        isFinal
+        sourceCode,
+        langId,
+        problemId,
+        isFinal,
+        challengeId ?? null,
       );
-      return response; 
+      return response;
     } catch (error: unknown) {
       return rejectWithValue(
-        handleAxiosError(error) || "Failed to execute code"
+        handleAxiosError(error) || "Failed to execute code",
       );
     }
-  }
+  },
 );
-
 /**
  * Thunk for Fetching Submission History
  * Retrieves all past attempts for a specific problem
  */
 export const fetchSubmissionHistoryThunk = createAsyncThunk<
   SubmissionRecord[], // Return type
-  string,             // problemId as input
+  string, // problemId as input
   { rejectValue: string }
->(
-  "workspace/fetchHistory",
-  async (problemId, { rejectWithValue }) => {
-    try {
-      const response = await submissionService.getHistory(problemId);
-      return response.history; // Assuming backend returns { success: true, history: [...] }
-    } catch (error: unknown) {
-      return rejectWithValue(
-        handleAxiosError(error) || "Failed to load submission history"
-      );
-    }
+>("workspace/fetchHistory", async (problemId, { rejectWithValue }) => {
+  try {
+    const response = await submissionService.getHistory(problemId);
+    return response.history; // Assuming backend returns { success: true, history: [...] }
+  } catch (error: unknown) {
+    return rejectWithValue(
+      handleAxiosError(error) || "Failed to load submission history",
+    );
   }
-);
+});

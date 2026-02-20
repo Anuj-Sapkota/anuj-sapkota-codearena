@@ -122,13 +122,14 @@ export const getChallengeBySlugService = async (
   });
 
   const solvedIds = new Set(challengeSubmissions.map((s) => s.problemId));
-
+  console.log("Challenge Submissions: ", challengeSubmissions) // This is coming empty 
+  console.log("SOlved Ids: ", solvedIds)
   // Map the problems with an 'isSolved' flag localized to this challenge
   const problemsWithStatus = challenge.problems.map((cp) => ({
     ...cp,
     isSolved: solvedIds.has(cp.problemId),
   }));
-
+  // console.log("Problem with status: ", problemsWithStatus)// -----------------------HERE is solved is getting false------------------//
   const solvedCount = problemsWithStatus.filter((p) => p.isSolved).length;
   const totalCount = problemsWithStatus.length;
   return {

@@ -20,7 +20,9 @@ export const handleSubmission = async (
   res: Response,
   next: NextFunction,
 ) => {
-  const { source_code, language_id, problemId, isFinal, challengeId } = req.body;
+  const { source_code, language_id, problemId, isFinal, challengeSlug } =
+    req.body;
+  console.log("Challenge Id from the submission controller: ", challengeSlug); ///-------------------------------
   const userId = (req as any).user.sub;
 
   try {
@@ -29,11 +31,21 @@ export const handleSubmission = async (
       include: { testCases: true },
     });
 
-    if (!problem)
+    const challenge = await prisma.challenge.findUnique({
+      where: { slug: String(challengeSlug) },
+    });
+
+    if (!problem) {
       return res
         .status(404)
         .json({ success: false, message: "Problem not found" });
+    }
 
+    if (!challenge) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Challenge not found" });
+    }
     const results = await Promise.all(
       problem.testCases.map(async (tc) => {
         const wrappedCode = wrapUserCode(
@@ -111,10 +123,12 @@ export const handleSubmission = async (
     if (isFinal && userId) {
       newSubmission = await prisma.$transaction(async (tx) => {
         const submission = await tx.submission.create({
-          data: {
+          data: {       
             userId: Number(userId),
             problemId: Number(problemId),
-            challengeId: challengeId ? Number(challengeId) : null,
+            challengeId: challenge.challengeId
+              ? Number(challenge.challengeId)
+              : null,
             code: source_code,
             languageId: Number(language_id),
             status: finalStatus,
@@ -174,7 +188,7 @@ export const getSubmissionHistory = async (req: Request, res: Response) => {
       select: {
         id: true,
         status: true,
-        time: true, // CHANGED: was runtime
+        time: true,
         memory: true,
         createdAt: true,
         languageId: true,

@@ -1,17 +1,23 @@
+"use client";
+
 import api from "../api";
 
 export const submissionService = {
   submitCode: async (
-    sourceCode: string, // Changed name to match Thunk
-    langId: number, // Changed name to match Thunk
+    sourceCode: string,
+    langId: number,
     problemId: string,
     isFinal: boolean = false,
+    challengeSlug: string | null,
   ) => {
+
+    console.log("Challenge id from frontend -submission service: ", challengeSlug)
     const response = await api.post("/submissions/submit", {
-      source_code: sourceCode, // Map to snake_case for backend
-      language_id: langId, // Map to snake_case for backend
+      source_code: sourceCode,
+      language_id: langId,
       problemId,
       isFinal,
+      challengeSlug, 
     });
 
     return response.data;
