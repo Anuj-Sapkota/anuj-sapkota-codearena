@@ -8,6 +8,7 @@ import {
   updateChallengeThunk,
   deleteChallengeThunk,
   fetchChallengeBySlugThunk,
+  fetchPublicChallengesThunk,
 } from "./challenge.actions";
 
 interface ChallengeState {
@@ -87,7 +88,18 @@ const challengeSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       })
-
+      .addCase(fetchPublicChallengesThunk.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchPublicChallengesThunk.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.items = action.payload.data; 
+      })
+      .addCase(fetchPublicChallengesThunk.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      })
       /**
        * CREATE CHALLENGE (Admin)
        */

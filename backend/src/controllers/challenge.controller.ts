@@ -5,6 +5,7 @@ import {
   getChallengeBySlugService,
   updateChallengeService,
   deleteChallengeService,
+  getPublicChallengesService,
 } from "../services/challenge.service.js";
 import { ServiceError } from "../errors/service.error.js";
 
@@ -144,6 +145,24 @@ export const deleteChallenge = async (
     res.status(200).json({
       success: true,
       message: "CHALLENGE_DELETED_FROM_REGISTRY",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getPublicChallenge = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    // Note: Calling the correctly spelled service
+    const results = await getPublicChallengesService();
+
+    return res.status(200).json({
+      success: true,
+      data: results.items, // Consistent with your Admin service structure
     });
   } catch (err) {
     next(err);

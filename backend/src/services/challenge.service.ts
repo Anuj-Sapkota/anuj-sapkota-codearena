@@ -122,8 +122,8 @@ export const getChallengeBySlugService = async (
   });
 
   const solvedIds = new Set(challengeSubmissions.map((s) => s.problemId));
-  console.log("Challenge Submissions: ", challengeSubmissions) // This is coming empty 
-  console.log("SOlved Ids: ", solvedIds)
+  console.log("Challenge Submissions: ", challengeSubmissions); // This is coming empty
+  console.log("SOlved Ids: ", solvedIds);
   // Map the problems with an 'isSolved' flag localized to this challenge
   const problemsWithStatus = challenge.problems.map((cp) => ({
     ...cp,
@@ -220,5 +220,40 @@ export const deleteChallengeService = async (challengeId: number) => {
       throw new ServiceError("CHALLENGE_NOT_FOUND", 404);
     }
     throw error;
+  }
+};
+
+/**
+ * Gets challenges that are public
+ */
+
+/**
+ * Gets challenges that are public and currently active.
+ * Updated to return a consistent structure.
+ */
+export const getPublicChallengesService = async () => {
+  const now = new Date();
+
+  try {
+    const challenges = await prisma.challenge.findMany({
+      where: {
+        isPublic: true,
+        startTime: { lte: now }, // Challenge has started
+        endTime: { gte: now }, // Challenge hasn't ended
+      },
+      include: {
+        // Include problems so the user can see how many tasks are inside
+        _count: { select: { problems: true } },
+      },
+      orderBy: { startTime: "desc" },
+    });
+    console.log("Challenges: ", challenges)
+    // We return it as 'items' to match the pattern used in getAllChallenges
+    return {
+      items: challenges,
+      total: challenges.length,
+    };
+  } catch (error) {
+    throw new ServiceError("FAILED_TO_FETCH_PUBLIC_CHALLENGES", 500);
   }
 };

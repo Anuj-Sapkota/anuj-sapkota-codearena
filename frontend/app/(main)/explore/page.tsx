@@ -5,13 +5,6 @@ import { CategoryTracks } from "@/components/explore/CategoryTracks";
 import { FeaturedChallenges } from "@/components/challenges/FeaturedChallenges";
 import { LearningPlaceholder } from "@/components/explore/LearningPlaceholder";
 
-// Dummy data for simulation
-const MOCK_CHALLENGES = [
-  { id: 1, title: "Binary_Search_Optimization", difficulty: "EASY", points: 50 },
-  { id: 2, title: "Graph_Sync_Protocol", difficulty: "MEDIUM", points: 150 },
-  { id: 3, title: "Recursive_Descent_Kernel", difficulty: "HARD", points: 300 },
-  { id: 4, title: "Memory_Leak_Detection", difficulty: "EASY", points: 75 },
-];
 
 export default function ExplorePage() {
   return (
@@ -25,9 +18,7 @@ export default function ExplorePage() {
         
         <CategoryTracks />
         
-        <FeaturedChallenges 
-          challenges={MOCK_CHALLENGES} 
-        />
+        <FeaturedChallenges/>
         
         <LearningPlaceholder />
       </main>

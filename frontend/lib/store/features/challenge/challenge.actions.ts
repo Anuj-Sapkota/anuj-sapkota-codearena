@@ -39,6 +39,26 @@ export const fetchChallengesThunk = createAsyncThunk<
 });
 
 /**
+ * Fetch public challenges
+ */
+export const fetchPublicChallengesThunk = createAsyncThunk<
+  { success: boolean; data: Challenge[] }, // Return type
+  void,                                   
+  { rejectValue: string }
+>(
+  "challenges/fetchPublic", 
+  async (_, { rejectWithValue }) => {
+    try {
+      // This calls your new public endpoint
+      return await challengeService.getPublic(); 
+    } catch (error: unknown) {
+      return rejectWithValue(
+        handleAxiosError(error) || "Failed to fetch active challenges"
+      );
+    }
+  }
+);
+/**
  * Create a new challenge registry entry
  */
 export const createChallengeThunk = createAsyncThunk<
