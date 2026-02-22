@@ -28,8 +28,8 @@ export const createChallengeService = async (data: any) => {
         description,
         bannerUrl,
         isPublic: isPublic || false,
-        startTime: startTime ? new Date(startTime) : null,
-        endTime: endTime ? new Date(endTime) : null,
+        startTime: startTime ? new Date(startTime).toISOString() : null,
+        endTime: endTime ? new Date(endTime).toISOString() : null,
         problems: {
           create:
             problemIds?.map((id: number, index: number) => ({
@@ -95,7 +95,10 @@ export const getAllChallengesService = async ({
 /**
  * Retrieves a single challenge via its unique slug (Public Use).
  */
-export const getChallengeBySlugService = async (slug: string) => {
+export const getChallengeBySlugService = async (
+  slug: string,
+  userId: number,
+) => {
   const challenge = await prisma.challenge.findUnique({
     where: { slug },
     include: {
@@ -106,13 +109,39 @@ export const getChallengeBySlugService = async (slug: string) => {
     },
   });
 
-  if (!challenge) {
-    throw new ServiceError(`CHALLENGE_NOT_FOUND`, 404);
-  }
+  if (!challenge) throw new Error("CHALLENGE_NOT_FOUND");
 
-  return challenge;
+  // Fetch all accepted submissions for this user specifically for THIS challenge
+  const challengeSubmissions = await prisma.submission.findMany({
+    where: {
+      userId: Number(userId),
+      challengeId: challenge.challengeId,
+      status: "ACCEPTED",
+    },
+    select: { problemId: true },
+  });
+
+  const solvedIds = new Set(challengeSubmissions.map((s) => s.problemId));
+  console.log("Challenge Submissions: ", challengeSubmissions); // This is coming empty
+  console.log("SOlved Ids: ", solvedIds);
+  // Map the problems with an 'isSolved' flag localized to this challenge
+  const problemsWithStatus = challenge.problems.map((cp) => ({
+    ...cp,
+    isSolved: solvedIds.has(cp.problemId),
+  }));
+  // console.log("Problem with status: ", problemsWithStatus)// -----------------------HERE is solved is getting false------------------//
+  const solvedCount = problemsWithStatus.filter((p) => p.isSolved).length;
+  const totalCount = problemsWithStatus.length;
+  return {
+    ...challenge,
+    problems: problemsWithStatus,
+    stats: {
+      solvedCount,
+      totalCount,
+      percentage: totalCount > 0 ? (solvedCount / totalCount) * 100 : 0,
+    },
+  };
 };
-
 /**
  * Updates challenge via Numeric ID (Administrative Use).
  */
@@ -120,7 +149,7 @@ export const updateChallengeService = async (
   challengeId: number,
   data: any,
 ) => {
-  const { problemIds, ...updateData } = data;
+  const { problemIds, startTime, endTime, slug, ...updateData } = data;
 
   try {
     return await prisma.$transaction(async (tx) => {
@@ -129,15 +158,12 @@ export const updateChallengeService = async (
         where: { challengeId },
         data: {
           ...updateData,
-          slug: updateData.slug
-            ? updateData.slug.toLowerCase().trim().replace(/\s+/g, "-")
+          slug: slug
+            ? slug.toLowerCase().trim().replace(/\s+/g, "-")
             : undefined,
-          startTime: updateData.startTime
-            ? new Date(updateData.startTime)
-            : undefined,
-          endTime: updateData.endTime
-            ? new Date(updateData.endTime)
-            : undefined,
+          // Force conversion to ISO to stop the "Timezone Slide"
+          startTime: startTime ? new Date(startTime).toISOString() : undefined,
+          endTime: endTime ? new Date(endTime).toISOString() : undefined,
         },
       });
 
@@ -191,5 +217,35 @@ export const deleteChallengeService = async (challengeId: number) => {
       throw new ServiceError("CHALLENGE_NOT_FOUND", 404);
     }
     throw error;
+  }
+};
+
+/**
+ * Gets challenges that are public
+ */
+export const getPublicChallengesService = async () => {
+  const now = new Date();
+
+  try {
+    const challenges = await prisma.challenge.findMany({
+      where: {
+        isPublic: true,
+        startTime: { lte: now }, // Challenge has started
+        endTime: { gte: now }, // Challenge hasn't ended
+      },
+      include: {
+        // Include problems so the user can see how many tasks are inside
+        _count: { select: { problems: true } },
+      },
+      orderBy: { startTime: "desc" },
+    });
+    console.log("Challenges: ", challenges);
+    // We return it as 'items' to match the pattern used in getAllChallenges
+    return {
+      items: challenges,
+      total: challenges.length,
+    };
+  } catch (error) {
+    throw new ServiceError("FAILED_TO_FETCH_PUBLIC_CHALLENGES", 500);
   }
 };

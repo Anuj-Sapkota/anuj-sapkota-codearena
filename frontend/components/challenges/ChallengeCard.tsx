@@ -1,9 +1,17 @@
 "use client";
-import { Challenge } from "@/types/challenge.types";
-import React from "react";
-import { FaStar, FaChevronRight, FaUsers } from "react-icons/fa";
 
-export const ChallengeCard = ({ challenge }: { challenge: any }) => {
+import React from "react";
+import { useRouter } from "next/navigation";
+import { FaStar, FaChevronRight, FaUsers } from "react-icons/fa";
+import { Challenge } from "@/types/challenge.types";
+
+interface ChallengeCardProps {
+  challenge: Challenge;
+}
+
+export const ChallengeCard = ({ challenge }: ChallengeCardProps) => {
+  const router = useRouter();
+
   // 1. Define the color mapping based on difficulty
   const difficultyConfig = {
     EASY: {
@@ -30,12 +38,25 @@ export const ChallengeCard = ({ challenge }: { challenge: any }) => {
   };
 
   // Fallback to MEDIUM if difficulty is undefined or doesn't match
-  const config = difficultyConfig[challenge.difficulty as keyof typeof difficultyConfig] || difficultyConfig.MEDIUM;
+  const difficultyKey = (challenge.difficulty?.toUpperCase() || "MEDIUM") as keyof typeof difficultyConfig;
+  const config = difficultyConfig[difficultyKey] || difficultyConfig.MEDIUM;
+
+  const handleSolveNavigation = () => {
+    // Navigating via slug as per your fetchChallengeBySlugThunk logic
+    if (challenge.slug) {
+      router.push(`/challenges/${challenge.slug}`);
+    } else {
+      console.error("Challenge slug is missing for navigation");
+    }
+  };
 
   return (
-    <div className={`group bg-white border border-slate-200 p-6 transition-all hover:shadow-2xl ${config.border} flex flex-col justify-between relative overflow-hidden`}>
+    <div 
+      onClick={handleSolveNavigation}
+      className={`group bg-white border border-slate-200 p-6 transition-all cursor-pointer hover:shadow-2xl ${config.border} flex flex-col justify-between relative overflow-hidden rounded-sm`}
+    >
       
-      {/* Dynamic Visual Accent */}
+      {/* Dynamic Visual Accent (Left Border Hover Effect) */}
       <div className={`absolute top-0 left-0 w-1 h-0 ${config.accent} transition-all duration-300 group-hover:h-full`} />
 
       <div>
@@ -62,12 +83,19 @@ export const ChallengeCard = ({ challenge }: { challenge: any }) => {
         <div className="flex items-center gap-3 text-slate-400">
           <div className="flex items-center gap-1 text-[11px] font-bold">
             <FaUsers size={12} />
-            <span>1.2k</span>
+            {/* Using a placeholder or dynamic count if available in your schema */}
+            <span>1.2k</span> 
           </div>
         </div>
         
-        {/* Dynamic Button Hover */}
-        <button className={`flex items-center gap-2 bg-slate-900 text-white px-5 py-2 text-[10px] cursor-pointer font-black uppercase tracking-widest ${config.button} transition-all group-hover:scale-105 active:scale-95`}>
+        {/* Solve Button */}
+        <button 
+          onClick={(e) => {
+            e.stopPropagation(); // Prevents double-firing if parent div has onClick
+            handleSolveNavigation();
+          }}
+          className={`flex items-center gap-2 bg-slate-900 text-white px-5 py-2 text-[10px] cursor-pointer font-black uppercase tracking-widest ${config.button} transition-all group-hover:scale-105 active:scale-95 rounded-sm`}
+        >
           Solve <FaChevronRight size={8} className="group-hover:translate-x-1 transition-transform" />
         </button>
       </div>

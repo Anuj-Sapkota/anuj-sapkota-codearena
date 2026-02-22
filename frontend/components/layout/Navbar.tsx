@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation"; // Added useRouter
 import {
   FiSearch,
   FiBell,
@@ -11,6 +11,7 @@ import {
   FiLogOut,
   FiSettings,
   FiChevronDown,
+  FiShield, // Added for Admin icon
 } from "react-icons/fi";
 import { useSelector, useDispatch } from "react-redux";
 
@@ -28,6 +29,7 @@ export default function Navbar() {
   );
   const dispatch = useDispatch<AppDispatch>();
   const pathname = usePathname();
+  const router = useRouter(); // Initialize router for navigation
 
   const [showProfileOptions, setShowProfileOptions] = useState(false);
   const [activeModal, setActiveModal] = useState<"login" | "register" | null>(
@@ -113,6 +115,18 @@ export default function Navbar() {
 
         {isAuthenticated ? (
           <div className="flex items-center gap-4">
+            
+            {/* ADMIN PANEL ACCESS BUTTON */}
+            {user?.role === "ADMIN" && (
+              <button
+                onClick={() => router.push("/admin/")}
+                className="flex items-center gap-2 px-3 py-1.5 cursor-pointer bg-rose-50 border border-rose-100 text-rose-600 rounded-sm hover:bg-rose-600 hover:text-white transition-all duration-200 shadow-sm group"
+              >
+                <FiShield size={14} className="group-hover:scale-110 transition-transform" />
+                <span className="text-[11px] font-black uppercase tracking-wider">Admin Panel</span>
+              </button>
+            )}
+
             <button className="relative p-2 text-slate-400 hover:text-slate-900 transition-colors">
               <FiBell size={20} />
               <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-primary-1 rounded-full"></span>

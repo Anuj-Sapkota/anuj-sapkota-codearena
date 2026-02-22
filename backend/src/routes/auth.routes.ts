@@ -25,20 +25,38 @@ router.get("/github", authController.initiateGithubAuth);
 // Callbacks stay the same, but the Passport Strategy (updated previously) will read the state
 router.get(
   "/google/callback",
-  passport.authenticate("google", { session: false, failureRedirect: "/login" }),
+  passport.authenticate("google", {
+    session: false,
+    failureRedirect: "/login",
+  }),
   authController.oauthSignIn,
 );
 
 router.get(
   "/github/callback",
-  passport.authenticate("github", { session: false, failureRedirect: "/login" }),
+  passport.authenticate("github", {
+    session: false,
+    failureRedirect: "/login",
+  }),
   authController.oauthSignIn,
 );
 
 // --- Account Settings ---
 router.post("/unlink", authenticateRequest, authController.unlinkOAuth);
-router.post("/set-initial-password", authenticateRequest, authController.setInitialPassword);
-router.delete("/delete-account", authenticateRequest, authController.deleteAccount);
-router.post("/change-password", authenticateRequest, authController.changePassword);
+router.post(
+  "/set-initial-password",
+  authenticateRequest,
+  authController.setInitialPassword,
+);
+router.delete(
+  "/delete-account",
+  authenticateRequest,
+  authController.deleteAccount,
+);
+router.post(
+  "/change-password",
+  authenticateRequest,
+  authController.changePassword,
+);
 
 export default router;

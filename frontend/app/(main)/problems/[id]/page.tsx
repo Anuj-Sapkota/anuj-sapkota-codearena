@@ -4,7 +4,7 @@ import React, { useEffect, use, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Panel, Group, Separator } from "react-resizable-panels";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 // Components
 import { CodeEditor } from "@/components/problems/CodeEditor";
@@ -48,7 +48,7 @@ export default function WorkspacePage({
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const descriptionRef = useRef<HTMLDivElement>(null);
-
+  const searchParams = useSearchParams();
   const [isSubmittingMode, setIsSubmittingMode] = useState(false);
 
   const { currentProblem, isLoading: problemLoading } = useSelector(
@@ -125,6 +125,7 @@ export default function WorkspacePage({
           langId: selectedLanguage.judge0Id,
           problemId: problem.problemId.toString(),
           isFinal,
+          challengeId: searchParams.get("challenge")
         }),
       );
 

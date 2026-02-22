@@ -7,12 +7,18 @@ export const challengeService = {
     return response.data;
   },
 
-  getAll: async (params?: { page?: number; limit?: number; search?: string }) => {
+  getAll: async (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  }) => {
     const response = await api.get("/challenges", { params });
     return response.data;
   },
 
-  getBySlug: async (slug: string): Promise<{ success: boolean; data: Challenge }> => {
+  getBySlug: async (
+    slug: string,
+  ): Promise<{ success: boolean; data: Challenge }> => {
     const response = await api.get(`/challenges/${slug}`);
     return response.data;
   },
@@ -26,6 +32,11 @@ export const challengeService = {
   // Target numeric ID for administrative stability
   delete: async (challengeId: number) => {
     const response = await api.delete(`/challenges/${challengeId}`);
+    return response.data;
+  },
+
+  getPublic: async () => {
+    const response = await api.get("/challenges/public");
     return response.data;
   },
 };

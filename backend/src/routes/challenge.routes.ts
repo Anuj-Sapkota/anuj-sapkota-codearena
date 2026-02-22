@@ -5,6 +5,7 @@ import {
   getSingleChallenge,
   updateChallenge,
   deleteChallenge,
+  getPublicChallenge,
 } from "../controllers/challenge.controller.js";
 import { authenticateRequest } from "../middlewares/auth.middleware.js";
 import { authorizeRequest } from "../middlewares/authorize.middleware.js";
@@ -12,15 +13,28 @@ import { authorizeRequest } from "../middlewares/authorize.middleware.js";
 const router = Router();
 
 /**
- * @route   GET /api/challenges
- * @desc    Fetch all challenges with pagination
+ * @route   GET /api/challenges/public
+ * @desc    Fetch active/live challenges for the user homepage
  * @access  Public
+ * @note    Placed above /:slug to prevent "public" being treated as a slug parameter.
  */
-router.get("/", getAllChallenges);
+router.get("/public", getPublicChallenge);
+
+/**
+ * @route   GET /api/challenges
+ * @desc    Fetch all challenges with pagination (Administrative list)
+ * @access  Private (Admin Only)
+ */
+router.get(
+  "/", 
+  authenticateRequest, 
+  authorizeRequest("ADMIN"), 
+  getAllChallenges
+);
 
 /**
  * @route   POST /api/challenges
- * @desc    Create a new challenge
+ * @desc    Create a new challenge and link problems
  * @access  Private (Admin Only)
  */
 router.post(
@@ -32,7 +46,7 @@ router.post(
 
 /**
  * @route   PATCH /api/challenges/:challengeId
- * @desc    Update an existing challenge via Numeric ID
+ * @desc    Update challenge details and re-sync problem list via Numeric ID
  * @access  Private (Admin Only)
  */
 router.patch(
@@ -44,7 +58,7 @@ router.patch(
 
 /**
  * @route   DELETE /api/challenges/:challengeId
- * @desc    Remove a challenge via Numeric ID
+ * @desc    Permanently remove a challenge and its problem links
  * @access  Private (Admin Only)
  */
 router.delete(
@@ -56,9 +70,10 @@ router.delete(
 
 /**
  * @route   GET /api/challenges/:slug
- * @desc    Fetch a single challenge by its unique slug (for the UI)
- * @access  Public
+ * @desc    Fetch detailed challenge data, including user-specific problem status
+ * @access  Private (Authenticated Users)
+ * @note    Dynamic parameter routes should always be placed at the end of the file.
  */
-router.get("/:slug", getSingleChallenge);
+router.get("/:slug", authenticateRequest, getSingleChallenge);
 
 export default router;

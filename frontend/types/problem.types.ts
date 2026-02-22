@@ -14,6 +14,7 @@ export interface Problem {
   slug: string;
   content: string;
   difficulty: "EASY" | "MEDIUM" | "HARD";
+  points: number;
   timeLimit: number;
   functionName: string;
   starterCode: {
@@ -52,6 +53,7 @@ export interface CreateProblemDTO {
   difficulty: "EASY" | "MEDIUM" | "HARD";
   timeLimit: number;
   functionName: string;
+  points: number;
   starterCode: Record<string, string>;
   memoryLimit: number;
   categoryIds: number[];

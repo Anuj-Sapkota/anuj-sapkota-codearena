@@ -6,7 +6,7 @@ import { AppDispatch, RootState } from "@/lib/store/store";
 import { fetchProblemsThunk } from "@/lib/store/features/problems/problem.actions";
 import { fetchCategoriesThunk } from "@/lib/store/features/category/category.actions";
 import { FaSearch } from "react-icons/fa";
-import { Problem, ProblemMeta } from "@/types/problem.types";
+import { Problem } from "@/types/problem.types";
 import SortDropdown from "@/components/problems/SortDropdown";
 import CategoryBar from "@/components/problems/CategoryBar";
 import FilterSidebar from "@/components/problems/FilterSidebar";
@@ -59,7 +59,7 @@ export default function UserProblemsPage() {
     sortBy,
   ]);
 
-  const problemMeta = meta as ProblemMeta;
+  const problemMeta = meta;
   const totalCount = problemMeta.total || 0;
   const solvedCount =
     problemMeta.totalSolved ||

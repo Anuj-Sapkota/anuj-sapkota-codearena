@@ -1,12 +1,17 @@
 import { Problem } from "./problem.types";
 
+export type ChallengeDifficulty = "EASY" | "MEDIUM" | "HARD";
+
+// 1. Updated ChallengeProblem to include optional solve status
 export interface ChallengeProblem {
   challengeId: number;
   problemId: number;
   order: number;
   problem: Problem;
+  isSolved?: boolean; // Added for UI tracking
 }
 
+// 2. Updated Challenge with stats and localized problems
 export interface Challenge {
   challengeId: number;
   title: string;
@@ -14,9 +19,18 @@ export interface Challenge {
   description?: string;
   bannerUrl?: string;
   isPublic: boolean;
+  difficulty: ChallengeDifficulty;
+  points: number;
   startTime?: string | Date;
   endTime?: string | Date;
-  problems?: ChallengeProblem[];
+  problems?: (ChallengeProblem & { isSolved?: boolean })[];
+  
+  stats?: {
+    solvedCount: number;
+    totalCount: number;
+    percentage: number;
+  };
+
   _count?: {
     problems: number;
   };
@@ -31,7 +45,9 @@ export interface CreateChallengeDTO {
   description?: string;
   bannerUrl?: string;
   isPublic: boolean;
-  startTime?: string; // Sent as ISO string from datetime-local input
-  endTime?: string; // Sent as ISO string from datetime-local input
-  problemIds: number[]; // Array of IDs to be linked in the join table
+  difficulty: ChallengeDifficulty;
+  points: number;
+  startTime?: string; 
+  endTime?: string; 
+  problemIds: number[]; 
 }
