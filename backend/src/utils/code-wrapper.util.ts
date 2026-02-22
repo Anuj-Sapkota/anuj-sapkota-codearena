@@ -7,7 +7,7 @@ export const wrapUserCode = (
   languageId: number,
   input: string,
   functionName: string,
-  inputType: "INT" | "ARRAY" | "STRING" | "BOOLEAN" = "ARRAY"
+  inputType: "INT" | "ARRAY" | "STRING" | "BOOLEAN" = "ARRAY",
 ) => {
   // Helper to convert JSON arrays "[1,2,3]" -> Java/C++ style "{1,2,3}"
   const formatForStaticLanguages = (str: string) =>
@@ -68,7 +68,7 @@ if __name__ == "__main__":
   if (languageId === 62) {
     let typeDecl = "int";
     let inputVal = input;
-    
+
     if (inputType === "ARRAY") {
       typeDecl = "int[]";
       inputVal = `new int[]${formatForStaticLanguages(input)}`;
@@ -105,7 +105,6 @@ public class Main {
 }
     `;
   }
-
   // --- C++ (GCC 13) ---
   if (languageId === 54) {
     let typeDecl = "int";
@@ -124,35 +123,54 @@ public class Main {
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <climits>
 
 using namespace std;
 
 ${userCode}
+
+// 1. Vector overload
+void printResult(const vector<int>& res) {
+    cout << "[";
+    for (size_t i = 0; i < res.size(); ++i) {
+        cout << res[i] << (i == res.size() - 1 ? "" : ",");
+    }
+    cout << "]";
+}
+
+// 2. Specific int overload (Prevents ambiguity)
+void printResult(int res) {
+    cout << res;
+}
+
+// 3. Specific long long overload
+void printResult(long long res) {
+    cout << res;
+}
+
+// 4. Specific string overload
+void printResult(const string& res) {
+    cout << "\\"" << res << "\\"";
+}
+
+// 5. Specific bool overload (using a dummy to prevent int-to-bool ambiguity)
+void printResult(bool res) {
+    cout << (res ? "true" : "false");
+}
 
 int main() {
     try {
         Solution sol;
         ${typeDecl} inputParam = ${inputVal};
         auto result = sol.${functionName}(inputParam);
-        
-        // Simple logic to print vector or primitive
-        #include <type_traits>
-        if constexpr (std::is_same_v<decltype(result), vector<int>>) {
-            cout << "[";
-            for (size_t i = 0; i < result.size(); ++i) {
-                cout << result[i] << (i == result.size() - 1 ? "" : ",");
-            }
-            cout << "]";
-        } else {
-            cout << result;
-        }
+        printResult(result);
     } catch (const exception& e) {
         cerr << e.what();
         return 1;
     }
     return 0;
 }
-    `;
+`;
   }
 
   return userCode;
