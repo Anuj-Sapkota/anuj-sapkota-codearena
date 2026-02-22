@@ -11,6 +11,12 @@ enum Role {
   USER
   ADMIN
 }
+enum InputType {
+  INT
+  ARRAY
+  STRING
+  BOOLEAN
+}
 
 model User {
   userId              Int       @id @default(autoincrement())
@@ -75,7 +81,7 @@ model Problem {
   points       Int    @default(50)
   functionName String @default("solution")
   starterCode  Json
-
+  inputType    InputType     @default(ARRAY) 
   timeLimit   Float @default(1.0)
   memoryLimit Int   @default(128)
 

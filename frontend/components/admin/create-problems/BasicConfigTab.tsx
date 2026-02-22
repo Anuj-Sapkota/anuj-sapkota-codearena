@@ -15,6 +15,27 @@ export default function BasicConfigTab({ formData, setFormData, categories = []}
             placeholder="E.G. BINARY SEARCH ARCHITECTURE"
           />
         </div>
+        
+        {/* NEW FIELD: Input Type Selection */}
+        <div className="space-y-2">
+          <FormLabel>Input Data Type</FormLabel>
+          <select
+            className="w-full border-2 border-gray-500 rounded-md p-4 bg-white font-bold cursor-pointer focus:border-primary-1 transition-all"
+            value={formData.inputType}
+            onChange={(e) => setFormData({ ...formData, inputType: e.target.value as any })}
+          >
+            <option value="ARRAY">ARRAY (e.g. [1, 2, 3])</option>
+            <option value="INT">INTEGER (e.g. 123)</option>
+            <option value="STRING">STRING (e.g. "hello")</option>
+            <option value="BOOLEAN">BOOLEAN (e.g. true)</option>
+          </select>
+          <p className="text-[10px] text-gray-400 italic mt-1">
+            * This tells the compiler how to pass test-case data to your code.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="space-y-2">
           <FormLabel>Function Name</FormLabel>
           <input
@@ -24,9 +45,7 @@ export default function BasicConfigTab({ formData, setFormData, categories = []}
             placeholder="solution"
           />
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-4 border-t border-gray-100">
+        
         <div className="space-y-2">
           <FormLabel>Difficulty</FormLabel>
           <select
@@ -39,13 +58,27 @@ export default function BasicConfigTab({ formData, setFormData, categories = []}
             <option value="HARD">LEVEL: HARD</option>
           </select>
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-gray-100">
         <div className="space-y-2">
           <FormLabel>Time Limit (s)</FormLabel>
-          <input type="number" step="0.1" className="w-full border-2 border-gray-500 rounded-md p-4" value={formData.timeLimit} onChange={(e) => setFormData({ ...formData, timeLimit: parseFloat(e.target.value) })} />
+          <input 
+            type="number" 
+            step="0.1" 
+            className="w-full border-2 border-gray-500 rounded-md p-4" 
+            value={formData.timeLimit} 
+            onChange={(e) => setFormData({ ...formData, timeLimit: parseFloat(e.target.value) })} 
+          />
         </div>
         <div className="space-y-2">
           <FormLabel>Memory Limit (MB)</FormLabel>
-          <input type="number" className="w-full border-2 border-gray-500 rounded-md p-4" value={formData.memoryLimit} onChange={(e) => setFormData({ ...formData, memoryLimit: parseInt(e.target.value) })} />
+          <input 
+            type="number" 
+            className="w-full border-2 border-gray-500 rounded-md p-4" 
+            value={formData.memoryLimit} 
+            onChange={(e) => setFormData({ ...formData, memoryLimit: parseInt(e.target.value) })} 
+          />
         </div>
       </div>
 

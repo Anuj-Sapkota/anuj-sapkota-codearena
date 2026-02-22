@@ -1,8 +1,11 @@
 import { Dispatch, SetStateAction } from "react";
 import { Category } from "./category.types";
 
+// 1. Define the valid types for our wrapper logic
+export type InputDataType = "INT" | "ARRAY" | "STRING" | "BOOLEAN";
+
 export interface TestCase {
-  testCaseId: number; // Consistently using testCaseId to match your Backend/Prisma
+  testCaseId: number; 
   input: string;
   expectedOutput: string;
   isSample: boolean;
@@ -14,6 +17,7 @@ export interface Problem {
   slug: string;
   content: string;
   difficulty: "EASY" | "MEDIUM" | "HARD";
+  inputType: InputDataType; // Added to interface
   points: number;
   timeLimit: number;
   functionName: string;
@@ -25,7 +29,7 @@ export interface Problem {
   };
   memoryLimit: number;
   categories: Category[];
-  testCases: TestCase[]; // Removed the '?' as Workspace needs these
+  testCases: TestCase[]; 
   status: "SOLVED" | "ATTEMPTED" | "UNSOLVED";
   isSolved?: boolean;
   _count?: {
@@ -51,6 +55,7 @@ export interface CreateProblemDTO {
   title: string;
   content: string;
   difficulty: "EASY" | "MEDIUM" | "HARD";
+  inputType: InputDataType; // Added to DTO
   timeLimit: number;
   functionName: string;
   points: number;

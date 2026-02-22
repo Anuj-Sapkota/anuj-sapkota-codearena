@@ -12,6 +12,7 @@ export const createProblemService = async (data: any) => {
     memoryLimit,
     categoryIds, // Array of Ints
     testCases, // Array of {input, expectedOutput, isSample}
+    inputType
   } = data;
 
   // 1. Validation
@@ -26,6 +27,7 @@ export const createProblemService = async (data: any) => {
         content,
         difficulty,
         functionName: functionName || "solution",
+        inputType,
         starterCode: starterCode || {
           javascript: "",
           python: "",
@@ -194,32 +196,37 @@ export const updateProblemService = async (id: string, data: any) => {
     starterCode,
     memoryLimit,
     categoryIds,
+    inputType,
     testCases,
   } = data;
 
   const numericId = parseInt(id);
-
   const updateData: any = {};
 
-  if (title) {
-    updateData.title = title;
-  }
+  // --- BASIC FIELD UPDATES ---
+  if (title) updateData.title = title;
   if (content) updateData.content = content;
   if (difficulty) updateData.difficulty = difficulty;
   if (functionName) updateData.functionName = functionName;
+  
+  // NEW: Update inputType (the "INT", "ARRAY", etc. logic)
+  if (inputType) updateData.inputType = inputType;
+
   if (starterCode !== undefined) updateData.starterCode = starterCode || {};
+  
   if (timeLimit !== undefined && timeLimit !== null) {
     updateData.timeLimit = parseFloat(timeLimit);
   }
+  
   if (memoryLimit !== undefined && memoryLimit !== null) {
     updateData.memoryLimit = parseInt(memoryLimit);
   }
 
-  // Handle categories - ADDED FILTERING HERE
+  // --- CATEGORY SYNC ---
   if (categoryIds && Array.isArray(categoryIds)) {
     const validCategoryIds = categoryIds
       .map((id) => Number(id))
-      .filter((id) => !isNaN(id) && id !== 0); // Remove bad IDs
+      .filter((id) => !isNaN(id) && id !== 0);
 
     updateData.categories = {
       set: validCategoryIds.map((id: number) => ({ categoryId: id })),
@@ -228,37 +235,38 @@ export const updateProblemService = async (id: string, data: any) => {
 
   try {
     return await prisma.$transaction(async (tx) => {
-      // Update basic info
+      // 1. Update the problem record
       await tx.problem.update({
         where: { problemId: numericId },
         data: updateData,
       });
 
-      // Update Test Cases
+      // 2. Handle Test Case replacement (Sync logic)
       if (testCases && Array.isArray(testCases)) {
         await tx.testCase.deleteMany({
           where: { problemId: numericId },
         });
 
-        // Use create instead of createMany if you have issues with some DBs,
-        // but createMany is fine for Postgres/MySQL
-        await tx.testCase.createMany({
-          data: testCases.map((tc: any) => ({
-            problemId: numericId,
-            input: tc.input || "",
-            expectedOutput: tc.expectedOutput || "",
-            isSample: tc.isSample || false,
-          })),
-        });
+        if (testCases.length > 0) {
+          await tx.testCase.createMany({
+            data: testCases.map((tc: any) => ({
+              problemId: numericId,
+              input: tc.input || "",
+              expectedOutput: tc.expectedOutput || "",
+              isSample: tc.isSample || false,
+            })),
+          });
+        }
       }
 
+      // 3. Return the fully updated record
       return tx.problem.findUnique({
         where: { problemId: numericId },
         include: { categories: true, testCases: true },
       });
     });
   } catch (error: any) {
-    console.error("PRISMA_UPDATE_ERROR:", error); // Log the actual error for debugging
+    console.error("PRISMA_UPDATE_ERROR:", error);
     if (error.code === "P2025")
       throw new ServiceError("Problem record not found", 404);
     throw error;
@@ -271,7 +279,7 @@ export const deleteProblemService = async (id: string) => {
     return await prisma.problem.delete({
       where: { problemId: numericId },
     });
-  } catch (error: any) {
+  } catch (error: any) {  
     if (error.code === "P2025")
       throw new ServiceError("Problem record not found", 404);
     throw error;

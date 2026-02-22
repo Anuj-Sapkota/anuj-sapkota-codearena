@@ -74,6 +74,7 @@ export const updateProblemThunk = createAsyncThunk<
   { rejectValue: string }
 >("problems/update", async ({ id, data }, { rejectWithValue }) => {
   try {
+    console.log("Data from the update thunk: ", data)
     return await problemService.update(id, data);
   } catch (error: unknown) {
     return rejectWithValue(

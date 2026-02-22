@@ -1,3 +1,4 @@
+import { BsXLg } from "react-icons/bs";
 import api from "../api";
 import { CreateProblemDTO, Problem } from "@/types/problem.types";
 
@@ -40,6 +41,7 @@ export const problemService = {
    * FIXED: Removed '/update' from URL to match backend router.put("/:id")
    */
   update: async (id: number, data: Partial<CreateProblemDTO>) => {
+    console.log("Probelm data from frontend services", data);
     const response = await api.put(`/problems/${id}`, data);
     return response.data;
   },

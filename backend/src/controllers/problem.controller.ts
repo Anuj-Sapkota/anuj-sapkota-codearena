@@ -105,6 +105,7 @@ export const updateProblem = async (
     if (!id) throw new ServiceError("Problem ID is required", 400);
 
     // We pass the ID and the new body to the service
+    console.log("From the problem controller", req.body)
     const updatedProblem = await updateProblemService(id, req.body);
 
     res.status(200).json({
