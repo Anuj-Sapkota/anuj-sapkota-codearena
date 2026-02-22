@@ -28,8 +28,8 @@ export const createChallengeService = async (data: any) => {
         description,
         bannerUrl,
         isPublic: isPublic || false,
-        startTime: startTime ? new Date(startTime) : null,
-        endTime: endTime ? new Date(endTime) : null,
+        startTime: startTime ? new Date(startTime).toISOString() : null,
+        endTime: endTime ? new Date(endTime).toISOString() : null,
         problems: {
           create:
             problemIds?.map((id: number, index: number) => ({
@@ -149,7 +149,7 @@ export const updateChallengeService = async (
   challengeId: number,
   data: any,
 ) => {
-  const { problemIds, ...updateData } = data;
+  const { problemIds, startTime, endTime, slug, ...updateData } = data;
 
   try {
     return await prisma.$transaction(async (tx) => {
@@ -158,15 +158,12 @@ export const updateChallengeService = async (
         where: { challengeId },
         data: {
           ...updateData,
-          slug: updateData.slug
-            ? updateData.slug.toLowerCase().trim().replace(/\s+/g, "-")
+          slug: slug
+            ? slug.toLowerCase().trim().replace(/\s+/g, "-")
             : undefined,
-          startTime: updateData.startTime
-            ? new Date(updateData.startTime)
-            : undefined,
-          endTime: updateData.endTime
-            ? new Date(updateData.endTime)
-            : undefined,
+          // Force conversion to ISO to stop the "Timezone Slide"
+          startTime: startTime ? new Date(startTime).toISOString() : undefined,
+          endTime: endTime ? new Date(endTime).toISOString() : undefined,
         },
       });
 
@@ -226,11 +223,6 @@ export const deleteChallengeService = async (challengeId: number) => {
 /**
  * Gets challenges that are public
  */
-
-/**
- * Gets challenges that are public and currently active.
- * Updated to return a consistent structure.
- */
 export const getPublicChallengesService = async () => {
   const now = new Date();
 
@@ -247,7 +239,7 @@ export const getPublicChallengesService = async () => {
       },
       orderBy: { startTime: "desc" },
     });
-    console.log("Challenges: ", challenges)
+    console.log("Challenges: ", challenges);
     // We return it as 'items' to match the pattern used in getAllChallenges
     return {
       items: challenges,
