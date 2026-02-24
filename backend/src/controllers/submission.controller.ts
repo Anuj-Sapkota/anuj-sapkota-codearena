@@ -40,12 +40,6 @@ export const handleSubmission = async (
         .status(404)
         .json({ success: false, message: "Problem not found" });
     }
-
-    if (!challenge) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Challenge not found" });
-    }
     const results = await Promise.all(
       problem.testCases.map(async (tc) => {
         const wrappedCode = wrapUserCode(
@@ -53,6 +47,7 @@ export const handleSubmission = async (
           language_id,
           tc.input,
           problem.functionName || "solution",
+          problem.inputType
         );
 
         const execution = await Judge0Service.submitCode(
@@ -126,7 +121,7 @@ export const handleSubmission = async (
           data: {       
             userId: Number(userId),
             problemId: Number(problemId),
-            challengeId: challenge.challengeId
+            challengeId: challenge?.challengeId
               ? Number(challenge.challengeId)
               : null,
             code: source_code,
@@ -170,6 +165,7 @@ export const handleSubmission = async (
       newSubmission,
     });
   } catch (error: any) {
+    console.log(error)
     next(error);
   }
 };

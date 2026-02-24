@@ -1,31 +1,45 @@
+/**
+ * Utility to wrap user code with language-specific boilerplate.
+ * Supports different input types to prevent type-mismatch errors.
+ */
 export const wrapUserCode = (
   userCode: string,
   languageId: number,
   input: string,
   functionName: string,
+  inputType: "INT" | "ARRAY" | "STRING" | "BOOLEAN" = "ARRAY",
 ) => {
-  // Helper to convert "[1,2,3]" -> "{1,2,3}" for C++/Java array initialization
-  const formatInput = (str: string) =>
+  // Helper to convert JSON arrays "[1,2,3]" -> Java/C++ style "{1,2,3}"
+  const formatForStaticLanguages = (str: string) =>
     str.replace(/\[/g, "{").replace(/\]/g, "}");
 
   // --- JAVASCRIPT (Node.js 18+) ---
   if (languageId === 63) {
+    const formattedInput = inputType === "STRING" ? `"${input}"` : input;
     return `
 ${userCode}
 
-try {
-  const inputData = ${input}; 
-  const result = ${functionName}(inputData);
-  const output = JSON.stringify(result);
-  process.stdout.write(typeof output === 'undefined' ? "null" : output);
-} catch (err) {
-  process.stderr.write(err.stack || err.message);
-}
+(function() {
+  try {
+    const inputData = ${formattedInput}; 
+    const result = ${functionName}(inputData);
+    
+    if (result === undefined) {
+      process.stdout.write("null");
+    } else {
+      process.stdout.write(JSON.stringify(result));
+    }
+  } catch (err) {
+    process.stderr.write(err.stack || err.message);
+    process.exit(1);
+  }
+})();
     `;
   }
 
   // --- PYTHON (3.10+) ---
   if (languageId === 71) {
+    const formattedInput = inputType === "STRING" ? `"${input}"` : input;
     return `
 import json
 import sys
@@ -34,76 +48,129 @@ ${userCode}
 
 if __name__ == "__main__":
     try:
-        input_data = ${input}
+        input_data = ${formattedInput}
+        # Handle cases where user defines a class Solution or a standalone function
         if 'Solution' in globals():
             sol = Solution()
             method = getattr(sol, "${functionName}")
             result = method(input_data)
         else:
             result = ${functionName}(input_data)
+        
         print(json.dumps(result), end="")
     except Exception as e:
         sys.stderr.write(str(e))
+        sys.exit(1)
     `;
   }
 
   // --- JAVA (OpenJDK 17) ---
   if (languageId === 62) {
-    const javaInput = formatInput(input);
+    let typeDecl = "int";
+    let inputVal = input;
+
+    if (inputType === "ARRAY") {
+      typeDecl = "int[]";
+      inputVal = `new int[]${formatForStaticLanguages(input)}`;
+    } else if (inputType === "STRING") {
+      typeDecl = "String";
+      inputVal = `"${input}"`;
+    }
+
     return `
 import java.util.*;
 
-// User code (class Solution) must be outside the public Main class
 ${userCode.replace(/public class/g, "class")}
 
 public class Main {
     public static void main(String[] args) {
         try {
             Solution sol = new Solution();
-            // Specifically handling the move-zeroes int array type
-            int[] nums = new int[]${javaInput};
-            int[] result = sol.${functionName}(nums);
-            // Print result as [1,3,12,0,0] without spaces for backend comparison
-            System.out.print(Arrays.toString(result).replace(" ", ""));
+            ${typeDecl} inputParam = ${inputVal};
+            
+            // Invoke the user's method
+            Object result = sol.${functionName}(inputParam);
+            
+            // Format output based on return type
+            if (result instanceof int[]) {
+                System.out.print(Arrays.toString((int[])result).replace(" ", ""));
+            } else {
+                System.out.print(result);
+            }
         } catch (Exception e) {
             System.err.print(e.getMessage());
+            System.exit(1);
         }
     }
 }
     `;
   }
-
   // --- C++ (GCC 13) ---
   if (languageId === 54) {
-    const cppInput = formatInput(input);
+    let typeDecl = "int";
+    let inputVal = input;
+
+    if (inputType === "ARRAY") {
+      typeDecl = "vector<int>";
+      inputVal = formatForStaticLanguages(input);
+    } else if (inputType === "STRING") {
+      typeDecl = "string";
+      inputVal = `"${input}"`;
+    }
+
     return `
 #include <iostream>
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <climits>
 
 using namespace std;
 
-// User code (class Solution) provided here
 ${userCode}
+
+// 1. Vector overload
+void printResult(const vector<int>& res) {
+    cout << "[";
+    for (size_t i = 0; i < res.size(); ++i) {
+        cout << res[i] << (i == res.size() - 1 ? "" : ",");
+    }
+    cout << "]";
+}
+
+// 2. Specific int overload (Prevents ambiguity)
+void printResult(int res) {
+    cout << res;
+}
+
+// 3. Specific long long overload
+void printResult(long long res) {
+    cout << res;
+}
+
+// 4. Specific string overload
+void printResult(const string& res) {
+    cout << "\\"" << res << "\\"";
+}
+
+// 5. Specific bool overload (using a dummy to prevent int-to-bool ambiguity)
+void printResult(bool res) {
+    cout << (res ? "true" : "false");
+}
 
 int main() {
     try {
         Solution sol;
-        vector<int> nums = ${cppInput};
-        vector<int> result = sol.${functionName}(nums);
-        
-        cout << "[";
-        for (size_t i = 0; i < result.size(); ++i) {
-            cout << result[i] << (i == result.size() - 1 ? "" : ",");
-        }
-        cout << "]";
+        ${typeDecl} inputParam = ${inputVal};
+        auto result = sol.${functionName}(inputParam);
+        printResult(result);
     } catch (const exception& e) {
         cerr << e.what();
+        return 1;
     }
     return 0;
 }
-    `;
+`;
   }
 
   return userCode;

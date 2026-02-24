@@ -25,6 +25,7 @@ export const submitCode = async (
     // This data comes back as Base64
     return response.data;
   } catch (error) {
+    console.log(error)
     throw new Error("Execution engine failed.");
   }
 };
