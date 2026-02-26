@@ -6,7 +6,6 @@ import { AppDispatch, RootState } from "@/lib/store/store";
 import { fetchProblemsThunk } from "@/lib/store/features/problems/problem.actions";
 import { fetchCategoriesThunk } from "@/lib/store/features/category/category.actions";
 import { FaSearch } from "react-icons/fa";
-import { Problem } from "@/types/problem.types";
 import SortDropdown from "@/components/problems/SortDropdown";
 import CategoryBar from "@/components/problems/CategoryBar";
 import FilterSidebar from "@/components/problems/FilterSidebar";
@@ -81,14 +80,14 @@ export default function UserProblemsPage() {
 
         {/* Improved Responsive Controls */}
         <div className="flex flex-col lg:flex-row gap-6 items-stretch lg:items-center my-10 md:my-14">
-          <div className="relative flex-[3]">
+          <div className="relative flex-23">
             <FaSearch
               className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400"
               size={18}
             />
             <input
               type="text"
-              placeholder="Filter by challenge name..."
+              placeholder="Filter by Problem name..."
               className="w-full bg-slate-50 border-2 border-slate-200 rounded-md py-4 md:py-5 pl-16 pr-6 text-sm font-bold outline-none focus:border-primary-1 focus:bg-white transition-all shadow-sm"
               onChange={(e) => setSearch(e.target.value)}
             />

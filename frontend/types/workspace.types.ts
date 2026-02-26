@@ -56,7 +56,7 @@ export interface WorkspaceState {
   activeTab: "testcase" | "result" | "submissions";
   submissions: SubmissionRecord[];
   isFetchingHistory: boolean;
-  descriptionTab: "description" | "submissions" | "detail";
+  descriptionTab: "description" | "submissions" | "detail" | "discuss";
   selectedSubmission: SubmissionRecord | null;
 }
 

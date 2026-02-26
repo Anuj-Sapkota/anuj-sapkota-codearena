@@ -13,6 +13,8 @@ import { SubmissionList } from "./SubmissionList";
 import { MdDescription, MdList } from "react-icons/md";
 import { Problem } from "@/types/problem.types";
 import { Category } from "@/types/category.types";
+import { GoCommentDiscussion } from "react-icons/go";
+import DiscussContainer from "../discussion/DiscussContainer";
 
 export const ProblemDescription = ({ problem }: { problem: Problem }) => {
   const dispatch = useDispatch<AppDispatch>();
@@ -35,14 +37,16 @@ export const ProblemDescription = ({ problem }: { problem: Problem }) => {
 
   const isActive = (tab: string) => {
     if (tab === "description") return descriptionTab === "description";
-    if (tab === "submissions")
+    if (tab === "submissions") {
       return descriptionTab === "submissions" || descriptionTab === "detail";
+    }
+    if (tab === "discuss") return descriptionTab === "discuss";
+
     return false;
   };
 
   return (
     <div className="flex flex-col h-full bg-[#fcfdfe]">
-      {/* DASHBOARD TABS */}
       {/* DASHBOARD TABS */}
       <div className="flex bg-[#18181b] border-b border-black px-2 shrink-0">
         {(
@@ -53,6 +57,7 @@ export const ProblemDescription = ({ problem }: { problem: Problem }) => {
               icon: <MdDescription />,
             },
             { id: "submissions", label: "Submissions", icon: <MdList /> },
+            { id: "discuss", label: "Discuss", icon: <GoCommentDiscussion /> },
           ] as const
         ).map((tab) => (
           <button
@@ -162,6 +167,12 @@ export const ProblemDescription = ({ problem }: { problem: Problem }) => {
             Synchronizing_State...
           </div>
         ) : null}
+      {/* Discussion tab */}
+       {descriptionTab === "discuss" && (
+        <div>
+          <DiscussContainer problemId={problem.problemId}/>
+          </div>
+       )}
       </div>
     </div>
   );
