@@ -5,22 +5,31 @@ interface EditorProps {
   onSubmit: (content: string, language: string | null) => void;
   onCancel: () => void;
   isLoading: boolean;
+  initialContent?: string;
+  initialLanguage?: string | null;
+  buttonLabel?: string;
 }
 
 const LANGUAGES = ["javascript", "python", "cpp", "java", "typescript", "go"];
 
-export const DiscussionEditor = ({ onSubmit, onCancel, isLoading }: EditorProps) => {
-  const [content, setContent] = useState("");
-  const [language, setLanguage] = useState<string | null>(null);
+export const DiscussionEditor = ({ 
+  onSubmit, 
+  onCancel, 
+  isLoading, 
+  initialContent = "", 
+  initialLanguage = null,
+  buttonLabel = "Post Discussion" 
+}: EditorProps) => {
+  const [content, setContent] = useState(initialContent);
+  const [language, setLanguage] = useState<string | null>(initialLanguage);
 
   const handleSubmit = () => {
     if (!content.trim()) return;
     onSubmit(content, language);
-    setContent("");
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
       <div className="flex items-center gap-3 mb-3">
         <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-md">
           <HiCode className="text-slate-500" />
@@ -47,6 +56,7 @@ export const DiscussionEditor = ({ onSubmit, onCancel, isLoading }: EditorProps)
       <div className="flex justify-end gap-2 mt-3">
         <button
           onClick={onCancel}
+          type="button"
           className="px-4 py-2 text-xs font-medium text-slate-500 hover:bg-slate-50 rounded-md transition-colors"
         >
           Cancel
@@ -56,7 +66,7 @@ export const DiscussionEditor = ({ onSubmit, onCancel, isLoading }: EditorProps)
           disabled={isLoading || !content.trim()}
           className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-xs font-bold rounded-md transition-all"
         >
-          {isLoading ? "Posting..." : "Post Discussion"}
+          {isLoading ? "Processing..." : buttonLabel}
         </button>
       </div>
     </div>

@@ -1,6 +1,12 @@
 import { Router } from "express";
-import { createDiscussion, getDiscussions, toggleUpvote } from "../controllers/discussion.controller.js";
-import { authenticateRequest } from "../middlewares/auth.middleware.js"; // Adjust based on your auth setup
+import { 
+  createDiscussion, 
+  getDiscussions, 
+  toggleUpvote, 
+  updateDiscussion, 
+  deleteDiscussion 
+} from "../controllers/discussion.controller.js";
+import { authenticateRequest } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
@@ -15,6 +21,18 @@ router.get("/problem/:problemId", getDiscussions);
  * @desc    Create a new discussion or reply (Protected)
  */
 router.post("/", authenticateRequest, createDiscussion);
+
+/**
+ * @route   PATCH /api/discussions/:id
+ * @desc    Update an existing discussion (Protected/Owner Only)
+ */
+router.patch("/:id", authenticateRequest, updateDiscussion);
+
+/**
+ * @route   DELETE /api/discussions/:id
+ * @desc    Delete a discussion (Protected/Owner Only)
+ */
+router.delete("/:id", authenticateRequest, deleteDiscussion);
 
 /**
  * @route   POST /api/discussions/:id/upvote

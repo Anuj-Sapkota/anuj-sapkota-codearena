@@ -39,3 +39,29 @@ export const toggleUpvoteThunk = createAsyncThunk<
     return rejectWithValue(handleAxiosError(error) || "Failed to process upvote");
   }
 });
+
+
+export const updateDiscussionThunk = createAsyncThunk<
+  { success: boolean; data: Discussion; message: string },
+  { id: string; data: Partial<CreateDiscussionDTO> },
+  { rejectValue: string }
+>("discussions/update", async ({ id, data }, { rejectWithValue }) => {
+  try {
+    return await discussionService.update(id, data);
+  } catch (error) {
+    return rejectWithValue(handleAxiosError(error) || "Failed to update post");
+  }
+});
+
+export const deleteDiscussionThunk = createAsyncThunk<
+  { success: boolean; id: string; message: string },
+  string,
+  { rejectValue: string }
+>("discussions/delete", async (id, { rejectWithValue }) => {
+  try {
+    const response = await discussionService.delete(id);
+    return { ...response, id }; // Return ID so slice can remove it from state
+  } catch (error) {
+    return rejectWithValue(handleAxiosError(error) || "Failed to delete post");
+  }
+});

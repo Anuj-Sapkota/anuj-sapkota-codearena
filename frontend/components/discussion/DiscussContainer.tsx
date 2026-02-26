@@ -2,24 +2,24 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { HiOutlinePencilSquare, HiBars3BottomLeft } from "react-icons/hi2";
-import { AppDispatch, RootState } from "@/lib/store/store.js"; // Adjust paths to your store setup
+import { AppDispatch, RootState } from "@/lib/store/store.js";
 import {
   fetchDiscussionsThunk,
   createDiscussionThunk,
   toggleUpvoteThunk,
+  deleteDiscussionThunk,
+  updateDiscussionThunk,
 } from "@/lib/store/features/discussion/discussion.actions";
 import { CommentItem } from "./CommentItem";
 import { DiscussionEditor } from "./DiscussionEditor";
 
 const DiscussContainer = ({ problemId }: { problemId: number }) => {
-  console.log("Problem id from the discuss container: ", problemId);
   const dispatch = useDispatch<AppDispatch>();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
 
-  // Use the Redux State
-  const { items, isLoading } = useSelector(
-    (state: RootState) => state.discussion,
-  );
+  // Redux State
+  const { items, isLoading } = useSelector((state: RootState) => state.discussion);
+  const currentUser = useSelector((state: RootState) => (state as any).auth?.user); // Adjust path to your auth state
 
   useEffect(() => {
     dispatch(fetchDiscussionsThunk(problemId));
@@ -44,9 +44,18 @@ const DiscussContainer = ({ problemId }: { problemId: number }) => {
     dispatch(toggleUpvoteThunk(id));
   };
 
+  const handleDelete = (id: string) => {
+    if (window.confirm("Delete this discussion permanently?")) {
+      dispatch(deleteDiscussionThunk(id));
+    }
+  };
+
+  const handleUpdate = (id: string, content: string, language: string | null) => {
+    dispatch(updateDiscussionThunk({ id, data: { content, language } }));
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-4 bg-white min-h-screen">
-      {/* 1. Header Section */}
       <div className="flex justify-between items-center border-b border-gray-100 pb-4 mb-6">
         <div className="flex items-center gap-4">
           <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
@@ -69,9 +78,8 @@ const DiscussContainer = ({ problemId }: { problemId: number }) => {
         )}
       </div>
 
-      {/* 2. Real Editor Component */}
       {isEditorOpen && (
-        <div className="mb-8 animate-in fade-in slide-in-from-top-4 duration-300">
+        <div className="mb-8">
           <DiscussionEditor
             onSubmit={handlePostSubmit}
             onCancel={() => setIsEditorOpen(false)}
@@ -80,31 +88,28 @@ const DiscussContainer = ({ problemId }: { problemId: number }) => {
         </div>
       )}
 
-      {/* 3. Discussion List */}
       <div className="space-y-2">
         {isLoading && items.length === 0 ? (
           <div className="flex flex-col gap-4">
             {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="h-24 w-full bg-slate-50 animate-pulse rounded-lg"
-              />
+              <div key={i} className="h-32 w-full bg-slate-50 animate-pulse rounded-lg" />
             ))}
           </div>
         ) : items.length > 0 ? (
-          items.map((comment) => (
+          items.map((comment: any) => (
             <CommentItem
               key={comment.id}
               comment={comment}
+              currentUserId={currentUser?.userId}
               onUpvote={handleUpvote}
-              onReply={(id) => console.log("Open reply editor for", id)}
+              onDelete={handleDelete}
+              onUpdate={handleUpdate}
+              onReply={(id) => console.log("Reply to", id)}
             />
           ))
         ) : (
           <div className="text-center py-20">
-            <p className="text-slate-400 text-sm">
-              No discussions yet. Be the first to post!
-            </p>
+            <p className="text-slate-400 text-sm">No discussions yet. Be the first to post!</p>
           </div>
         )}
       </div>
