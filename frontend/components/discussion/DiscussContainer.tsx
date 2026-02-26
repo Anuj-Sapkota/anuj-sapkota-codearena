@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { HiOutlinePencilSquare, HiBars3BottomLeft } from "react-icons/hi2";
+import { MdChatBubbleOutline, MdAdd, MdHistory } from "react-icons/md";
 import { AppDispatch, RootState } from "@/lib/store/store.js";
 import {
   fetchDiscussionsThunk,
@@ -17,9 +17,8 @@ const DiscussContainer = ({ problemId }: { problemId: number }) => {
   const dispatch = useDispatch<AppDispatch>();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
 
-  // Redux State
   const { items, isLoading } = useSelector((state: RootState) => state.discussion);
-  const currentUser = useSelector((state: RootState) => (state as any).auth?.user); // Adjust path to your auth state
+  const currentUser = useSelector((state: RootState) => (state as any).auth?.user);
 
   useEffect(() => {
     dispatch(fetchDiscussionsThunk(problemId));
@@ -27,89 +26,93 @@ const DiscussContainer = ({ problemId }: { problemId: number }) => {
 
   const handlePostSubmit = async (content: string, language: string | null) => {
     const result = await dispatch(
-      createDiscussionThunk({
-        content,
-        problemId,
-        language,
-        parentId: null,
-      }),
+      createDiscussionThunk({ content, problemId, language, parentId: null })
     );
-
     if (createDiscussionThunk.fulfilled.match(result)) {
       setIsEditorOpen(false);
     }
   };
 
-  const handleUpvote = (id: string) => {
-    dispatch(toggleUpvoteThunk(id));
-  };
-
+  const handleUpvote = (id: string) => dispatch(toggleUpvoteThunk(id));
   const handleDelete = (id: string) => {
-    if (window.confirm("Delete this discussion permanently?")) {
+    if (window.confirm("DELETE_PERMANENTLY? This cannot be undone.")) {
       dispatch(deleteDiscussionThunk(id));
     }
   };
-
   const handleUpdate = (id: string, content: string, language: string | null) => {
     dispatch(updateDiscussionThunk({ id, data: { content, language } }));
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-4 bg-white min-h-screen">
-      <div className="flex justify-between items-center border-b border-gray-100 pb-4 mb-6">
-        <div className="flex items-center gap-4">
-          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-            <HiBars3BottomLeft className="text-blue-600" />
-            Discussions
-          </h2>
-          <span className="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded-full">
-            {items.length} posts
-          </span>
+    <div className="max-w-4xl mx-auto p-6 bg-white min-h-screen animate-in fade-in slide-in-from-bottom-2 duration-500">
+      
+      {/* HEADER SECTION */}
+      <div className="flex flex-col gap-8 mb-10">
+        <div className="flex items-center justify-between px-1">
+          <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2">
+            <MdChatBubbleOutline className="text-base" /> Community_Debrief ({items.length})
+          </h3>
+
+          {!isEditorOpen && (
+            <button
+              onClick={() => setIsEditorOpen(true)}
+              className="group relative bg-slate-800 text-white px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] transition-all hover:shadow-2xl hover:shadow-emerald-500/20 active:scale-95 flex items-center justify-center gap-3 overflow-hidden cursor-pointer"
+            >
+              <span className="relative z-10 flex items-center gap-2">
+                New_Post <MdAdd className="text-sm group-hover:rotate-90 transition-transform duration-300" />
+              </span>
+              {/* The "FormButton" Slide-up Effect */}
+              <div className="absolute inset-0 bg-emerald-600 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+            </button>
+          )}
         </div>
 
-        {!isEditorOpen && (
-          <button
-            onClick={() => setIsEditorOpen(true)}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-all"
-          >
-            <HiOutlinePencilSquare size={18} />
-            New Post
-          </button>
+        {isEditorOpen && (
+          <div className="animate-in slide-in-from-top-4 duration-300">
+            <DiscussionEditor
+              onSubmit={handlePostSubmit}
+              onCancel={() => setIsEditorOpen(false)}
+              isLoading={isLoading}
+              buttonLabel="PUBLISH_POST"
+            />
+          </div>
         )}
       </div>
 
-      {isEditorOpen && (
-        <div className="mb-8">
-          <DiscussionEditor
-            onSubmit={handlePostSubmit}
-            onCancel={() => setIsEditorOpen(false)}
-            isLoading={isLoading}
-          />
-        </div>
-      )}
-
-      <div className="space-y-2">
+      {/* FEED SECTION */}
+      <div className="space-y-6">
         {isLoading && items.length === 0 ? (
-          <div className="flex flex-col gap-4">
+          <div className="space-y-4 animate-pulse">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-32 w-full bg-slate-50 animate-pulse rounded-lg" />
+              <div key={i} className="h-40 bg-slate-50 border-2 border-slate-100 rounded-2xl" />
             ))}
           </div>
         ) : items.length > 0 ? (
-          items.map((comment: any) => (
-            <CommentItem
-              key={comment.id}
-              comment={comment}
-              currentUserId={currentUser?.userId}
-              onUpvote={handleUpvote}
-              onDelete={handleDelete}
-              onUpdate={handleUpdate}
-              onReply={(id) => console.log("Reply to", id)}
-            />
-          ))
+          <div className="flex flex-col gap-4">
+            {items.map((comment: any) => (
+              <CommentItem
+                key={comment.id}
+                comment={comment}
+                currentUserId={currentUser?.userId}
+                onUpvote={handleUpvote}
+                onDelete={handleDelete}
+                onUpdate={handleUpdate}
+                onReply={(id) => console.log("Reply to", id)}
+              />
+            ))}
+          </div>
         ) : (
-          <div className="text-center py-20">
-            <p className="text-slate-400 text-sm">No discussions yet. Be the first to post!</p>
+          <div className="flex flex-col items-center justify-center py-24 bg-slate-50/50 border-2 border-dashed border-slate-200 rounded-[2rem] transition-colors hover:border-emerald-200">
+            <MdHistory className="text-6xl mb-4 text-slate-200" />
+            <p className="font-black text-[10px] uppercase tracking-[0.3em] text-slate-400">
+              Zero_Discussions_Found
+            </p>
+            <button 
+              onClick={() => setIsEditorOpen(true)}
+              className="mt-4 text-[10px] font-black text-emerald-600 uppercase tracking-widest hover:underline"
+            >
+              Initialize_First_Thread
+            </button>
           </div>
         )}
       </div>
