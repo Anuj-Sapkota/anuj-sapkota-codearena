@@ -1,7 +1,6 @@
-// store/discussion.slice.ts
 "use client";
 
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { Discussion } from "@/types/discussion.types";
 import {
   fetchDiscussionsThunk,
@@ -21,6 +20,47 @@ const initialState: DiscussionState = {
   items: [],
   isLoading: false,
   error: null,
+};
+
+/**
+ * RECURSIVE HELPERS
+ * These functions traverse the tree to find and modify deep replies.
+ */
+const updateItemInTree = (items: Discussion[], updatedItem: Discussion): Discussion[] => {
+  return items.map((item) => {
+    if (item.id === updatedItem.id) {
+      // Return the updated item but keep existing replies if they aren't in the payload
+      return { ...item, ...updatedItem, replies: updatedItem.replies || item.replies };
+    }
+    if (item.replies && item.replies.length > 0) {
+      return { ...item, replies: updateItemInTree(item.replies, updatedItem) };
+    }
+    return item;
+  });
+};
+
+const addItemToTree = (items: Discussion[], parentId: string, newItem: Discussion): Discussion[] => {
+  return items.map((item) => {
+    if (item.id === parentId) {
+      return {
+        ...item,
+        replies: [...(item.replies || []), newItem],
+      };
+    }
+    if (item.replies && item.replies.length > 0) {
+      return { ...item, replies: addItemToTree(item.replies, parentId, newItem) };
+    }
+    return item;
+  });
+};
+
+const removeItemFromTree = (items: Discussion[], idToRemove: string): Discussion[] => {
+  return items
+    .filter((item) => item.id !== idToRemove)
+    .map((item) => ({
+      ...item,
+      replies: item.replies ? removeItemFromTree(item.replies, idToRemove) : [],
+    }));
 };
 
 const discussionSlice = createSlice({
@@ -47,78 +87,33 @@ const discussionSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // CREATE DISCUSSION (Thread or Reply)
+      // CREATE DISCUSSION (Thread or Deep Reply)
       .addCase(createDiscussionThunk.fulfilled, (state, action) => {
         state.isLoading = false;
         const newPost = action.payload.data;
-
         if (newPost.parentId) {
-          // If it's a reply, find parent and push to replies array
-          const parent = state.items.find(
-            (item) => item.id === newPost.parentId,
-          );
-          if (parent) {
-            if (!parent.replies) parent.replies = [];
-            parent.replies.push(newPost);
-          }
+          state.items = addItemToTree(state.items, newPost.parentId, newPost);
         } else {
-          // New top-level thread
           state.items.unshift(newPost);
         }
       })
 
-      // TOGGLE UPVOTE (Optimistic update or direct replacement)
+      // TOGGLE UPVOTE & UPDATE (Using shared recursive logic)
       .addCase(toggleUpvoteThunk.fulfilled, (state, action) => {
-        const updatedDoc = action.payload.data;
-        const index = state.items.findIndex(
-          (item) => item.id === updatedDoc.id,
-        );
-        if (index !== -1) {
-          state.items[index] = { ...state.items[index], ...updatedDoc };
-        }
+        state.items = updateItemInTree(state.items, action.payload.data);
       })
-
-      /**
-       * UPDATE DISCUSSION
-       */
       .addCase(updateDiscussionThunk.fulfilled, (state, action) => {
-        const updated = action.payload.data;
-        // Search in top-level items
-        const index = state.items.findIndex((item) => item.id === updated.id);
-        if (index !== -1) {
-          state.items[index] = { ...state.items[index], ...updated };
-        } else {
-          // Check inside replies if not found in top-level
-          state.items.forEach((parent) => {
-            const replyIndex = parent.replies?.findIndex(
-              (r) => r.id === updated.id,
-            );
-            if (replyIndex !== undefined && replyIndex !== -1) {
-              parent.replies![replyIndex] = {
-                ...parent.replies![replyIndex],
-                ...updated,
-              };
-            }
-          });
-        }
+        state.items = updateItemInTree(state.items, action.payload.data);
       })
 
-      /**
-       * DELETE DISCUSSION
-       */
+      // DELETE DISCUSSION
       .addCase(deleteDiscussionThunk.fulfilled, (state, action) => {
-        const deletedId = action.payload.id;
-        // Remove from top-level
-        state.items = state.items.filter((item) => item.id !== deletedId);
-        // Also clean up from replies of any post
-        state.items.forEach((parent) => {
-          if (parent.replies) {
-            parent.replies = parent.replies.filter((r) => r.id !== deletedId);
-          }
-        });
+        state.items = removeItemFromTree(state.items, action.payload.id);
       });
   },
 });
+
+
 
 export const { clearDiscussionError } = discussionSlice.actions;
 export default discussionSlice.reducer;

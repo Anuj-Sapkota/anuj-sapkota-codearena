@@ -9,6 +9,7 @@ export interface Discussion {
   content: string;
   language: string | null;
   upvotes: number;
+  
   userId: number;
   problemId: number;
   parentId: string | null;

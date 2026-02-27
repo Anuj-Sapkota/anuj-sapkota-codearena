@@ -3,10 +3,12 @@ import api from "../api";
 import { CreateDiscussionDTO, Discussion } from "@/types/discussion.types.js";
 
 export const discussionService = {
-  getByProblem: async (problemId: number) => {
-    const response = await api.get(`/discussions/problem/${problemId}`);
-    return response.data;
-  },
+  getByProblem: async (problemId: number, userId: number) => {
+    const response = await api.get(`/discussions/problem/${problemId}`, {
+    params: { userId } 
+  });
+  return response.data;
+},
 
   create: async (data: CreateDiscussionDTO) => {
     const response = await api.post("/discussions", data);

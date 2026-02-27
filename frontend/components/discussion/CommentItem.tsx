@@ -7,7 +7,9 @@ import {
   HiOutlineChatBubbleLeft, 
   HiOutlineTrash, 
   HiOutlinePencil, 
-  HiEllipsisVertical 
+  HiEllipsisVertical,
+  HiChevronDown,
+  HiChevronUp
 } from "react-icons/hi2";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/cjs/styles/prism";
@@ -35,8 +37,11 @@ export const CommentItem = ({
   const [showMenu, setShowMenu] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isReplying, setIsReplying] = useState(false);
+  const [showReplies, setShowReplies] = useState(false);
+  
   const menuRef = useRef<HTMLDivElement>(null);
   const isOwner = currentUserId === comment.userId;
+  const hasReplies = comment.replies && comment.replies.length > 0;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -50,12 +55,10 @@ export const CommentItem = ({
 
   const renderFormattedContent = (content: string, selectedLang: string | null) => {
     const parts = content.split(/(```[\s\S]*?```)/g);
-    
     return parts.map((part, index) => {
       if (part.startsWith("```") && part.endsWith("```")) {
         const code = part.slice(3, -3).trim();
         const displayLang = selectedLang || "text";
-
         return (
           <div key={index} className="rounded-xl overflow-hidden my-4 border-2 border-slate-100 shadow-sm">
             <div className="bg-[#0f172a] px-4 py-2 border-b border-slate-800 flex justify-between items-center">
@@ -66,43 +69,18 @@ export const CommentItem = ({
             <SyntaxHighlighter
               language={displayLang}
               style={vscDarkPlus}
-              customStyle={{
-                margin: 0,
-                padding: "1.5rem",
-                fontSize: "13px",
-                lineHeight: "1.6",
-                background: "#0f172a",
-              }}
+              customStyle={{ margin: 0, padding: "1.5rem", fontSize: "13px", lineHeight: "1.6", background: "#0f172a" }}
             >
               {code}
             </SyntaxHighlighter>
           </div>
         );
       }
-      
       const trimmedText = part.trim();
       if (!trimmedText) return null;
       return <p key={index} className="text-sm text-slate-700 leading-relaxed my-3">{part}</p>;
     });
   };
-
-  if (isEditing) {
-    return (
-      <div className="my-6 border-2 border-emerald-100 rounded-2xl p-1 bg-emerald-50/10">
-        <DiscussionEditor
-          initialContent={comment.content}
-          initialLanguage={comment.language}
-          buttonLabel="UPDATE_POST"
-          isLoading={false}CPP
-          onCancel={() => setIsEditing(false)}
-          onSubmit={(c, l) => {
-            onUpdate(comment.id, c, l);
-            setIsEditing(false);
-          }}
-        />
-      </div>
-    );
-  }
 
   return (
     <div className={`flex flex-col w-full ${depth > 0 ? "mt-4" : "mb-5"}`}>
@@ -123,8 +101,6 @@ export const CommentItem = ({
               <div className="flex flex-col">
                 <div className="flex items-center gap-2">
                   <span className="text-[13px] font-black text-slate-900 tracking-tight">{comment.user.username}</span>
-                  
-                  {/* Language Badge displayed on the right of the name */}
                   {comment.language && (
                     <span className="bg-emerald-50 text-emerald-700 text-[9px] px-2 py-0.5 rounded-full border border-emerald-100 font-black uppercase tracking-wider">
                       {comment.language}
@@ -158,18 +134,35 @@ export const CommentItem = ({
 
           {/* Body */}
           <div className="text-slate-700">
-            {renderFormattedContent(comment.content, comment.language)}
+            {isEditing ? (
+               <DiscussionEditor
+               initialContent={comment.content}
+               initialLanguage={comment.language}
+               buttonLabel="UPDATE_POST"
+               isLoading={false}
+               onCancel={() => setIsEditing(false)}
+               onSubmit={(c, l) => {
+                 onUpdate(comment.id, c, l);
+                 setIsEditing(false);
+               }}
+             />
+            ) : renderFormattedContent(comment.content, comment.language)}
           </div>
 
           {/* Footer Actions */}
           <div className="flex items-center gap-3 pt-4 border-t-2 border-slate-50">
+            {/* LIGHTWEIGHT UPVOTE BUTTON */}
             <button
               onClick={() => onUpvote(comment.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                comment.hasUpvoted ? "bg-emerald-600 text-white shadow-lg shadow-emerald-200" : "bg-slate-50 text-slate-400 hover:bg-slate-100"
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-200 bg-slate-50 hover:bg-slate-100 active:scale-95 ${
+                comment.hasUpvoted ? "text-emerald-600" : "text-slate-400"
               }`}
             >
-              {comment.hasUpvoted ? <HiHandThumbUp size={14} /> : <HiOutlineHandThumbUp size={14} />}
+              {comment.hasUpvoted ? (
+                <HiHandThumbUp size={14} className="text-emerald-500 animate-in zoom-in duration-300" />
+              ) : (
+                <HiOutlineHandThumbUp size={14} />
+              )}
               {comment.upvotes}
             </button>
 
@@ -186,12 +179,14 @@ export const CommentItem = ({
         </div>
       </div>
 
+      {/* Reply Editor & Replies Toggles remain the same... */}
       {isReplying && (
         <div className="mt-4 ml-10 animate-in slide-in-from-top-2 duration-300">
           <DiscussionEditor
             onSubmit={(content, lang) => {
               onReply(comment.id, content, lang);
               setIsReplying(false);
+              setShowReplies(true); 
             }}
             onCancel={() => setIsReplying(false)}
             isLoading={false}
@@ -200,19 +195,34 @@ export const CommentItem = ({
         </div>
       )}
 
-      {comment.replies?.map((reply: any) => (
-        <div key={reply.id} className="ml-10 border-l-2 border-slate-100 pl-6">
-          <CommentItem
-            comment={reply}
-            currentUserId={currentUserId}
-            onUpvote={onUpvote}
-            onDelete={onDelete}
-            onUpdate={onUpdate}
-            onReply={onReply}
-            depth={depth + 1}
-          />
+      {hasReplies && (
+        <div className="mt-2 ml-10">
+          <button
+            onClick={() => setShowReplies(!showReplies)}
+            className="flex items-center gap-2 px-2 py-1 text-[10px] font-black text-emerald-600 uppercase tracking-widest hover:bg-emerald-50 rounded-lg transition-colors"
+          >
+            {showReplies ? <HiChevronUp size={16} /> : <HiChevronDown size={16} />}
+            {showReplies ? "Hide_Replies" : `View_Replies (${comment.replies.length})`}
+          </button>
         </div>
-      ))}
+      )}
+
+      {hasReplies && showReplies && (
+        <div className="mt-2 ml-10 border-l-2 border-slate-100 pl-6 animate-in fade-in slide-in-from-left-2 duration-300">
+          {comment.replies.map((reply: any) => (
+            <CommentItem
+              key={reply.id}
+              comment={reply}
+              currentUserId={currentUserId}
+              onUpvote={onUpvote}
+              onDelete={onDelete}
+              onUpdate={onUpdate}
+              onReply={onReply}
+              depth={depth + 1}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

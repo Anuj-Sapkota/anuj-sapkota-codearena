@@ -1,123 +1,162 @@
 import { prisma } from "../lib/prisma.js";
 
 /**
+ * Helper to recursively inject hasUpvoted into discussion trees
+ */
+const formatDiscussion = (disc: any): any => {
+  return {
+    ...disc,
+    // If the array exists and has at least one entry, the user has upvoted
+    hasUpvoted: disc.upvoteTracks ? disc.upvoteTracks.length > 0 : false,
+    // Recursively format replies
+    replies: disc.replies ? disc.replies.map(formatDiscussion) : [],
+  };
+};
+
+/**
  * Fetch all top-level discussions for a problem
  */
-export const getByProblem = async (problemId: number, currentUserId?: number) => {
-  return await prisma.discussion.findMany({
+export const getByProblem = async (
+  problemId: number,
+  currentUserId?: number,
+) => {
+  const discussions = await prisma.discussion.findMany({
     where: { problemId, parentId: null },
     include: {
-      user: { 
-        select: { 
-          username: true, 
-          full_name: true, 
-          profile_pic_url: true 
-        } 
+      user: {
+        select: { username: true, full_name: true, profile_pic_url: true },
       },
+      upvoteTracks: currentUserId
+        ? { where: { userId: currentUserId } }
+        : false,
       replies: {
-        include: { 
-          user: { 
-            select: { username: true, full_name: true } 
-          } 
+        include: {
+          user: {
+            select: { username: true, full_name: true, profile_pic_url: true },
+          },
+          upvoteTracks: currentUserId
+            ? { where: { userId: currentUserId } }
+            : false,
+          // If you have 3 levels of nesting, you'd repeat the include here
         },
         orderBy: { createdAt: "asc" },
       },
-      upvoteTracks: currentUserId ? { where: { userId: currentUserId } } : false,
     },
     orderBy: { createdAt: "desc" },
   });
-};
 
-/**
- * Create a new post or reply
- */
-export const createDiscussionService = async (data: { 
-  content: string; 
-  userId: number; 
-  problemId: number; 
-  parentId?: string | null;
-  language?: string | null; 
-}) => {
-  const match = data.content.match(/```(\w+)/);
-  const languageFallback = match ? match[1] : null;
-  const finalLanguage = data.language || languageFallback;
-
-  return await prisma.discussion.create({
-    data: {
-      content: data.content,
-      userId: data.userId,
-      problemId: data.problemId,
-      language: finalLanguage,
-      parentId: data.parentId ?? null, 
-    } as any, 
-    include: { 
-      user: { 
-        select: { username: true, full_name: true } 
-      } 
-    },
-  });
-};
-
-/**
- * Update an existing post (only content/language)
- */
-export const updateDiscussionService = async (
-  discussionId: string, 
-  userId: number, 
-  data: { content?: string; language?: string | null }
-) => {
-  // We include userId in 'where' to ensure users can only edit their own posts
-  return await prisma.discussion.update({
-    where: { 
-      id: discussionId,
-      userId: userId 
-    },
-    data: {
-      ...data,
-      // If content changed, re-detect language if not explicitly provided
-      language: data.language !== undefined ? data.language : (data.content?.match(/```(\w+)/)?.[1] ?? null)
-    },
-  });
-};
-
-/**
- * Delete a post
- * Note: Prisma 'onDelete: Cascade' in your schema should handle replies/upvotes
- */
-export const deleteDiscussionService = async (discussionId: string, userId: number) => {
-  return await prisma.discussion.delete({
-    where: { 
-      id: discussionId,
-      userId: userId // Authorization check
-    },
-  });
+  return discussions.map(formatDiscussion);
 };
 
 /**
  * Toggle Upvote logic
  */
-export const toggleUpvoteService = async (discussionId: string, userId: number) => {
+export const toggleUpvoteService = async (
+  discussionId: string,
+  userId: number,
+) => {
   const existing = await prisma.discussionUpvote.findUnique({
-    where: { 
-      userId_discussionId: { userId, discussionId } 
+    where: {
+      userId_discussionId: { userId, discussionId },
     },
   });
 
+  let updatedDiscussion;
+
   if (existing) {
-    return await prisma.$transaction(async (tx) => {
+    updatedDiscussion = await prisma.$transaction(async (tx) => {
       await tx.discussionUpvote.delete({ where: { id: existing.id } });
       return await tx.discussion.update({
         where: { id: discussionId },
         data: { upvotes: { decrement: 1 } },
+        include: { upvoteTracks: { where: { userId } } },
+      });
+    });
+  } else {
+    updatedDiscussion = await prisma.$transaction(async (tx) => {
+      await tx.discussionUpvote.create({ data: { userId, discussionId } });
+      return await tx.discussion.update({
+        where: { id: discussionId },
+        data: { upvotes: { increment: 1 } },
+        include: { upvoteTracks: { where: { userId } } },
       });
     });
   }
 
-  return await prisma.$transaction(async (tx) => {
-    await tx.discussionUpvote.create({ data: { userId, discussionId } });
-    return await tx.discussion.update({
-      where: { id: discussionId },
-      data: { upvotes: { increment: 1 } },
-    });
+  // Return formatted version so Redux gets the updated 'hasUpvoted' boolean
+  return formatDiscussion(updatedDiscussion);
+};
+
+/**
+ * Create a new post or reply
+ */
+export const createDiscussionService = async (data: {
+  content: string;
+  userId: number;
+  problemId: number;
+  parentId?: string | null;
+  language?: string | null;
+}) => {
+  // Logic to handle language fallback
+  const match = data.content.match(/```(\w+)/);
+  const languageFallback = match ? match[1] : null;
+  const finalLanguage = data.language || languageFallback;
+
+  const newPost = await prisma.discussion.create({
+    data: {
+      content: data.content,
+      userId: data.userId,
+      problemId: data.problemId,
+      language: finalLanguage,
+      parentId: data.parentId ?? null,
+    } as any,
+    include: {
+      user: {
+        select: { username: true, full_name: true, profile_pic_url: true },
+      },
+      upvoteTracks: { where: { userId: data.userId } },
+    },
+  });
+
+  return formatDiscussion(newPost);
+};
+
+/**
+ * Update an existing post
+ */
+export const updateDiscussionService = async (
+  discussionId: string,
+  userId: number,
+  data: { content?: string; language?: string | null },
+) => {
+  const updated = await prisma.discussion.update({
+    where: { id: discussionId, userId },
+    data: {
+      ...data,
+      language:
+        data.language !== undefined
+          ? data.language
+          : (data.content?.match(/```(\w+)/)?.[1] ?? null),
+    },
+    include: {
+      user: {
+        select: { username: true, full_name: true, profile_pic_url: true },
+      },
+      upvoteTracks: { where: { userId } },
+    },
+  });
+
+  return formatDiscussion(updated);
+};
+
+/**
+ * Delete a post
+ */
+export const deleteDiscussionService = async (
+  discussionId: string,
+  userId: number,
+) => {
+  return await prisma.discussion.delete({
+    where: { id: discussionId, userId },
   });
 };

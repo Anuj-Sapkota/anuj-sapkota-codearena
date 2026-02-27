@@ -26,8 +26,13 @@ const DiscussContainer = ({ problemId }: { problemId: number }) => {
   );
 
   useEffect(() => {
-    dispatch(fetchDiscussionsThunk(problemId));
-  }, [dispatch, problemId]);
+    dispatch(
+      fetchDiscussionsThunk({
+        problemId,
+        userId: currentUser?.userId,
+      }),
+    );
+  }, [dispatch, problemId, currentUser?.userId]);
 
   // Handle Top-Level Post
   const handlePostSubmit = async (content: string, language: string | null) => {

@@ -6,11 +6,11 @@ import { CreateDiscussionDTO, Discussion } from "@/types/discussion.types";
 
 export const fetchDiscussionsThunk = createAsyncThunk<
   { success: boolean; data: Discussion[] },
-  number,
+  { problemId: number; userId?: number },
   { rejectValue: string }
->("discussions/fetchByProblem", async (problemId, { rejectWithValue }) => {
+>("discussions/fetchByProblem", async ({problemId, userId}, { rejectWithValue }) => {
   try {
-    return await discussionService.getByProblem(problemId);
+    return await discussionService.getByProblem(problemId, userId);
   } catch (error) {
     return rejectWithValue(handleAxiosError(error) || "Failed to fetch discussions");
   }
