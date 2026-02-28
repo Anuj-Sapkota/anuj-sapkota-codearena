@@ -17,32 +17,31 @@ const formatDiscussion = (disc: any): any => {
  * Fetch all top-level discussions for a problem
  */
 export const getByProblem = async (
-  problemId: number,
-  currentUserId?: number,
+  problemId: number, 
+  currentUserId?: number, 
+  sortBy: "newest" | "most_upvoted" = "newest" // Default to newest
 ) => {
+
+  console.log("From the service: ", sortBy)
+  // Define the sort object for Prisma
+  const orderBy: any = sortBy === "most_upvoted" 
+    ? { upvotes: "desc" } 
+    : { createdAt: "desc" };
+
   const discussions = await prisma.discussion.findMany({
     where: { problemId, parentId: null },
     include: {
-      user: {
-        select: { username: true, full_name: true, profile_pic_url: true },
-      },
-      upvoteTracks: currentUserId
-        ? { where: { userId: currentUserId } }
-        : false,
+      user: { select: { username: true, profile_pic_url: true } },
+      upvoteTracks: currentUserId ? { where: { userId: currentUserId } } : false,
       replies: {
         include: {
-          user: {
-            select: { username: true, full_name: true, profile_pic_url: true },
-          },
-          upvoteTracks: currentUserId
-            ? { where: { userId: currentUserId } }
-            : false,
-          // If you have 3 levels of nesting, you'd repeat the include here
+          user: { select: { username: true } },
+          upvoteTracks: currentUserId ? { where: { userId: currentUserId } } : false,
         },
-        orderBy: { createdAt: "asc" },
+        orderBy: { createdAt: "asc" }, // Replies usually stay chronological
       },
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: orderBy, // Apply dynamic sorting here
   });
 
   return discussions.map(formatDiscussion);

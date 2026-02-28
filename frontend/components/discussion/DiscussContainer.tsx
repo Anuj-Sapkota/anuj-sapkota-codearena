@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { MdChatBubbleOutline, MdAdd, MdHistory } from "react-icons/md";
+import { MdChatBubbleOutline, MdAdd, MdHistory, MdSort } from "react-icons/md";
 import { AppDispatch, RootState } from "@/lib/store/store.js";
 import {
   fetchDiscussionsThunk,
@@ -16,6 +16,9 @@ import { DiscussionEditor } from "./DiscussionEditor";
 const DiscussContainer = ({ problemId }: { problemId: number }) => {
   const dispatch = useDispatch<AppDispatch>();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  
+  // Local state for filtering
+  const [sortBy, setSortBy] = useState<"newest" | "most_upvoted">("newest");
 
   // Redux State
   const { items, isLoading } = useSelector(
@@ -25,14 +28,16 @@ const DiscussContainer = ({ problemId }: { problemId: number }) => {
     (state: RootState) => (state as any).auth?.user,
   );
 
+  // Fetch discussions when problemId, userId, or sortBy changes
   useEffect(() => {
     dispatch(
       fetchDiscussionsThunk({
         problemId,
         userId: currentUser?.userId,
+        sortBy, 
       }),
     );
-  }, [dispatch, problemId, currentUser?.userId]);
+  }, [dispatch, problemId, currentUser?.userId, sortBy]);
 
   // Handle Top-Level Post
   const handlePostSubmit = async (content: string, language: string | null) => {
@@ -60,7 +65,7 @@ const DiscussContainer = ({ problemId }: { problemId: number }) => {
         content,
         problemId,
         language,
-        parentId, // Links the reply to its parent
+        parentId, 
       }),
     );
   };
@@ -83,13 +88,42 @@ const DiscussContainer = ({ problemId }: { problemId: number }) => {
 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white min-h-screen animate-in fade-in slide-in-from-bottom-2 duration-500">
-      {/* HEADER SECTION: Tech-Industrial Style */}
+      
+      {/* HEADER SECTION */}
       <div className="flex flex-col gap-8 mb-10">
         <div className="flex items-center justify-between px-1">
-          <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2">
-            <MdChatBubbleOutline className="text-base" /> Community_Debrief (
-            {items.length})
-          </h3>
+          <div className="flex flex-col gap-1">
+            <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2">
+              <MdChatBubbleOutline className="text-base" /> Community_Debrief (
+              {items.length})
+            </h3>
+            
+            {/* FILTER UI */}
+            <div className="flex items-center gap-4 mt-2">
+              <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
+                <button
+                  onClick={() => setSortBy("newest")}
+                  className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+                    sortBy === "newest" 
+                      ? "bg-white text-slate-900 shadow-sm" 
+                      : "text-slate-400 hover:text-slate-600"
+                  }`}
+                >
+                  Newest
+                </button>
+                <button
+                  onClick={() => setSortBy("most_upvoted")}
+                  className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+                    sortBy === "most_upvoted" 
+                      ? "bg-white text-slate-900 shadow-sm" 
+                      : "text-slate-400 hover:text-slate-600"
+                  }`}
+                >
+                  Most_Upvoted
+                </button>
+              </div>
+            </div>
+          </div>
 
           {!isEditorOpen && (
             <button
@@ -100,7 +134,6 @@ const DiscussContainer = ({ problemId }: { problemId: number }) => {
                 New_Post{" "}
                 <MdAdd className="text-sm group-hover:rotate-90 transition-transform duration-300" />
               </span>
-              {/* FormButton Slide-up Effect */}
               <div className="absolute inset-0 bg-emerald-600 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
             </button>
           )}
@@ -140,7 +173,7 @@ const DiscussContainer = ({ problemId }: { problemId: number }) => {
                 onUpvote={handleUpvote}
                 onDelete={handleDelete}
                 onUpdate={handleUpdate}
-                onReply={handleReplySubmit} // Passes the updated handler for replies
+                onReply={handleReplySubmit}
               />
             ))}
           </div>

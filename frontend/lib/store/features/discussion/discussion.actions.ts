@@ -6,15 +6,19 @@ import { CreateDiscussionDTO, Discussion } from "@/types/discussion.types";
 
 export const fetchDiscussionsThunk = createAsyncThunk<
   { success: boolean; data: Discussion[] },
-  { problemId: number; userId?: number },
+  { problemId: number; userId?: number; sortBy?: string }, 
   { rejectValue: string }
->("discussions/fetchByProblem", async ({problemId, userId}, { rejectWithValue }) => {
-  try {
-    return await discussionService.getByProblem(problemId, userId);
-  } catch (error) {
-    return rejectWithValue(handleAxiosError(error) || "Failed to fetch discussions");
-  }
-});
+>(
+  "discussions/fetchByProblem",
+  async ({ problemId, userId, sortBy }, { rejectWithValue }) => {
+    try {
+      console.log("Sorted by from thunk: ", sortBy)
+      return await discussionService.getByProblem(problemId, userId, sortBy);
+    } catch (error) {
+      return rejectWithValue("Failed to fetch discussions");
+    }
+  },
+);
 
 export const createDiscussionThunk = createAsyncThunk<
   { success: boolean; data: Discussion; message: string },
@@ -24,7 +28,9 @@ export const createDiscussionThunk = createAsyncThunk<
   try {
     return await discussionService.create(discussionData);
   } catch (error) {
-    return rejectWithValue(handleAxiosError(error) || "Failed to post discussion");
+    return rejectWithValue(
+      handleAxiosError(error) || "Failed to post discussion",
+    );
   }
 });
 
@@ -36,10 +42,11 @@ export const toggleUpvoteThunk = createAsyncThunk<
   try {
     return await discussionService.toggleUpvote(id);
   } catch (error) {
-    return rejectWithValue(handleAxiosError(error) || "Failed to process upvote");
+    return rejectWithValue(
+      handleAxiosError(error) || "Failed to process upvote",
+    );
   }
 });
-
 
 export const updateDiscussionThunk = createAsyncThunk<
   { success: boolean; data: Discussion; message: string },

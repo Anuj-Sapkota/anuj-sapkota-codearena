@@ -1,15 +1,14 @@
 // services/discussion.service.ts
 import api from "../api";
-import { CreateDiscussionDTO, Discussion } from "@/types/discussion.types.js";
+import { CreateDiscussionDTO } from "@/types/discussion.types.js";
 
 export const discussionService = {
-  getByProblem: async (problemId: number, userId: number) => {
-    const response = await api.get(`/discussions/problem/${problemId}`, {
-    params: { userId } 
+ getByProblem: async (problemId: number, userId?: number, sortBy: string = "newest") => {
+  const response = await api.get(`/discussions/problem/${problemId}`, {
+    params: { userId, sortBy } 
   });
   return response.data;
 },
-
   create: async (data: CreateDiscussionDTO) => {
     const response = await api.post("/discussions", data);
     return response.data;
