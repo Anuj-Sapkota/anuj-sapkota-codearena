@@ -103,7 +103,7 @@ const DiscussContainer = ({ problemId }: { problemId: number }) => {
               <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
                 <button
                   onClick={() => setSortBy("newest")}
-                  className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+                  className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer ${
                     sortBy === "newest" 
                       ? "bg-white text-slate-900 shadow-sm" 
                       : "text-slate-400 hover:text-slate-600"
@@ -113,7 +113,7 @@ const DiscussContainer = ({ problemId }: { problemId: number }) => {
                 </button>
                 <button
                   onClick={() => setSortBy("most_upvoted")}
-                  className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+                  className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer ${
                     sortBy === "most_upvoted" 
                       ? "bg-white text-slate-900 shadow-sm" 
                       : "text-slate-400 hover:text-slate-600"

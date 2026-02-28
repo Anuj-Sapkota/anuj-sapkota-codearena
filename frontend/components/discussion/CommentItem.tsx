@@ -89,7 +89,7 @@ export const CommentItem = ({
           {/* Header */}
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-slate-50 border-2 border-white flex-shrink-0 relative">
+              <div className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-slate-50 border-2 border-white shrink-0 relative">
                 {comment.user.profile_pic_url ? (
                   <Image src={comment.user.profile_pic_url} alt="avatar" fill className="object-cover" />
                 ) : (
@@ -115,15 +115,15 @@ export const CommentItem = ({
 
             {isOwner && (
               <div className="relative" ref={menuRef}>
-                <button onClick={() => setShowMenu(!showMenu)} className="p-2 hover:bg-slate-50 rounded-lg text-slate-400 transition-colors">
+                <button onClick={() => setShowMenu(!showMenu)} className="p-2 hover:bg-slate-50 rounded-lg text-slate-400 transition-colors cursor-pointer">
                   <HiEllipsisVertical size={20} />
                 </button>
                 {showMenu && (
                   <div className="absolute right-0 mt-2 w-48 bg-white border-2 border-slate-100 rounded-xl shadow-xl z-30 py-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <button onClick={() => setIsEditing(true)} className="w-full flex items-center gap-3 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50">
+                    <button onClick={() => setIsEditing(true)} className="w-full flex items-center cursor-pointer gap-3 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50">
                       <HiOutlinePencil /> Edit_Post
                     </button>
-                    <button onClick={() => onDelete(comment.id)} className="w-full flex items-center gap-3 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50">
+                    <button onClick={() => onDelete(comment.id)} className="w-full flex items-center cursor-pointer gap-3 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50">
                       <HiOutlineTrash /> Delete_Post
                     </button>
                   </div>
@@ -159,7 +159,7 @@ export const CommentItem = ({
               }`}
             >
               {comment.hasUpvoted ? (
-                <HiHandThumbUp size={14} className="text-emerald-500 animate-in zoom-in duration-300" />
+                <HiHandThumbUp size={14} className="text-emerald-500 animate-in zoom-in duration-300 cursor-pointer" />
               ) : (
                 <HiOutlineHandThumbUp size={14} />
               )}
@@ -168,7 +168,7 @@ export const CommentItem = ({
 
             <button
               onClick={() => setIsReplying(!isReplying)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${
                 isReplying ? "bg-slate-900 text-white" : "bg-slate-50 text-slate-400 hover:bg-slate-100"
               }`}
             >

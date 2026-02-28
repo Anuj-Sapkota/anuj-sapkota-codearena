@@ -12,16 +12,19 @@ import { ServiceError } from "../errors/service.error.js";
  * GET /api/discussions/problem/:problemId
  */
 export const getDiscussions = async (req: Request, res: Response) => {
-  // problemId is in the URL path (:problemId) -> req.params
   const { problemId } = req.params;
 
   const userId = req.query.userId
     ? parseInt(req.query.userId as string)
     : undefined;
-  const sortBy = (req.query.sortBy as string) || "newest";
+  const sortBy = req.query.sortBy as "newest" | "most_upvoted" | undefined;
 
   try {
-    const data = await getByProblem(parseInt(problemId), userId, sortBy);
+    const data = await getByProblem(
+      parseInt(problemId as string),
+      userId,
+      sortBy,
+    );
     res.status(200).json({ success: true, data });
   } catch (error) {
     res.status(500).json({ success: false, message: "Server Error" });

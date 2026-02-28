@@ -71,7 +71,7 @@ export const DiscussionEditor = ({
         <button
           onClick={onCancel}
           type="button"
-          className="flex items-center gap-2 px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-red-500 transition-colors"
+          className="flex items-center gap-2 px-6 py-3 text-[10px]  cursor-pointer font-black text-slate-400 uppercase tracking-widest hover:text-red-500 transition-colors"
         >
           <MdClose className="text-lg" /> Cancel_Action
         </button>
