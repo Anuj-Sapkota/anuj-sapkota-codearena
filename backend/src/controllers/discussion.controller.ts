@@ -17,7 +17,8 @@ export const getDiscussions = async (req: Request, res: Response) => {
     ? parseInt(req.query.userId as string)
     : undefined;
   const sortBy = req.query.sortBy as "newest" | "most_upvoted" | undefined;
-  const language = req.query.language as string | undefined; // Get language
+  const language = req.query.language as string | undefined;
+  const search = req.query.search as string | undefined; // Capture search
 
   try {
     const data = await getByProblem(
@@ -25,6 +26,7 @@ export const getDiscussions = async (req: Request, res: Response) => {
       userId,
       sortBy,
       language,
+      search,
     );
     res.status(200).json({ success: true, data });
   } catch (error) {

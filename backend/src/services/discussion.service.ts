@@ -17,28 +17,41 @@ const formatDiscussion = (disc: any): any => {
  * Fetch all top-level discussions for a problem
  */
 export const getByProblem = async (
-  problemId: number, 
-  currentUserId?: number, 
+  problemId: number,
+  currentUserId?: number,
   sortBy: "newest" | "most_upvoted" = "newest",
-  language?: string // New parameter
+  language?: string,
+  search?: string, // New parameter
 ) => {
-  const orderBy: any = sortBy === "most_upvoted" 
-    ? { upvotes: "desc" } 
-    : { createdAt: "desc" };
+  const orderBy: any =
+    sortBy === "most_upvoted" ? { upvotes: "desc" } : { createdAt: "desc" };
 
   const discussions = await prisma.discussion.findMany({
-    where: { 
-      problemId, 
+    where: {
+      problemId,
       parentId: null,
-      ...(language && language !== "all" ? { language } : {}) 
+      ...(language && language !== "all" ? { language } : {}),
+      // Search logic: looks for content matches
+      ...(search
+        ? {
+            content: {
+              contains: search,
+              mode: "insensitive",
+            },
+          }
+        : {}),
     },
     include: {
-      user: { select: { username: true, profile_pic_url: true } },
-      upvoteTracks: currentUserId ? { where: { userId: currentUserId } } : false,
+      user: { select: { username: true, profile_pic_url: true, role: true } },
+      upvoteTracks: currentUserId
+        ? { where: { userId: currentUserId } }
+        : false,
       replies: {
         include: {
-          user: { select: { username: true } },
-          upvoteTracks: currentUserId ? { where: { userId: currentUserId } } : false,
+          user: { select: { username: true, role: true } },
+          upvoteTracks: currentUserId
+            ? { where: { userId: currentUserId } }
+            : false,
         },
         orderBy: { createdAt: "asc" },
       },

@@ -3,9 +3,9 @@ import api from "../api";
 import { CreateDiscussionDTO } from "@/types/discussion.types.js";
 
 export const discussionService = {
- getByProblem: async (problemId: number, userId?: number, sortBy: string = "newest", language?: string) => {
+ getByProblem: async (problemId: number, userId?: number, sortBy: string = "newest", language?: string, search?: string) => {
   const response = await api.get(`/discussions/problem/${problemId}`, {
-    params: { userId, sortBy, language } 
+    params: { userId, sortBy, language, search } 
   });
   return response.data;
 },

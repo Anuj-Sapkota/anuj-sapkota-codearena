@@ -1,6 +1,7 @@
+// store/discussion.slice.ts
 "use client";
 
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { createSlice } from "@reduxjs/toolkit";
 import { Discussion } from "@/types/discussion.types";
 import {
   fetchDiscussionsThunk,
@@ -8,7 +9,7 @@ import {
   toggleUpvoteThunk,
   updateDiscussionThunk,
   deleteDiscussionThunk,
-  pinDiscussionThunk, // Import the new Pin Thunk
+  pinDiscussionThunk,
 } from "./discussion.actions";
 
 interface DiscussionState {
@@ -25,7 +26,6 @@ const initialState: DiscussionState = {
 
 /**
  * RECURSIVE HELPERS
- * These functions traverse the tree to find and modify deep replies.
  */
 const updateItemInTree = (
   items: Discussion[],
@@ -33,7 +33,6 @@ const updateItemInTree = (
 ): Discussion[] => {
   return items.map((item) => {
     if (item.id === updatedItem.id) {
-      // Return the updated item but keep existing replies if they aren't in the payload
       return {
         ...item,
         ...updatedItem,
@@ -54,10 +53,7 @@ const addItemToTree = (
 ): Discussion[] => {
   return items.map((item) => {
     if (item.id === parentId) {
-      return {
-        ...item,
-        replies: [...(item.replies || []), newItem],
-      };
+      return { ...item, replies: [...(item.replies || []), newItem] };
     }
     if (item.replies && item.replies.length > 0) {
       return {
@@ -91,13 +87,14 @@ const discussionSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // FETCH DISCUSSIONS
+      // FETCH DISCUSSIONS (Handles initial load, filter changes, and search)
       .addCase(fetchDiscussionsThunk.pending, (state) => {
         state.isLoading = true;
         state.error = null;
       })
       .addCase(fetchDiscussionsThunk.fulfilled, (state, action) => {
         state.isLoading = false;
+        // The data returned will already be filtered/searched by the backend
         state.items = action.payload.data;
       })
       .addCase(fetchDiscussionsThunk.rejected, (state, action) => {
@@ -105,7 +102,7 @@ const discussionSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // CREATE DISCUSSION (Thread or Deep Reply)
+      // CREATE
       .addCase(createDiscussionThunk.fulfilled, (state, action) => {
         state.isLoading = false;
         const newPost = action.payload.data;
@@ -116,7 +113,7 @@ const discussionSlice = createSlice({
         }
       })
 
-      // TOGGLE UPVOTE, UPDATE, & PIN (Using shared recursive logic)
+      // UPDATE ACTIONS (Toggle Upvote, Edit Content, Pin)
       .addCase(toggleUpvoteThunk.fulfilled, (state, action) => {
         state.items = updateItemInTree(state.items, action.payload.data);
       })
@@ -124,13 +121,10 @@ const discussionSlice = createSlice({
         state.items = updateItemInTree(state.items, action.payload.data);
       })
       .addCase(pinDiscussionThunk.fulfilled, (state, action) => {
-        // Since pinning changes the 'isPinned' property, we just update it in the state.
-        // Note: If you want pinned items to jump to the top immediately without a refresh,
-        // you would handle re-sorting logic here.
         state.items = updateItemInTree(state.items, action.payload.data);
       })
 
-      // DELETE DISCUSSION
+      // DELETE
       .addCase(deleteDiscussionThunk.fulfilled, (state, action) => {
         state.items = removeItemFromTree(state.items, action.payload.id);
       });

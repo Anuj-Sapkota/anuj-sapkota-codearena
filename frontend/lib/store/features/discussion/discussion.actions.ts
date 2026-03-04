@@ -6,15 +6,26 @@ import { CreateDiscussionDTO, Discussion } from "@/types/discussion.types";
 
 export const fetchDiscussionsThunk = createAsyncThunk<
   { success: boolean; data: Discussion[] },
-  { problemId: number; userId?: number; sortBy?: string; language?: string }, // Added language
+  { 
+    problemId: number; 
+    userId?: number; 
+    sortBy?: string; 
+    language?: string; 
+    search?: string // Added Search Parameter
+  }, 
   { rejectValue: string }
 >(
   "discussions/fetchByProblem",
-  async ({ problemId, userId, sortBy, language }, { rejectWithValue }) => {
+  async ({ problemId, userId, sortBy, language, search }, { rejectWithValue }) => {
     try {
-      console.log("Filters from thunk:", { sortBy, language });
-      // Passing both sortBy and language to the service
-      return await discussionService.getByProblem(problemId, userId, sortBy, language);
+      // Passing search through to the API service
+      return await discussionService.getByProblem(
+        problemId, 
+        userId, 
+        sortBy, 
+        language, 
+        search
+      );
     } catch (error) {
       return rejectWithValue(handleAxiosError(error) || "Failed to fetch discussions");
     }
