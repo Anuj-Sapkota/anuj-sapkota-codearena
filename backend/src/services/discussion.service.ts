@@ -19,17 +19,19 @@ const formatDiscussion = (disc: any): any => {
 export const getByProblem = async (
   problemId: number, 
   currentUserId?: number, 
-  sortBy: "newest" | "most_upvoted" = "newest" // Default to newest
+  sortBy: "newest" | "most_upvoted" = "newest",
+  language?: string // New parameter
 ) => {
-
-  console.log("From the service: ", sortBy)
-  // Define the sort object for Prisma
   const orderBy: any = sortBy === "most_upvoted" 
     ? { upvotes: "desc" } 
     : { createdAt: "desc" };
 
   const discussions = await prisma.discussion.findMany({
-    where: { problemId, parentId: null },
+    where: { 
+      problemId, 
+      parentId: null,
+      ...(language && language !== "all" ? { language } : {}) 
+    },
     include: {
       user: { select: { username: true, profile_pic_url: true } },
       upvoteTracks: currentUserId ? { where: { userId: currentUserId } } : false,
@@ -38,10 +40,10 @@ export const getByProblem = async (
           user: { select: { username: true } },
           upvoteTracks: currentUserId ? { where: { userId: currentUserId } } : false,
         },
-        orderBy: { createdAt: "asc" }, // Replies usually stay chronological
+        orderBy: { createdAt: "asc" },
       },
     },
-    orderBy: orderBy, // Apply dynamic sorting here
+    orderBy: orderBy,
   });
 
   return discussions.map(formatDiscussion);

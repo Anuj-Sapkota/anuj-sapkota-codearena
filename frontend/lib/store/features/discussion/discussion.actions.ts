@@ -6,16 +6,17 @@ import { CreateDiscussionDTO, Discussion } from "@/types/discussion.types";
 
 export const fetchDiscussionsThunk = createAsyncThunk<
   { success: boolean; data: Discussion[] },
-  { problemId: number; userId?: number; sortBy?: string }, 
+  { problemId: number; userId?: number; sortBy?: string; language?: string }, // Added language
   { rejectValue: string }
 >(
   "discussions/fetchByProblem",
-  async ({ problemId, userId, sortBy }, { rejectWithValue }) => {
+  async ({ problemId, userId, sortBy, language }, { rejectWithValue }) => {
     try {
-      console.log("Sorted by from thunk: ", sortBy)
-      return await discussionService.getByProblem(problemId, userId, sortBy);
+      console.log("Filters from thunk:", { sortBy, language });
+      // Passing both sortBy and language to the service
+      return await discussionService.getByProblem(problemId, userId, sortBy, language);
     } catch (error) {
-      return rejectWithValue("Failed to fetch discussions");
+      return rejectWithValue(handleAxiosError(error) || "Failed to fetch discussions");
     }
   },
 );
@@ -35,7 +36,7 @@ export const createDiscussionThunk = createAsyncThunk<
 });
 
 export const toggleUpvoteThunk = createAsyncThunk<
-  { success: boolean; data: Discussion }, // Returns updated discussion with new upvote count
+  { success: boolean; data: Discussion }, 
   string,
   { rejectValue: string }
 >("discussions/toggleUpvote", async (id, { rejectWithValue }) => {
@@ -67,8 +68,21 @@ export const deleteDiscussionThunk = createAsyncThunk<
 >("discussions/delete", async (id, { rejectWithValue }) => {
   try {
     const response = await discussionService.delete(id);
-    return { ...response, id }; // Return ID so slice can remove it from state
+    return { ...response, id }; 
   } catch (error) {
     return rejectWithValue(handleAxiosError(error) || "Failed to delete post");
+  }
+});
+
+// NEW: Admin Pin Action (Optional but recommended for Admin part)
+export const pinDiscussionThunk = createAsyncThunk<
+  { success: boolean; data: Discussion },
+  string,
+  { rejectValue: string }
+>("discussions/pin", async (id, { rejectWithValue }) => {
+  try {
+    return await discussionService.togglePin(id);
+  } catch (error) {
+    return rejectWithValue(handleAxiosError(error) || "Failed to pin post");
   }
 });

@@ -13,17 +13,18 @@ import { ServiceError } from "../errors/service.error.js";
  */
 export const getDiscussions = async (req: Request, res: Response) => {
   const { problemId } = req.params;
-
   const userId = req.query.userId
     ? parseInt(req.query.userId as string)
     : undefined;
   const sortBy = req.query.sortBy as "newest" | "most_upvoted" | undefined;
+  const language = req.query.language as string | undefined; // Get language
 
   try {
     const data = await getByProblem(
-      parseInt(problemId as string),
+      parseInt(problemId!),
       userId,
       sortBy,
+      language,
     );
     res.status(200).json({ success: true, data });
   } catch (error) {

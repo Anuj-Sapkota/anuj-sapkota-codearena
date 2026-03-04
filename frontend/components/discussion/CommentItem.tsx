@@ -9,8 +9,10 @@ import {
   HiOutlinePencil, 
   HiEllipsisVertical,
   HiChevronDown,
-  HiChevronUp
+  HiChevronUp,
+  HiShieldCheck // Icon for Admin
 } from "react-icons/hi2";
+
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import { DiscussionEditor } from "./DiscussionEditor";
@@ -18,6 +20,7 @@ import { DiscussionEditor } from "./DiscussionEditor";
 interface CommentProps {
   comment: any;
   currentUserId?: number;
+  isAdmin?: boolean; // New Prop
   onUpvote: (id: string) => void;
   onReply: (parentId: string, content: string, lang: string | null) => void;
   onDelete: (id: string) => void;
@@ -32,6 +35,7 @@ export const CommentItem = ({
   onDelete,
   onUpdate,
   currentUserId,
+  isAdmin = false, // Default to false
   depth = 0,
 }: CommentProps) => {
   const [showMenu, setShowMenu] = useState(false);
@@ -63,7 +67,7 @@ export const CommentItem = ({
           <div key={index} className="rounded-xl overflow-hidden my-4 border-2 border-slate-100 shadow-sm">
             <div className="bg-[#0f172a] px-4 py-2 border-b border-slate-800 flex justify-between items-center">
               <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
-                {selectedLang ? selectedLang : "NO_LANGUAGE_SPECIFIED"}
+                {selectedLang ? selectedLang : "CODE_SNIPPET"}
               </span>
             </div>
             <SyntaxHighlighter
@@ -84,25 +88,36 @@ export const CommentItem = ({
 
   return (
     <div className={`flex flex-col w-full ${depth > 0 ? "mt-4" : "mb-5"}`}>
-      <div className="group relative bg-white border-2 border-slate-100 rounded-2xl p-5 hover:border-slate-200 transition-all duration-300">
+      <div className={`group relative bg-white border-2 rounded-2xl p-5 transition-all duration-300 ${
+        comment.user.role === "ADMIN" ? "border-amber-100 bg-amber-50/10" : "border-slate-100 hover:border-slate-200"
+      }`}>
         <div className="flex flex-col gap-4">
           {/* Header */}
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-slate-50 border-2 border-white shrink-0 relative">
+              <div className={`w-9 h-9 rounded-full overflow-hidden ring-2 border-2 border-white shrink-0 relative ${
+                comment.user.role === "ADMIN" ? "ring-amber-400" : "ring-slate-50"
+              }`}>
                 {comment.user.profile_pic_url ? (
                   <Image src={comment.user.profile_pic_url} alt="avatar" fill className="object-cover" />
                 ) : (
-                  <div className="w-full h-full bg-slate-100 flex items-center justify-center font-black text-slate-400 text-xs">
+                  <div className={`w-full h-full flex items-center justify-center font-black text-xs ${
+                    comment.user.role === "ADMIN" ? "bg-amber-100 text-amber-600" : "bg-slate-100 text-slate-400"
+                  }`}>
                     {comment.user.username.charAt(0).toUpperCase()}
                   </div>
                 )}
               </div>
               <div className="flex flex-col">
                 <div className="flex items-center gap-2">
-                  <span className="text-[13px] font-black text-slate-900 tracking-tight">{comment.user.username}</span>
+                  <span className="text-[13px] font-black text-slate-900 tracking-tight flex items-center gap-1">
+                    {comment.user.username}
+                    {comment.user.role === "ADMIN" && (
+                      <HiShieldCheck className="text-amber-500 text-sm" title="Verified Admin" />
+                    )}
+                  </span>
                   {comment.language && (
-                    <span className="bg-emerald-50 text-emerald-700 text-[9px] px-2 py-0.5 rounded-full border border-emerald-100 font-black uppercase tracking-wider">
+                    <span className="bg-slate-800 text-white text-[8px] px-2 py-0.5 rounded font-black uppercase tracking-widest">
                       {comment.language}
                     </span>
                   )}
@@ -113,18 +128,23 @@ export const CommentItem = ({
               </div>
             </div>
 
-            {isOwner && (
+            {/* Action Menu (Show for Owner OR Admin) */}
+            {(isOwner || isAdmin) && (
               <div className="relative" ref={menuRef}>
                 <button onClick={() => setShowMenu(!showMenu)} className="p-2 hover:bg-slate-50 rounded-lg text-slate-400 transition-colors cursor-pointer">
                   <HiEllipsisVertical size={20} />
                 </button>
                 {showMenu && (
                   <div className="absolute right-0 mt-2 w-48 bg-white border-2 border-slate-100 rounded-xl shadow-xl z-30 py-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <button onClick={() => setIsEditing(true)} className="w-full flex items-center cursor-pointer gap-3 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50">
-                      <HiOutlinePencil /> Edit_Post
-                    </button>
+                    {/* Only Owner can Edit */}
+                    {isOwner && (
+                      <button onClick={() => setIsEditing(true)} className="w-full flex items-center cursor-pointer gap-3 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50">
+                        <HiOutlinePencil /> Edit_Post
+                      </button>
+                    )}
+                    {/* Both Admin and Owner can Delete */}
                     <button onClick={() => onDelete(comment.id)} className="w-full flex items-center cursor-pointer gap-3 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50">
-                      <HiOutlineTrash /> Delete_Post
+                      <HiOutlineTrash /> {isAdmin && !isOwner ? "Moderate_Delete" : "Delete_Post"}
                     </button>
                   </div>
                 )}
@@ -151,7 +171,6 @@ export const CommentItem = ({
 
           {/* Footer Actions */}
           <div className="flex items-center gap-3 pt-4 border-t-2 border-slate-50">
-            {/* LIGHTWEIGHT UPVOTE BUTTON */}
             <button
               onClick={() => onUpvote(comment.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-200 bg-slate-50 hover:bg-slate-100 active:scale-95 ${
@@ -179,7 +198,7 @@ export const CommentItem = ({
         </div>
       </div>
 
-      {/* Reply Editor & Replies Toggles remain the same... */}
+      {/* Reply logic remains the same... */}
       {isReplying && (
         <div className="mt-4 ml-10 animate-in slide-in-from-top-2 duration-300">
           <DiscussionEditor
@@ -214,6 +233,7 @@ export const CommentItem = ({
               key={reply.id}
               comment={reply}
               currentUserId={currentUserId}
+              isAdmin={isAdmin} // Pass isAdmin down to replies
               onUpvote={onUpvote}
               onDelete={onDelete}
               onUpdate={onUpdate}

@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { MdChatBubbleOutline, MdAdd, MdHistory, MdSort } from "react-icons/md";
+import { MdChatBubbleOutline, MdAdd, MdHistory, MdFilterList } from "react-icons/md";
 import { AppDispatch, RootState } from "@/lib/store/store.js";
 import {
   fetchDiscussionsThunk,
@@ -17,8 +17,9 @@ const DiscussContainer = ({ problemId }: { problemId: number }) => {
   const dispatch = useDispatch<AppDispatch>();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   
-  // Local state for filtering
+  // Filtering States
   const [sortBy, setSortBy] = useState<"newest" | "most_upvoted">("newest");
+  const [selectedLang, setSelectedLang] = useState<string>("all");
 
   // Redux State
   const { items, isLoading } = useSelector(
@@ -28,18 +29,21 @@ const DiscussContainer = ({ problemId }: { problemId: number }) => {
     (state: RootState) => (state as any).auth?.user,
   );
 
-  // Fetch discussions when problemId, userId, or sortBy changes
+  // Check if Admin for Management features
+  const isAdmin = currentUser?.role === "ADMIN";
+
+  // Trigger fetch on any filter change
   useEffect(() => {
     dispatch(
       fetchDiscussionsThunk({
         problemId,
         userId: currentUser?.userId,
-        sortBy, 
+        sortBy,
+        language: selectedLang === "all" ? undefined : selectedLang,
       }),
     );
-  }, [dispatch, problemId, currentUser?.userId, sortBy]);
+  }, [dispatch, problemId, currentUser?.userId, sortBy, selectedLang]);
 
-  // Handle Top-Level Post
   const handlePostSubmit = async (content: string, language: string | null) => {
     const result = await dispatch(
       createDiscussionThunk({
@@ -54,7 +58,6 @@ const DiscussContainer = ({ problemId }: { problemId: number }) => {
     }
   };
 
-  // Handle Nested Reply
   const handleReplySubmit = async (
     parentId: string,
     content: string,
@@ -92,14 +95,16 @@ const DiscussContainer = ({ problemId }: { problemId: number }) => {
       {/* HEADER SECTION */}
       <div className="flex flex-col gap-8 mb-10">
         <div className="flex items-center justify-between px-1">
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-4">
             <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2">
               <MdChatBubbleOutline className="text-base" /> Community_Debrief (
               {items.length})
+              {isAdmin && <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-[8px]">ADMIN_MODE</span>}
             </h3>
             
-            {/* FILTER UI */}
-            <div className="flex items-center gap-4 mt-2">
+            {/* FILTER TOOLBAR */}
+            <div className="flex items-center gap-3">
+              {/* Sort Toggle */}
               <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
                 <button
                   onClick={() => setSortBy("newest")}
@@ -119,8 +124,24 @@ const DiscussContainer = ({ problemId }: { problemId: number }) => {
                       : "text-slate-400 hover:text-slate-600"
                   }`}
                 >
-                  Most_Upvoted
+                  Popular
                 </button>
+              </div>
+
+              {/* Language Dropdown */}
+              <div className="relative flex items-center">
+                <select 
+                  value={selectedLang}
+                  onChange={(e) => setSelectedLang(e.target.value)}
+                  className="appearance-none bg-slate-100 border border-slate-200 text-[9px] font-black uppercase tracking-widest rounded-xl pl-8 pr-4 py-2.5 outline-none cursor-pointer hover:bg-slate-200 transition-colors text-slate-700"
+                >
+                  <option value="all">All_Langs</option>
+                  <option value="python">Python</option>
+                  <option value="cpp">C++</option>
+                  <option value="java">Java</option>
+                  <option value="javascript">JavaScript</option>
+                </select>
+                <MdFilterList className="absolute left-3 text-slate-400 pointer-events-none" />
               </div>
             </div>
           </div>
@@ -139,7 +160,6 @@ const DiscussContainer = ({ problemId }: { problemId: number }) => {
           )}
         </div>
 
-        {/* Top-Level Editor */}
         {isEditorOpen && (
           <div className="animate-in slide-in-from-top-4 duration-300">
             <DiscussionEditor
@@ -157,10 +177,7 @@ const DiscussContainer = ({ problemId }: { problemId: number }) => {
         {isLoading && items.length === 0 ? (
           <div className="space-y-4 animate-pulse">
             {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="h-40 bg-slate-50 border-2 border-slate-100 rounded-2xl"
-              />
+              <div key={i} className="h-40 bg-slate-50 border-2 border-slate-100 rounded-2xl" />
             ))}
           </div>
         ) : items.length > 0 ? (
@@ -170,6 +187,7 @@ const DiscussContainer = ({ problemId }: { problemId: number }) => {
                 key={comment.id}
                 comment={comment}
                 currentUserId={currentUser?.userId}
+                isAdmin={isAdmin}
                 onUpvote={handleUpvote}
                 onDelete={handleDelete}
                 onUpdate={handleUpdate}
@@ -183,12 +201,6 @@ const DiscussContainer = ({ problemId }: { problemId: number }) => {
             <p className="font-black text-[10px] uppercase tracking-[0.3em] text-slate-400">
               Zero_Discussions_Found
             </p>
-            <button
-              onClick={() => setIsEditorOpen(true)}
-              className="mt-4 text-[10px] font-black text-emerald-600 uppercase tracking-widest hover:underline hover:text-emerald-700 transition-colors"
-            >
-              Initialize_First_Thread
-            </button>
           </div>
         )}
       </div>
