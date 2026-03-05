@@ -10,6 +10,7 @@ import problemRoute from "./routes/problem.routes.js";
 import submissionRoutes from "./routes/submission.routes.js";
 import githubRoutes from "./routes/github.routes.js";
 import challengeRoutes from "./routes/challenge.routes.js";
+import discussionRoutes from "./routes/discussion.routes.js";
 
 import config from "./configs/config.js";
 import { connectCloudinary } from "./configs/cloudinary.config.js";
@@ -52,6 +53,9 @@ app.use("/api/github", githubRoutes);
 
 //Challenges
 app.use("/api/challenges", challengeRoutes);
+
+//Discussion
+app.use("/api/discussions", discussionRoutes);
 
 console.log("BACKEND123");
 // This is the "Catch-All" middleware

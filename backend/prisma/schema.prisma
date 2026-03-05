@@ -11,11 +11,23 @@ enum Role {
   USER
   ADMIN
 }
+
 enum InputType {
   INT
   ARRAY
   STRING
   BOOLEAN
+}
+
+enum ChallengeType {
+  SCHEDULED
+  STATIC
+}
+
+enum ChallengeDifficulty {
+  EASY
+  MEDIUM
+  HARD
 }
 
 model User {
@@ -37,8 +49,10 @@ model User {
   total_points        Int       @default(0)
 
   // Relations
-  submissions     Submission[] // Link back to submissions
-  problemStatuses UserProblemStatus[]
+  submissions      Submission[]
+  problemStatuses  UserProblemStatus[]
+  discussions      Discussion[]       // Added link to discussions
+  discussionVotes  DiscussionUpvote[] // Added link to track upvotes
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -46,53 +60,25 @@ model User {
   @@map("users")
 }
 
-model Category {
-  categoryId  Int     @id @default(autoincrement())
-  name        String  @unique
-  slug        String  @unique
-  description String? @db.Text
-
-  // Relations
-  problems Problem[] // Many-to-many relationship
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("categories")
-}
-
-model TestCase {
-  id             Int     @id @default(autoincrement())
-  input          String  @db.Text
-  expectedOutput String  @db.Text
-  isSample       Boolean @default(false) // If true, show to user. If false, hidden.
-
-  problemId Int
-  problem   Problem @relation(fields: [problemId], references: [problemId], onDelete: Cascade)
-
-  @@map("test_cases")
-}
-
 model Problem {
-  problemId    Int    @id @default(autoincrement())
+  problemId    Int       @id @default(autoincrement())
   title        String
-  content      String @db.Text
-  difficulty   String // EASY, MEDIUM, HARD
-  points       Int    @default(50)
-  functionName String @default("solution")
+  content      String    @db.Text
+  difficulty   String    // EASY, MEDIUM, HARD
+  points       Int       @default(50)
+  functionName String    @default("solution")
   starterCode  Json
-  inputType    InputType     @default(ARRAY) 
-  timeLimit   Float @default(1.0)
-  memoryLimit Int   @default(128)
+  inputType    InputType @default(ARRAY) 
+  timeLimit    Float     @default(1.0)
+  memoryLimit  Int       @default(128)
 
   // Relations
   categories   Category[]
   testCases    TestCase[]
   submissions  Submission[]
   userStatuses UserProblemStatus[]
-
-  // NEW: Relation to Challenges via Join Table
-  challenges ChallengeProblem[]
+  challenges   ChallengeProblem[]
+  discussions  Discussion[]       // Added link to discussions
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -100,29 +86,88 @@ model Problem {
   @@map("problems")
 }
 
+// --- NEW DISCUSSION MODELS ---
+
+model Discussion {
+  id        String   @id @default(cuid())
+  title     String?  // Only for the main post
+  content   String   @db.Text
+  language  String?  // e.g., "cpp", "python"
+  
+  // Relations to User and Problem (IDs changed to Int to match parents)
+  userId    Int
+  user      User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  
+  problemId Int
+  problem   Problem  @relation(fields: [problemId], references: [problemId], onDelete: Cascade)
+
+  // Self-relation for nested replies
+  parentId  String?
+  parent    Discussion?  @relation("DiscussionToDiscussion", fields: [parentId], references: [id])
+  replies   Discussion[] @relation("DiscussionToDiscussion")
+
+  // Upvotes handling
+  upvotes      Int                @default(0)
+  upvoteTracks DiscussionUpvote[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("discussions")
+}
+
+model DiscussionUpvote {
+  id           Int        @id @default(autoincrement())
+  userId       Int
+  discussionId String
+  
+  user       User       @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  discussion Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, discussionId]) // Ensures one upvote per user per comment
+  @@map("discussion_upvotes")
+}
+
+// --- REMAINING MODELS (Category, TestCase, Submission, etc.) ---
+
+model Category {
+  categoryId  Int     @id @default(autoincrement())
+  name        String  @unique
+  slug        String  @unique
+  description String? @db.Text
+  problems    Problem[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@map("categories")
+}
+
+model TestCase {
+  id             Int     @id @default(autoincrement())
+  input          String  @db.Text
+  expectedOutput String  @db.Text
+  isSample       Boolean @default(false)
+  problemId      Int
+  problem        Problem @relation(fields: [problemId], references: [problemId], onDelete: Cascade)
+  @@map("test_cases")
+}
+
 model Submission {
-  id         String @id @default(uuid())
-  problemId  Int
-  userId     Int
-  challengeId  Int?
-  code       String @db.Text
-  languageId Int
-  status     String // "ACCEPTED", "WRONG_ANSWER", "COMPILATION_ERROR"
-
-  // --- ADDED FOR DETAILED REPORTS ---
-  totalPassed Int @default(0) // How many test cases passed
-  totalCases  Int @default(0) // Total cases at the time of submission
-
+  id          String   @id @default(uuid())
+  problemId   Int
+  userId      Int
+  challengeId Int?
+  code        String   @db.Text
+  languageId  Int
+  status      String 
+  totalPassed Int      @default(0)
+  totalCases  Int      @default(0)
   memory      Int?
   time        Float?
   token       String?  @unique
   failMessage String?
   createdAt   DateTime @default(now())
-  
-
-  problem Problem @relation(fields: [problemId], references: [problemId])
-  user    User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
-
+  problem     Problem  @relation(fields: [problemId], references: [problemId])
+  user        User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
   @@map("submissions")
 }
 
@@ -130,57 +175,37 @@ model UserProblemStatus {
   id        Int    @id @default(autoincrement())
   userId    Int
   problemId Int
-  status    String // "SOLVED", "ATTEMPTED"
-
-  // Relations
-  user    User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  problem Problem @relation(fields: [problemId], references: [problemId])
-
-  @@unique([userId, problemId]) // This is key: one record per user per problem
+  status    String 
+  user      User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  problem   Problem @relation(fields: [problemId], references: [problemId])
+  @@unique([userId, problemId])
   @@map("user_problem_status")
 }
 
-// Define a proper Enum for strict type safety
-enum ChallengeDifficulty {
-  EASY
-  MEDIUM
-  HARD
-}
-
 model Challenge {
-  challengeId Int     @id @default(autoincrement())
+  challengeId Int      @id @default(autoincrement())
   title       String
-  slug        String  @unique
-  description String? @db.Text
+  slug        String   @unique
+  description String?  @db.Text
   bannerUrl   String?
-
-  // NEW: Grading and Categorization
-  difficulty ChallengeDifficulty @default(MEDIUM)
-  points     Int                 @default(100)
-
-  // Rules
-  isPublic  Boolean   @default(false)
-  startTime DateTime?
-  endTime   DateTime?
-
-  // Many-to-many through join table
-  problems ChallengeProblem[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  type        ChallengeType @default(SCHEDULED) // Added static vs scheduled
+  difficulty  ChallengeDifficulty @default(MEDIUM)
+  points      Int      @default(100)
+  isPublic    Boolean  @default(false)
+  startTime   DateTime?
+  endTime     DateTime?
+  problems    ChallengeProblem[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   @@map("challenges")
 }
 
 model ChallengeProblem {
   challenge   Challenge @relation(fields: [challengeId], references: [challengeId], onDelete: Cascade)
   challengeId Int
-
-  problem   Problem @relation(fields: [problemId], references: [problemId], onDelete: Cascade)
-  problemId Int
-
-  order Int @default(0)
-
+  problem     Problem @relation(fields: [problemId], references: [problemId], onDelete: Cascade)
+  problemId   Int
+  order       Int @default(0)
   @@id([challengeId, problemId])
   @@map("challenge_problems")
 }
