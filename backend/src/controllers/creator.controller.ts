@@ -8,8 +8,9 @@ import { ServiceError } from "../errors/service.error.js";
 
 export const applyForCreator = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as any).user?.userId; // Adjust based on your JWT payload
-    if (!userId) throw new ServiceError("Unauthorized", 401);
+    const userId = (req as any).user?.sub;
+    console.log("This is from creator controller: ", userId)
+    // if (!userId) throw new ServiceError("Unauthorized", 401);
 
     const profile = await applyToBecomeCreatorService(Number(userId), req.body);
 
@@ -25,7 +26,7 @@ export const applyForCreator = async (req: Request, res: Response, next: NextFun
 
 export const verifyOTP = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as any).user?.userId;
+    const userId = (req as any).user?.sub;
     const { otp } = req.body;
 
     if (!otp) throw new ServiceError("OTP is required", 400);

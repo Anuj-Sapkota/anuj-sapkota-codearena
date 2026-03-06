@@ -101,11 +101,8 @@ model CreatorProfile {
   
   bio             String?  @db.Text
   portfolioUrl    String?
-  sampleVideoUrl  String?  // Cloudinary URL for Admin review
   
-  // KYC / Phone Verification
-  phoneNumber     String?  @unique
-  isPhoneVerified Boolean  @default(false)
+  isEmailVerified Boolean  @default(false)
   otpCode         String?  // For Mock OTP verification
   otpExpiresAt    DateTime?
 
