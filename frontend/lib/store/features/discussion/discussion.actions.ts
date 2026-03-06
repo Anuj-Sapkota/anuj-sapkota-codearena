@@ -115,6 +115,7 @@ export const deleteDiscussionThunk = createAsyncThunk<
   }
 });
 
+<<<<<<< HEAD
 /**
  * 7. REPORT (User Action)
  */
@@ -153,3 +154,17 @@ export const moderateDiscussionThunk = createAsyncThunk<
     );
   }
 });
+=======
+// // NEW: Admin Pin Action (Optional but recommended for Admin part)
+// export const pinDiscussionThunk = createAsyncThunk<
+//   { success: boolean; data: Discussion },
+//   string,
+//   { rejectValue: string }
+// >("discussions/pin", async (id, { rejectWithValue }) => {
+//   try {
+//     return await discussionService.togglePin(id);
+//   } catch (error) {
+//     return rejectWithValue(handleAxiosError(error) || "Failed to pin post");
+//   }
+// });
+>>>>>>> e93b301 (feat: backend for creator apply and partial frontend including redux implemented)

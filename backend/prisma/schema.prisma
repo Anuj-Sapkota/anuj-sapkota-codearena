@@ -7,9 +7,25 @@ datasource db {
   provider = "postgresql"
 }
 
+// --- ENUMS ---
+
 enum Role {
   USER
+  CREATOR
   ADMIN
+}
+
+enum ApplicationStatus {
+  NOT_APPLIED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ResourceType {
+  VIDEO
+  PDF
+  ARTICLE
 }
 
 enum InputType {
@@ -39,28 +55,35 @@ enum ReportType {
 }
 
 model User {
-  userId              Int       @id @default(autoincrement())
+  userId              Int               @id @default(autoincrement())
   full_name           String
-  username            String    @unique
-  email               String    @unique
+  username            String            @unique
+  email               String            @unique
   password_hash       String?
-  has_password        Boolean   @default(false)
+  has_password        Boolean           @default(false)
   auth_provider       String?
   github_id           String?
   github_access_token String?
   google_id           String?
   profile_pic_url     String?
-  resetToken          String?   @unique
+  resetToken          String?           @unique
   resetTokenExpiry    DateTime?
   bio                 String?
-  role                Role      @default(USER)
-  total_points        Int       @default(0)
+  role                Role              @default(USER)
+  creatorStatus       ApplicationStatus @default(NOT_APPLIED)
+  total_points        Int               @default(0)
 
   // Relations
   submissions     Submission[]
   problemStatuses UserProblemStatus[]
   discussions     Discussion[] // Added link to discussions
   discussionVotes DiscussionUpvote[] // Added link to track upvotes
+  
+  // Learning & Marketplace Relations
+  creatorProfile   CreatorProfile?
+  ownedResources   Resource[]        // Resources created by this user
+  purchases        Purchase[]        // Resources bought by this user
+  reviews          Review[]          // Reviews written by this user
 
   created_at        DateTime           @default(now())
   updated_at        DateTime           @updatedAt
@@ -68,6 +91,96 @@ model User {
 
   @@map("users")
 }
+
+// --- CREATOR & IDENTITY MODELS ---
+
+model CreatorProfile {
+  id              Int      @id @default(autoincrement())
+  userId          Int      @unique
+  user            User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  
+  bio             String?  @db.Text
+  portfolioUrl    String?
+  sampleVideoUrl  String?  // Cloudinary URL for Admin review
+  
+  // KYC / Phone Verification
+  phoneNumber     String?  @unique
+  isPhoneVerified Boolean  @default(false)
+  otpCode         String?  // For Mock OTP verification
+  otpExpiresAt    DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("creator_profiles")
+}
+
+// --- RESOURCE MARKETPLACE MODELS ---
+
+model Resource {
+  id            String       @id @default(cuid())
+  title         String
+  description   String       @db.Text
+  type          ResourceType
+  contentUrl    String       // Cloudinary URL (Protected)
+  previewUrl    String?      // Cloudinary URL (Public snippet)
+  price         Float        @default(0.0)
+  language      String?      // e.g., "python", "javascript"
+  
+  // Metrics for sorting/trust
+  avgRating     Float        @default(0.0)
+  totalReviews  Int          @default(0)
+  isApproved    Boolean      @default(false)
+
+  // Relations
+  creatorId     Int
+  creator       User         @relation(fields: [creatorId], references: [userId])
+  
+  problemId     Int?         // Optional: Link to a specific coding problem
+  problem       Problem?     @relation(fields: [problemId], references: [problemId])
+  
+  reviews       Review[]
+  purchases     Purchase[]
+
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@map("resources")
+}
+
+model Purchase {
+  id         String   @id @default(cuid())
+  userId     Int
+  resourceId String
+  amount     Float
+  
+  user       User     @relation(fields: [userId], references: [userId])
+  resource   Resource @relation(fields: [resourceId], references: [id])
+
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, resourceId]) // Ensures one purchase per resource
+  @@map("purchases")
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  rating     Int      // 1-5 stars
+  comment    String   @db.Text
+  
+  userId     Int
+  resourceId String
+  
+  user       User     @relation(fields: [userId], references: [userId])
+  resource   Resource @relation(fields: [resourceId], references: [id])
+
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, resourceId]) // One review per purchase
+  @@map("resource_reviews")
+}
+
+// --- CODING PROBLEMS & CHALLENGES ---
 
 model Problem {
   problemId    Int       @id @default(autoincrement())
@@ -87,7 +200,8 @@ model Problem {
   submissions  Submission[]
   userStatuses UserProblemStatus[]
   challenges   ChallengeProblem[]
-  discussions  Discussion[] // Added link to discussions
+  discussions  Discussion[]
+  resources    Resource[] // Educational resources for this specific problem
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -95,27 +209,27 @@ model Problem {
   @@map("problems")
 }
 
-// --- NEW DISCUSSION MODELS ---
+// --- DISCUSSIONS (COMMUNITY) ---
 
 model Discussion {
-  id       String  @id @default(cuid())
-  title    String? // Only for the main post
-  content  String  @db.Text
-  language String? // e.g., "cpp", "python"
-
-  // Relations to User and Problem (IDs changed to Int to match parents)
-  userId Int
-  user   User @relation(fields: [userId], references: [userId], onDelete: Cascade)
-
+  id        String   @id @default(cuid())
+  title     String?  // Main post title
+  content   String   @db.Text
+  language  String?  // Tag (e.g., "cpp", "python")
+  isPinned  Boolean  @default(false) // Admin feature
+  
+  userId    Int
+  user      User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  
   problemId Int
   problem   Problem @relation(fields: [problemId], references: [problemId], onDelete: Cascade)
 
-  // Self-relation for nested replies
-  parentId String?
-  parent   Discussion?  @relation("DiscussionToDiscussion", fields: [parentId], references: [id])
-  replies  Discussion[] @relation("DiscussionToDiscussion")
+  // Nested Threading
+  parentId  String?
+  parent    Discussion?  @relation("DiscussionToDiscussion", fields: [parentId], references: [id])
+  replies   Discussion[] @relation("DiscussionToDiscussion")
 
-  // Upvotes handling
+  // Social Stats
   upvotes      Int                @default(0)
   upvoteTracks DiscussionUpvote[]
   isBlocked    Boolean            @default(false)
@@ -127,29 +241,13 @@ model Discussion {
 
   @@map("discussions")
 }
-
-model DiscussionUpvote {
-  id           Int    @id @default(autoincrement())
-  userId       Int
-  discussionId String
-
-  user       User       @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  discussion Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, discussionId]) // Ensures one upvote per user per comment
-  @@map("discussion_upvotes")
-}
-
 model DiscussionReport {
   id           Int      @id @default(autoincrement())
   userId       Int
   discussionId String
-  
-  // The category (e.g., SPAM, HARASSMENT)
   reportType   ReportType   @default(OTHER)
-  
-  //The specific user input explanation
   details      String?  @db.Text 
+
 
   user       User       @relation(fields: [userId], references: [userId], onDelete: Cascade)
   discussion Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
@@ -159,14 +257,25 @@ model DiscussionReport {
   @@unique([userId, discussionId]) 
   @@map("discussion_reports")
 }
+model DiscussionUpvote {
+  id           Int    @id @default(autoincrement())
+  userId       Int
+  discussionId String
 
-// --- REMAINING MODELS (Category, TestCase, Submission, etc.) ---
+  user       User       @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  discussion Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, discussionId])
+  @@map("discussion_upvotes")
+}
+
+// --- UTILITY MODELS ---
 
 model Category {
-  categoryId  Int       @id @default(autoincrement())
-  name        String    @unique
-  slug        String    @unique
-  description String?   @db.Text
+  categoryId  Int      @id @default(autoincrement())
+  name        String   @unique
+  slug        String   @unique
+  description String?  @db.Text
   problems    Problem[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

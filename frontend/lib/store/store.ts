@@ -8,6 +8,7 @@ import problemReducer from "@/lib/store/features/problems/problem.slice";
 import workspaceReducer from "@/lib/store/features/workspace/workspace.slice";
 import challengeReducer from "@/lib/store/features/challenge/challenge.slice";
 import discussionReducer from "@/lib/store/features/discussion/discussion.slice";
+import creatorReducer from "@/lib/store/features/creator/creator.slice";
 
 //setting up the root reducer
 const rootReducer = combineReducers({
@@ -17,6 +18,7 @@ const rootReducer = combineReducers({
   workspace: workspaceReducer,
   challenge: challengeReducer,
   discussion: discussionReducer,
+  creator: creatorReducer,
 });
 
 //setting up the persist configuration

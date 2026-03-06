@@ -20,6 +20,7 @@ export const getDiscussions = async (
   res: Response,
   next: NextFunction,
 ) => {
+export const getDiscussions = async (req: Request, res: Response, next: NextFunction) => {
   const { problemId } = req.params;
   const userId = req.query.userId
     ? parseInt(req.query.userId as string)
