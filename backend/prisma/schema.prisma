@@ -95,19 +95,19 @@ model User {
 // --- CREATOR & IDENTITY MODELS ---
 
 model CreatorProfile {
-  id              Int      @id @default(autoincrement())
-  userId          Int      @unique
-  user            User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  
-  bio             String?  @db.Text
-  portfolioUrl    String?
-  
-  isEmailVerified Boolean  @default(false)
-  otpCode         String?  // For Mock OTP verification
+  id     Int  @id @default(autoincrement())
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  bio          String? @db.Text
+  portfolioUrl String?
+
+  isEmailVerified Boolean   @default(false)
+  otpCode         String? // For Mock OTP verification
   otpExpiresAt    DateTime?
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("creator_profiles")
 }
@@ -115,63 +115,63 @@ model CreatorProfile {
 // --- RESOURCE MARKETPLACE MODELS ---
 
 model Resource {
-  id            String       @id @default(cuid())
-  title         String
-  description   String       @db.Text
-  type          ResourceType
-  contentUrl    String       // Cloudinary URL (Protected)
-  previewUrl    String?      // Cloudinary URL (Public snippet)
-  price         Float        @default(0.0)
-  language      String?      // e.g., "python", "javascript"
-  
+  id          String       @id @default(cuid())
+  title       String
+  description String       @db.Text
+  type        ResourceType
+  contentUrl  String // Cloudinary URL (Protected)
+  previewUrl  String? // Cloudinary URL (Public snippet)
+  price       Float        @default(0.0)
+  language    String? // e.g., "python", "javascript"
+
   // Metrics for sorting/trust
-  avgRating     Float        @default(0.0)
-  totalReviews  Int          @default(0)
-  isApproved    Boolean      @default(false)
+  avgRating    Float   @default(0.0)
+  totalReviews Int     @default(0)
+  isApproved   Boolean @default(false)
 
   // Relations
-  creatorId     Int
-  creator       User         @relation(fields: [creatorId], references: [userId])
-  
-  problemId     Int?         // Optional: Link to a specific coding problem
-  problem       Problem?     @relation(fields: [problemId], references: [problemId])
-  
-  reviews       Review[]
-  purchases     Purchase[]
+  creatorId Int
+  creator   User @relation(fields: [creatorId], references: [userId])
 
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  problemId Int? // Optional: Link to a specific coding problem
+  problem   Problem? @relation(fields: [problemId], references: [problemId])
+
+  reviews   Review[]
+  purchases Purchase[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("resources")
 }
 
 model Purchase {
-  id         String   @id @default(cuid())
+  id         String @id @default(cuid())
   userId     Int
   resourceId String
   amount     Float
-  
-  user       User     @relation(fields: [userId], references: [userId])
-  resource   Resource @relation(fields: [resourceId], references: [id])
 
-  createdAt  DateTime @default(now())
+  user     User     @relation(fields: [userId], references: [userId])
+  resource Resource @relation(fields: [resourceId], references: [id])
+
+  createdAt DateTime @default(now())
 
   @@unique([userId, resourceId]) // Ensures one purchase per resource
   @@map("purchases")
 }
 
 model Review {
-  id         String   @id @default(cuid())
-  rating     Int      // 1-5 stars
-  comment    String   @db.Text
-  
+  id      String @id @default(cuid())
+  rating  Int // 1-5 stars
+  comment String @db.Text
+
   userId     Int
   resourceId String
-  
-  user       User     @relation(fields: [userId], references: [userId])
-  resource   Resource @relation(fields: [resourceId], references: [id])
 
-  createdAt  DateTime @default(now())
+  user     User     @relation(fields: [userId], references: [userId])
+  resource Resource @relation(fields: [resourceId], references: [id])
+
+  createdAt DateTime @default(now())
 
   @@unique([userId, resourceId]) // One review per purchase
   @@map("resource_reviews")
@@ -209,22 +209,22 @@ model Problem {
 // --- DISCUSSIONS (COMMUNITY) ---
 
 model Discussion {
-  id        String   @id @default(cuid())
-  title     String?  // Main post title
-  content   String   @db.Text
-  language  String?  // Tag (e.g., "cpp", "python")
-  isPinned  Boolean  @default(false) // Admin feature
-  
-  userId    Int
-  user      User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  
+  id       String  @id @default(cuid())
+  title    String? // Main post title
+  content  String  @db.Text
+  language String? // Tag (e.g., "cpp", "python")
+  isPinned Boolean @default(false) // Admin feature
+
+  userId Int
+  user   User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
   problemId Int
   problem   Problem @relation(fields: [problemId], references: [problemId], onDelete: Cascade)
 
   // Nested Threading
-  parentId  String?
-  parent    Discussion?  @relation("DiscussionToDiscussion", fields: [parentId], references: [id])
-  replies   Discussion[] @relation("DiscussionToDiscussion")
+  parentId String?
+  parent   Discussion?  @relation("DiscussionToDiscussion", fields: [parentId], references: [id])
+  replies  Discussion[] @relation("DiscussionToDiscussion")
 
   // Social Stats
   upvotes      Int                @default(0)
@@ -232,7 +232,6 @@ model Discussion {
   isBlocked    Boolean            @default(false)
   reportCount  Int                @default(0)
   reports      DiscussionReport[]
-
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
 
@@ -254,6 +253,8 @@ model DiscussionReport {
   @@unique([userId, discussionId]) 
   @@map("discussion_reports")
 }
+
+
 model DiscussionUpvote {
   id           Int    @id @default(autoincrement())
   userId       Int
@@ -266,13 +267,15 @@ model DiscussionUpvote {
   @@map("discussion_upvotes")
 }
 
+
+
 // --- UTILITY MODELS ---
 
 model Category {
-  categoryId  Int      @id @default(autoincrement())
-  name        String   @unique
-  slug        String   @unique
-  description String?  @db.Text
+  categoryId  Int       @id @default(autoincrement())
+  name        String    @unique
+  slug        String    @unique
+  description String?   @db.Text
   problems    Problem[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
