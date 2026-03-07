@@ -4,7 +4,9 @@ import {
   getDiscussions, 
   toggleUpvote, 
   updateDiscussion, 
-  deleteDiscussion 
+  deleteDiscussion,
+  reportDiscussion,    
+  moderateDiscussion  
 } from "../controllers/discussion.controller.js";
 import { authenticateRequest } from "../middlewares/auth.middleware.js";
 
@@ -30,7 +32,7 @@ router.patch("/:id", authenticateRequest, updateDiscussion);
 
 /**
  * @route   DELETE /api/discussions/:id
- * @desc    Delete a discussion (Protected/Owner Only)
+ * @desc    Delete a discussion (Protected/Owner/Admin Only)
  */
 router.delete("/:id", authenticateRequest, deleteDiscussion);
 
@@ -39,5 +41,17 @@ router.delete("/:id", authenticateRequest, deleteDiscussion);
  * @desc    Toggle upvote/unvote on a discussion (Protected)
  */
 router.post("/:id/upvote", authenticateRequest, toggleUpvote);
+
+/**
+ * @route   POST /api/discussions/:id/report
+ * @desc    Report a discussion for violation (Protected)
+ */
+router.post("/:id/report", authenticateRequest, reportDiscussion);
+
+/**
+ * @route   PATCH /api/discussions/:id/moderate
+ * @desc    Block or Unblock a discussion (Admin Only)
+ */
+router.patch("/:id/moderate", authenticateRequest, moderateDiscussion);
 
 export default router;

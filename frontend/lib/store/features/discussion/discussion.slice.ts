@@ -9,7 +9,9 @@ import {
   toggleUpvoteThunk,
   updateDiscussionThunk,
   deleteDiscussionThunk,
-  pinDiscussionThunk,
+  moderateDiscussionThunk,
+  reportDiscussionThunk,
+  // pinDiscussionThunk,
 } from "./discussion.actions";
 
 interface DiscussionState {
@@ -87,14 +89,13 @@ const discussionSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // FETCH DISCUSSIONS (Handles initial load, filter changes, and search)
+      // FETCH DISCUSSIONS
       .addCase(fetchDiscussionsThunk.pending, (state) => {
         state.isLoading = true;
         state.error = null;
       })
       .addCase(fetchDiscussionsThunk.fulfilled, (state, action) => {
         state.isLoading = false;
-        // The data returned will already be filtered/searched by the backend
         state.items = action.payload.data;
       })
       .addCase(fetchDiscussionsThunk.rejected, (state, action) => {
@@ -113,14 +114,24 @@ const discussionSlice = createSlice({
         }
       })
 
-      // UPDATE ACTIONS (Toggle Upvote, Edit Content, Pin)
+      // UPDATE ACTIONS (Upvote, Edit)
       .addCase(toggleUpvoteThunk.fulfilled, (state, action) => {
         state.items = updateItemInTree(state.items, action.payload.data);
       })
       .addCase(updateDiscussionThunk.fulfilled, (state, action) => {
         state.items = updateItemInTree(state.items, action.payload.data);
       })
-      .addCase(pinDiscussionThunk.fulfilled, (state, action) => {
+
+      // NEW: REPORT ACTION
+      // This ensures the UI reflects the new reportCount immediately
+      .addCase(reportDiscussionThunk.fulfilled, (state, action) => {
+        // action.payload.data is the updated discussion returned from reportDiscussionService
+        state.items = updateItemInTree(state.items, action.payload.data);
+      })
+
+      // NEW: MODERATE ACTION
+      // This ensures the UI reflects Blocked/Unblocked status immediately
+      .addCase(moderateDiscussionThunk.fulfilled, (state, action) => {
         state.items = updateItemInTree(state.items, action.payload.data);
       })
 

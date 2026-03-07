@@ -5,20 +5,31 @@ import {
   updateDiscussionService,
   deleteDiscussionService,
   toggleUpvoteService,
+  moderateDiscussionService,
+  reportDiscussionService,
 } from "../services/discussion.service.js";
 import { ServiceError } from "../errors/service.error.js";
+import  { ReportType } from "../../generated/prisma/client.js";
 
 /**
  * GET /api/discussions/problem/:problemId
  */
-export const getDiscussions = async (req: Request, res: Response) => {
+export const getDiscussions = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   const { problemId } = req.params;
   const userId = req.query.userId
     ? parseInt(req.query.userId as string)
     : undefined;
+
+  // Extract role from the authenticated user (if logged in)
+  const userRole = (req as any).user?.role;
+
   const sortBy = req.query.sortBy as "newest" | "most_upvoted" | undefined;
   const language = req.query.language as string | undefined;
-  const search = req.query.search as string | undefined; // Capture search
+  const search = req.query.search as string | undefined;
 
   try {
     const data = await getByProblem(
@@ -27,10 +38,11 @@ export const getDiscussions = async (req: Request, res: Response) => {
       sortBy,
       language,
       search,
+      userRole, // Pass the role here
     );
     res.status(200).json({ success: true, data });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Server Error" });
+  } catch (err) {
+    next(err);
   }
 };
 /**
@@ -144,6 +156,75 @@ export const toggleUpvote = async (
     res.status(200).json({
       success: true,
       message: "UPVOTE_TOGGLED",
+      data: updated,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/discussions/:id/report
+ */
+export const reportDiscussion = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { id } = req.params;
+    const userId = (req as any).user?.sub;
+    const { type, details } = req.body;
+
+    if (!userId) throw new ServiceError("AUTH_CONTEXT_MISSING", 401);
+
+    // Validation: Ensure the 'type' provided matches the Enum
+    if (!Object.values(ReportType).includes(type as ReportType)) {
+      throw new ServiceError("INVALID_REPORT_TYPE", 400);
+    }
+
+    const reportedDiscussion = await reportDiscussionService(
+      id, 
+      Number(userId), 
+      type as ReportType, // Cast to Enum type
+      details
+    );
+
+    console.log("REPORT_INCIDENT_LOGGED: ", reportedDiscussion.id);
+
+    res.status(200).json({
+      success: true,
+      message: "DISCUSSION_REPORTED",
+    });
+  } catch (err: any) {
+    // Catch Prisma Unique Constraint Error (User reporting same post twice)
+    if (err.code === 'P2002') {
+      return res.status(409).json({
+        success: false,
+        message: "ALREADY_REPORTED",
+      });
+    }
+    next(err);
+  }
+};
+/**
+ * PATCH /api/discussions/:id/moderate (ADMIN ONLY)
+ */
+export const moderateDiscussion = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { id } = req.params;
+    const { action } = req.body; // "BLOCK" | "UNBLOCK"
+
+    // In your actual route file, ensure this is wrapped in an isAdmin middleware
+    const updated = await moderateDiscussionService(id, action);
+
+    res.status(200).json({
+      success: true,
+      message: `DISCUSSION_${action}ED`,
       data: updated,
     });
   } catch (err) {

@@ -1,3 +1,4 @@
+import type { ReportType } from "../../generated/prisma/client.js";
 import { prisma } from "../lib/prisma.js";
 
 /**
@@ -16,12 +17,15 @@ const formatDiscussion = (disc: any): any => {
 /**
  * Fetch all top-level discussions for a problem
  */
+// services/discussion.service.ts
+
 export const getByProblem = async (
   problemId: number,
   currentUserId?: number,
   sortBy: "newest" | "most_upvoted" = "newest",
   language?: string,
-  search?: string, // New parameter
+  search?: string,
+  userRole?: string, // Add userRole here
 ) => {
   const orderBy: any =
     sortBy === "most_upvoted" ? { upvotes: "desc" } : { createdAt: "desc" };
@@ -31,15 +35,10 @@ export const getByProblem = async (
       problemId,
       parentId: null,
       ...(language && language !== "all" ? { language } : {}),
-      // Search logic: looks for content matches
-      ...(search
-        ? {
-            content: {
-              contains: search,
-              mode: "insensitive",
-            },
-          }
-        : {}),
+      ...(search ? { content: { contains: search, mode: "insensitive" } } : {}),
+
+      // NEW LOGIC: Only filter out blocked posts if the user is NOT an admin
+      ...(userRole !== "ADMIN" ? { isBlocked: false } : {}),
     },
     include: {
       user: { select: { username: true, profile_pic_url: true, role: true } },
@@ -61,7 +60,6 @@ export const getByProblem = async (
 
   return discussions.map(formatDiscussion);
 };
-
 /**
  * Toggle Upvote logic
  */
@@ -172,5 +170,81 @@ export const deleteDiscussionService = async (
 ) => {
   return await prisma.discussion.delete({
     where: { id: discussionId, userId },
+  });
+};
+
+/**
+ * Report a discussion. Auto-blocks if reports reach 5.
+ */
+
+export const reportDiscussionService = async (
+  discussionId: string,
+  userId: number,
+  reportType: ReportType, // Strictly typed to your Prisma Enum
+  details?: string,
+) => {
+  return await prisma.$transaction(async (tx) => {
+    // 1. Create the report record
+    const created = await tx.discussionReport.create({
+      data: {
+        userId,
+        discussionId,
+        reportType, // Matches Enum in schema
+        details, 
+      },
+    });
+
+    console.log("Created discussion report entry ID: ", created.id);
+
+    // 2. Increment the count on the discussion
+    const updated = await tx.discussion.update({
+      where: { id: discussionId },
+      data: { reportCount: { increment: 1 } },
+    });
+
+    // 3. Auto-moderation logic: Block if threshold reached
+    const REPORT_THRESHOLD = 5;
+    if (updated.reportCount >= REPORT_THRESHOLD && !updated.isBlocked) {
+      await tx.discussion.update({
+        where: { id: discussionId },
+        data: { isBlocked: true },
+      });
+      console.log(
+        `AUTO_MODERATION: Discussion ${discussionId} blocked at ${updated.reportCount} reports.`,
+      );
+    }
+
+    return updated;
+  });
+};
+
+/**
+ * Admin: Get all flagged discussions
+ */
+export const getFlaggedDiscussions = async () => {
+  return await prisma.discussion.findMany({
+    where: { reportCount: { gt: 0 } },
+    include: {
+      user: { select: { username: true } },
+      reports: { include: { user: { select: { username: true } } } },
+    },
+    orderBy: { reportCount: "desc" },
+  });
+};
+
+/**
+ * Admin: Moderation Action
+ */
+export const moderateDiscussionService = async (
+  id: string,
+  action: "BLOCK" | "UNBLOCK",
+) => {
+  return await prisma.discussion.update({
+    where: { id },
+    data: {
+      isBlocked: action === "BLOCK",
+      // Optional: Reset count if unblocked
+      reportCount: action === "UNBLOCK" ? 0 : undefined,
+    },
   });
 };

@@ -3,6 +3,7 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import { discussionService } from "@/lib/services/discussion.service";
 import { handleAxiosError } from "@/utils/axios-error.util";
 import { CreateDiscussionDTO, Discussion } from "@/types/discussion.types";
+import api from "@/lib/api";
 
 export const fetchDiscussionsThunk = createAsyncThunk<
   { success: boolean; data: Discussion[] },
@@ -85,15 +86,41 @@ export const deleteDiscussionThunk = createAsyncThunk<
   }
 });
 
-// NEW: Admin Pin Action (Optional but recommended for Admin part)
-export const pinDiscussionThunk = createAsyncThunk<
-  { success: boolean; data: Discussion },
-  string,
-  { rejectValue: string }
->("discussions/pin", async (id, { rejectWithValue }) => {
-  try {
-    return await discussionService.togglePin(id);
-  } catch (error) {
-    return rejectWithValue(handleAxiosError(error) || "Failed to pin post");
+// // NEW: Admin Pin Action (Optional but recommended for Admin part)
+// export const pinDiscussionThunk = createAsyncThunk<
+//   { success: boolean; data: Discussion },
+//   string,
+//   { rejectValue: string }
+// >("discussions/pin", async (id, { rejectWithValue }) => {
+//   try {
+//     return await discussionService.togglePin(id);
+//   } catch (error) {
+//     return rejectWithValue(handleAxiosError(error) || "Failed to pin post");
+//   }
+// });
+
+export const reportDiscussionThunk = createAsyncThunk(
+  "discussion/report",
+  async ({ id, type, details }: { id: string; type: string; details: string }, { rejectWithValue }) => {
+    try {
+      const { data } = await api.post(`/discussions/${id}/report`, { type, details });
+      return { id, data: data.data }; // Returning the updated discussion object
+    } catch (error: any) {
+      // Look for the "ALREADY_REPORTED" message sent by the backend
+      const serverMessage = error.response?.data?.message || "REPORT_FAILED";
+      return rejectWithValue(serverMessage);
+    }
   }
-});
+);
+
+export const moderateDiscussionThunk = createAsyncThunk(
+  "discussion/moderate",
+  async ({ id, action }: { id: string; action: "BLOCK" | "UNBLOCK" }, { rejectWithValue }) => {
+    try {
+      const { data } = await api.patch(`/discussions/${id}/moderate`, { action });
+      return { id, action, data: data.data };
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || "Moderation failed");
+    }
+  }
+);
