@@ -25,7 +25,7 @@ export const getByProblem = async (
   sortBy: "newest" | "most_upvoted" = "newest",
   language?: string,
   search?: string,
-  userRole?: string, // Add userRole here
+  userRole?: string,
 ) => {
   const orderBy: any =
     sortBy === "most_upvoted" ? { upvotes: "desc" } : { createdAt: "desc" };
@@ -37,17 +37,40 @@ export const getByProblem = async (
       ...(language && language !== "all" ? { language } : {}),
       ...(search ? { content: { contains: search, mode: "insensitive" } } : {}),
 
-      // NEW LOGIC: Only filter out blocked posts if the user is NOT an admin
-      ...(userRole !== "ADMIN" ? { isBlocked: false } : {}),
+      // NEW LOGIC:
+      // 1. Admins see EVERYTHING.
+      // 2. Users see: (Non-blocked content) OR (Their own blocked content).
+      ...(userRole !== "ADMIN"
+        ? {
+            OR: [
+              { isBlocked: false },
+              { userId: currentUserId }, // Allows the owner to see their "Hidden" message
+            ],
+          }
+        : {}),
     },
     include: {
-      user: { select: { username: true, profile_pic_url: true, role: true } },
+      user: {
+        select: {
+          userId: true,
+          username: true,
+          profile_pic_url: true,
+          role: true,
+        },
+      },
       upvoteTracks: currentUserId
         ? { where: { userId: currentUserId } }
         : false,
       replies: {
+        // Apply the same OR logic to replies so owners see their blocked replies too
+        where:
+          userRole !== "ADMIN"
+            ? {
+                OR: [{ isBlocked: false }, { userId: currentUserId }],
+              }
+            : {},
         include: {
-          user: { select: { username: true, role: true } },
+          user: { select: { userId: true, username: true, role: true } },
           upvoteTracks: currentUserId
             ? { where: { userId: currentUserId } }
             : false,
@@ -180,53 +203,100 @@ export const deleteDiscussionService = async (
 export const reportDiscussionService = async (
   discussionId: string,
   userId: number,
-  reportType: ReportType, // Strictly typed to your Prisma Enum
+  reportType: ReportType,
   details?: string,
 ) => {
   return await prisma.$transaction(async (tx) => {
     // 1. Create the report record
-    const created = await tx.discussionReport.create({
+    await tx.discussionReport.create({
       data: {
         userId,
         discussionId,
-        reportType, // Matches Enum in schema
-        details, 
+        reportType,
+        details,
       },
     });
 
-    console.log("Created discussion report entry ID: ", created.id);
-
     // 2. Increment the count on the discussion
-    const updated = await tx.discussion.update({
+    const updatedStatus = await tx.discussion.update({
       where: { id: discussionId },
       data: { reportCount: { increment: 1 } },
+      select: { reportCount: true, isBlocked: true },
     });
 
-    // 3. Auto-moderation logic: Block if threshold reached
-    const REPORT_THRESHOLD = 5;
-    if (updated.reportCount >= REPORT_THRESHOLD && !updated.isBlocked) {
+    // 3. Auto-moderation logic: Block if threshold reached (3 reports)
+    const REPORT_THRESHOLD = 3;
+    if (
+      updatedStatus.reportCount >= REPORT_THRESHOLD &&
+      !updatedStatus.isBlocked
+    ) {
       await tx.discussion.update({
         where: { id: discussionId },
         data: { isBlocked: true },
       });
       console.log(
-        `AUTO_MODERATION: Discussion ${discussionId} blocked at ${updated.reportCount} reports.`,
+        `[AUTO_MOD] Discussion ${discussionId} blocked at ${updatedStatus.reportCount} reports.`,
       );
     }
 
-    return updated;
+    // 4. Return the FULL updated discussion object
+    return await tx.discussion.findUnique({
+      where: { id: discussionId },
+      include: {
+        user: {
+          select: {
+            userId: true,
+            full_name: true,
+            username: true,
+            profile_pic_url: true,
+          },
+        },
+        reports: {
+          include: {
+            user: {
+              select: {
+                username: true,
+              },
+            },
+          },
+        },
+        _count: {
+          select: {
+            replies: true,
+            upvoteTracks: true, // Correct relation name from your schema
+            reports: true,
+          },
+        },
+      },
+    });
   });
 };
 
 /**
  * Admin: Get all flagged discussions
  */
-export const getFlaggedDiscussions = async () => {
+/**
+ * Admin: Get discussions with high report counts (Threshold: 3+)
+ */
+export const getFlaggedDiscussionsService = async () => {
   return await prisma.discussion.findMany({
-    where: { reportCount: { gt: 0 } },
+    where: {
+      reportCount: { gte: 3 }, // Only show things that actually need attention
+    },
     include: {
-      user: { select: { username: true } },
-      reports: { include: { user: { select: { username: true } } } },
+      user: {
+        select: {
+          username: true,
+          profile_pic_url: true,
+        },
+      },
+      // Include the detailed report logs
+      reports: {
+        include: {
+          user: { select: { username: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      },
     },
     orderBy: { reportCount: "desc" },
   });
@@ -235,16 +305,34 @@ export const getFlaggedDiscussions = async () => {
 /**
  * Admin: Moderation Action
  */
+/**
+ * Admin: Moderation Action
+ */
 export const moderateDiscussionService = async (
   id: string,
   action: "BLOCK" | "UNBLOCK",
 ) => {
-  return await prisma.discussion.update({
-    where: { id },
-    data: {
-      isBlocked: action === "BLOCK",
-      // Optional: Reset count if unblocked
-      reportCount: action === "UNBLOCK" ? 0 : undefined,
-    },
+  return await prisma.$transaction(async (tx) => {
+    // 1. Update the discussion status
+    const updated = await tx.discussion.update({
+      where: { id },
+      data: {
+        isBlocked: action === "BLOCK",
+        // If unblocking, we reset the counter to give the user a clean slate
+        reportCount: action === "UNBLOCK" ? 0 : undefined,
+      },
+    });
+
+    // 2. If UNBLOCKING, delete the associated reports so the dashboard stays clean
+    if (action === "UNBLOCK") {
+      await tx.discussionReport.deleteMany({
+        where: { discussionId: id },
+      });
+      console.log(
+        `ADMIN_ACTION: Discussion ${id} cleared and reports deleted.`,
+      );
+    }
+
+    return updated;
   });
 };

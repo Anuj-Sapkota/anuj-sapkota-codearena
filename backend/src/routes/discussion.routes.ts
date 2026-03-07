@@ -6,7 +6,8 @@ import {
   updateDiscussion, 
   deleteDiscussion,
   reportDiscussion,    
-  moderateDiscussion  
+  moderateDiscussion,  
+  getFlaggedDiscussions
 } from "../controllers/discussion.controller.js";
 import { authenticateRequest } from "../middlewares/auth.middleware.js";
 
@@ -54,4 +55,10 @@ router.post("/:id/report", authenticateRequest, reportDiscussion);
  */
 router.patch("/:id/moderate", authenticateRequest, moderateDiscussion);
 
+/**
+ * @route   GET /api/discussions/reports/flagged
+ * @desc    Fetch all discussions with high report counts
+ */
+router.get("/reports/flagged", authenticateRequest, getFlaggedDiscussions);
+  
 export default router;

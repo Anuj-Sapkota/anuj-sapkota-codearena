@@ -33,4 +33,23 @@ export const discussionService = {
     const response = await api.delete(`/discussions/${discussionId}`);
     return response.data;
   },
+
+  // Report a discussion (User action)
+  report: async (id: string, type: string, details: string) => {
+    const response = await api.post(`/discussions/${id}/report`, { type, details });
+    return response.data;
+  },
+
+  // Get all flagged discussions (Admin action)
+  getFlagged: async () => {
+    const response = await api.get("/discussions/reports/flagged");
+    return response.data;
+  },
+
+  // Moderate: Block or Unblock (Admin action)
+  moderate: async (id: string, action: "BLOCK" | "UNBLOCK") => {
+    const response = await api.patch(`/discussions/${id}/moderate`, { action });
+    return response.data;
+  },
+  
 };

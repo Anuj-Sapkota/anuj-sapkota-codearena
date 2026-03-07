@@ -1,33 +1,35 @@
-// store/discussion.slice.ts
 "use client";
 
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { Discussion } from "@/types/discussion.types";
 import {
   fetchDiscussionsThunk,
+  fetchFlaggedDiscussionsThunk,
   createDiscussionThunk,
   toggleUpvoteThunk,
   updateDiscussionThunk,
   deleteDiscussionThunk,
   moderateDiscussionThunk,
   reportDiscussionThunk,
-  // pinDiscussionThunk,
 } from "./discussion.actions";
 
 interface DiscussionState {
   items: Discussion[];
+  flaggedItems: Discussion[]; // Admin-only dashboard data
   isLoading: boolean;
   error: string | null;
 }
 
 const initialState: DiscussionState = {
   items: [],
+  flaggedItems: [],
   isLoading: false,
   error: null,
 };
 
 /**
  * RECURSIVE HELPERS
+ * These handle deep updates in the nested discussion/reply tree.
  */
 const updateItemInTree = (
   items: Discussion[],
@@ -38,6 +40,7 @@ const updateItemInTree = (
       return {
         ...item,
         ...updatedItem,
+        // Ensure we don't accidentally wipe out nested replies if they weren't in the update
         replies: updatedItem.replies || item.replies,
       };
     }
@@ -89,7 +92,10 @@ const discussionSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // FETCH DISCUSSIONS
+      /**
+       * FETCH ACTIONS
+       */
+      // Standard User View
       .addCase(fetchDiscussionsThunk.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -103,7 +109,23 @@ const discussionSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // CREATE
+      // Admin Flagged View
+      .addCase(fetchFlaggedDiscussionsThunk.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchFlaggedDiscussionsThunk.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.flaggedItems = action.payload;
+      })
+      .addCase(fetchFlaggedDiscussionsThunk.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      })
+
+      /**
+       * WRITE ACTIONS
+       */
       .addCase(createDiscussionThunk.fulfilled, (state, action) => {
         state.isLoading = false;
         const newPost = action.payload.data;
@@ -114,30 +136,51 @@ const discussionSlice = createSlice({
         }
       })
 
-      // UPDATE ACTIONS (Upvote, Edit)
       .addCase(toggleUpvoteThunk.fulfilled, (state, action) => {
         state.items = updateItemInTree(state.items, action.payload.data);
       })
+
       .addCase(updateDiscussionThunk.fulfilled, (state, action) => {
         state.items = updateItemInTree(state.items, action.payload.data);
       })
 
-      // NEW: REPORT ACTION
-      // This ensures the UI reflects the new reportCount immediately
+      /**
+       * MODERATION & REPORTING
+       */
       .addCase(reportDiscussionThunk.fulfilled, (state, action) => {
-        // action.payload.data is the updated discussion returned from reportDiscussionService
+        // Update report count/status in main tree
         state.items = updateItemInTree(state.items, action.payload.data);
       })
 
-      // NEW: MODERATE ACTION
-      // This ensures the UI reflects Blocked/Unblocked status immediately
       .addCase(moderateDiscussionThunk.fulfilled, (state, action) => {
-        state.items = updateItemInTree(state.items, action.payload.data);
+        const { id, action: modAction, data } = action.payload;
+
+        // 1. Always sync the main discussion tree
+        state.items = updateItemInTree(state.items, data);
+
+        // 2. Manage the Flagged Dashboard list
+        if (modAction === "UNBLOCK") {
+          // If approved, remove from moderation queue entirely
+          state.flaggedItems = state.flaggedItems.filter(
+            (item) => item.id !== id,
+          );
+        } else {
+          // If blocked, update the item's state in the queue
+          state.flaggedItems = state.flaggedItems.map((item) =>
+            item.id === id ? data : item,
+          );
+        }
       })
 
-      // DELETE
+      /**
+       * DELETE
+       */
       .addCase(deleteDiscussionThunk.fulfilled, (state, action) => {
-        state.items = removeItemFromTree(state.items, action.payload.id);
+        const idToRemove = action.payload.id;
+        state.items = removeItemFromTree(state.items, idToRemove);
+        state.flaggedItems = state.flaggedItems.filter(
+          (i) => i.id !== idToRemove,
+        );
       });
   },
 });

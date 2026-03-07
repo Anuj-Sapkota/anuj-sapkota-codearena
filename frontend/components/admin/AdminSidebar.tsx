@@ -11,13 +11,14 @@ import {
   FaUsers,
   FaChartBar,
   FaTimes,
+  FaShieldAlt, // Added for Moderation
 } from "react-icons/fa";
 import { FiLogOut } from "react-icons/fi";
 import { LuSwords } from "react-icons/lu";
 import { useDispatch } from "react-redux";
 
 interface AdminSidebarProps {
-  onClose?: () => void; // Added this to fix the TS error
+  onClose?: () => void;
 }
 
 const navItems = [
@@ -25,12 +26,12 @@ const navItems = [
   { name: "Categories", href: "/admin/categories", icon: FaTags },
   { name: "Problems", href: "/admin/problems", icon: FaCode },
   { name: "Challenges", href: "/admin/challenges", icon: LuSwords },
+  { name: "Moderation", href: "/admin/moderation", icon: FaShieldAlt }, // Completed this
   { name: "Users", href: "/admin/users", icon: FaUsers },
 ];
 
 export default function AdminSidebar({ onClose }: AdminSidebarProps) {
   const pathname = usePathname();
-
   const dispatch = useDispatch<AppDispatch>();
 
   return (
@@ -60,12 +61,16 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
 
       <nav className="flex-1 px-4 space-y-1">
         {navItems.map((item) => {
-          const isActive = pathname === item.href;
+          // Check if the current pathname starts with the item href to keep it active
+          // when viewing sub-pages (like /admin/moderation/logs)
+          const isActive =
+            pathname === item.href || pathname.startsWith(`${item.href}/`);
+
           return (
             <Link
               key={item.href}
               href={item.href}
-              onClick={onClose} // Close sidebar when clicking a link on mobile
+              onClick={onClose}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
                 isActive
                   ? "bg-primary-1 text-white shadow-md shadow-primary-1/20"
@@ -81,9 +86,9 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
         })}
       </nav>
 
-      <div className="mx-4 mt-3 pt-3 border-t border-gray-100 mb-14 ">
+      <div className="mx-4 mt-3 pt-3 border-t border-gray-100 mb-14">
         <button
-          onClick={() => dispatch(logoutThunk())} //logout
+          onClick={() => dispatch(logoutThunk())}
           className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl text-red-500 hover:bg-red-50 transition-all text-sm font-black cursor-pointer"
         >
           <FiLogOut size={18} /> LOGOUT
