@@ -15,11 +15,6 @@ import { ReportType } from "../../generated/prisma/client.js";
 /**
  * GET /api/discussions/problem/:problemId
  */
-export const getDiscussions = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
 export const getDiscussions = async (req: Request, res: Response, next: NextFunction) => {
   const { problemId } = req.params;
   const userId = req.query.userId

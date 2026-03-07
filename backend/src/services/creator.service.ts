@@ -1,9 +1,8 @@
 import { ServiceError } from "../errors/service.error.js";
 import { prisma } from "../lib/prisma.js";
 import { sendVerificationEmail } from "./mail.service.js";
-
 export const applyToBecomeCreatorService = async (userId: number, data: any) => {
-  const { bio, portfolioUrl, githubUrl } = data;
+  const { bio, portfolioUrl } = data;
 
   const user = await prisma.user.findUnique({ where: { userId } });
   if (!user) throw new ServiceError("User not found", 404);
@@ -12,12 +11,24 @@ export const applyToBecomeCreatorService = async (userId: number, data: any) => 
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   const expiry = new Date(Date.now() + 10 * 60000); // 10 mins
 
-  // Upsert the profile and update user status to PENDING
   return await prisma.$transaction(async (tx) => {
+    // Correct property name is creatorProfile
     const profile = await tx.creatorProfile.upsert({
       where: { userId },
-      update: { bio, portfolioUrl, otpCode: otp, otpExpiresAt: expiry },
-      create: { userId, bio, portfolioUrl, otpCode: otp, otpExpiresAt: expiry },
+      update: { 
+        bio, 
+        portfolioUrl, 
+        otpCode: otp, 
+        otpExpiresAt: expiry,
+        isEmailVerified: false // Reset verification if they re-apply
+      },
+      create: { 
+        userId, 
+        bio, 
+        portfolioUrl, 
+        otpCode: otp, 
+        otpExpiresAt: expiry 
+      },
     });
 
     await tx.user.update({
@@ -25,7 +36,6 @@ export const applyToBecomeCreatorService = async (userId: number, data: any) => 
       data: { creatorStatus: "PENDING" },
     });
 
-    // Send the email (Real delivery)
     await sendVerificationEmail(user.email, otp);
 
     return profile;
@@ -45,7 +55,7 @@ export const verifyCreatorOTPService = async (userId: number, otp: string) => {
 
   return await prisma.creatorProfile.update({
     where: { userId },
-    data: { isPhoneVerified: true, otpCode: null, otpExpiresAt: null },
+    data: { isEmailVerified: true, otpCode: null, otpExpiresAt: null },
   });
 };
 
