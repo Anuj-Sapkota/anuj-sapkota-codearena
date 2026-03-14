@@ -26,9 +26,8 @@ export const creatorService = {
   },
 
   // Admin: Review a pending application
-  reviewApplication: async (data: AdminReviewDTO) => {
-    // Note: Ensure this matches your backend route: "/admin/review-creator"
-    const response = await api.patch("/creator/review-creator", data);
-    return response.data;
-  },
+reviewApplication: async (data: AdminReviewDTO) => {
+  const response = await api.patch("/creator/admin/review", data);
+  return response.data;
+},
 };

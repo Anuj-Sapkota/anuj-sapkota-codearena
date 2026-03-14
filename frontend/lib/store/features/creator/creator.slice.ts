@@ -10,7 +10,6 @@ interface CreatorState {
   step: "FORM" | "OTP" | "PENDING_ADMIN";
   isSubmitting: boolean;
   error: string | null;
-  // Admin & Status Data
   pendingApplications: any[];
   userApplicationStatus: any | null;
 }
@@ -27,7 +26,6 @@ const creatorSlice = createSlice({
   name: "creator",
   initialState,
   reducers: {
-    // 🚀 FIXED: Correctly accessing action.payload
     setStep: (state, action: PayloadAction<CreatorState["step"]>) => {
       state.step = action.payload;
     },
@@ -39,7 +37,7 @@ const creatorSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      /* --- 1. APPLY (Initial Submission) --- */
+      /* --- 1. APPLY --- */
       .addCase(applyCreatorThunk.pending, (state) => {
         state.isSubmitting = true;
         state.error = null;
@@ -69,15 +67,25 @@ const creatorSlice = createSlice({
 
       /* --- 3. FETCH FOR ADMIN --- */
       .addCase(fetchPendingApplicationsThunk.fulfilled, (state, action) => {
-        // action.payload.data if your backend wraps it in a data property
-        state.pendingApplications = action.payload.data || action.payload;
+        // Correctly accessing .data from your controller's response
+        state.pendingApplications = action.payload.data || [];
       })
 
       /* --- 4. ADMIN REVIEW --- */
+      .addCase(reviewApplicationThunk.pending, (state) => {
+        state.isSubmitting = true;
+      })
       .addCase(reviewApplicationThunk.fulfilled, (state, action) => {
+        state.isSubmitting = false;
+        // 🚀 THE FIX: Filter out the reviewed user from the list
+        // Using == or Number() ensures type-safety if one is a string
         state.pendingApplications = state.pendingApplications.filter(
-          (app) => app.userId !== action.payload.userId,
+          (app) => Number(app.userId) !== Number(action.payload.userId)
         );
+      })
+      .addCase(reviewApplicationThunk.rejected, (state, action) => {
+        state.isSubmitting = false;
+        state.error = action.payload as string;
       });
   },
 });

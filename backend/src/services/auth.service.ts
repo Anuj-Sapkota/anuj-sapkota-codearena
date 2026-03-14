@@ -26,6 +26,8 @@ const formatAuthResponse = (user: any): { user: AuthUser["user"] } => {
       total_points: user.total_points,
       google_id: user.google_id,
       github_id: user.github_id,
+      creatorStatus: user.creatorStatus, // 🚀 Ensure this is passed
+      creatorProfile: user.creatorProfile, // 🚀 Ensure this is passed
     },
   };
 };
@@ -79,6 +81,7 @@ const login = async ({
 }: LoginInput): Promise<AuthUser> => {
   const user = await prisma.user.findFirst({
     where: { OR: [{ email: emailOrUsername }, { username: emailOrUsername }] },
+    include: { creatorProfile: true },
   });
 
   if (!user) {
@@ -102,7 +105,12 @@ const login = async ({
 
 // --- GET USER PROFILE ---
 const getUserByUserID = async (userId: number): Promise<AuthUser> => {
-  const user = await prisma.user.findUnique({ where: { userId } });
+  // 🚀 FIXED: Added include so the profile data (status/reason) persists on refresh
+  const user = await prisma.user.findUnique({
+    where: { userId },
+    include: { creatorProfile: true },
+  });
+
   if (!user) throw new ServiceError("User not found", 404);
 
   return formatAuthResponse(user);

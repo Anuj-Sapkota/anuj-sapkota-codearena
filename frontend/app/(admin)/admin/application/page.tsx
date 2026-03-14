@@ -1,137 +1,201 @@
 "use client";
 
-import React, { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/lib/store/store";
 import {
   fetchPendingApplicationsThunk,
   reviewApplicationThunk,
 } from "@/lib/store/features/creator/creator.actions";
-import { RootState, AppDispatch } from "@/lib/store/store";
+import {
+  FiCheck,
+  FiX,
+  FiGithub,
+  FiGlobe,
+  FiMessageSquare,
+} from "react-icons/fi";
+import { toast } from "sonner";
 
-const AdminApplicationTable: React.FC = () => {
+export default function PendingCreatorsPage() {
   const dispatch = useDispatch<AppDispatch>();
+  const { pendingApplications, isSubmitting } = useSelector(
+    (state: RootState) => state.creator,
+  );
 
-  // Pulling state from our new creator slice
-  const { pendingApplications, isAdminLoading, isReviewing, error } =
-    useSelector((state: RootState) => state.creator);
+  const [selectedUser, setSelectedUser] = useState<number | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
 
   useEffect(() => {
     dispatch(fetchPendingApplicationsThunk());
   }, [dispatch]);
 
-  const handleReview = (userId: number, status: "APPROVED" | "REJECTED") => {
-    const confirmMessage = `Are you sure you want to ${status.toLowerCase()} this applicant?`;
-    if (window.confirm(confirmMessage)) {
-      dispatch(reviewApplicationThunk({ targetUserId: userId, status }));
+  // 🚀 FIXED: Added 'async' so we can await the dispatch and use .unwrap()
+  const handleReview = async (userId: number, status: "APPROVED" | "REJECTED") => {
+    if (status === "REJECTED" && !rejectionReason) {
+      toast.error("Please provide a reason for rejection.");
+      return;
+    }
+
+    try {
+      // Use .unwrap() to trigger the catch block if the backend returns an error
+      await dispatch(
+        reviewApplicationThunk({
+          targetUserId: userId,
+          status,
+          reason: status === "REJECTED" ? rejectionReason : undefined,
+        })
+      ).unwrap();
+
+      toast.success(
+        `Application ${status === "APPROVED" ? "approved" : "rejected"} successfully`
+      );
+
+      setSelectedUser(null);
+      setRejectionReason("");
+    } catch (err: any) {
+      toast.error(err || "Failed to update application status");
     }
   };
 
-  if (isAdminLoading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
-      <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-        <h2 className="text-xl font-bold text-gray-800">
-          Pending Creator Applications
-        </h2>
-        <p className="text-sm text-gray-500">
-          Review users who want to contribute resources
+    <div className="p-8 max-w-7xl mx-auto">
+      <div className="mb-10">
+        <h1 className="text-3xl font-black uppercase tracking-tighter">
+          Creator Applications
+        </h1>
+        <p className="text-slate-500 text-sm">
+          Review and verify expert profiles for the marketplace.
         </p>
       </div>
 
-      {error && (
-        <div className="m-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">
-          {error}
-        </div>
-      )}
-
-      <div className="overflow-x-auto">
+      <div className="bg-white border border-slate-200 rounded-sm overflow-hidden shadow-sm">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-gray-100 text-gray-600 uppercase text-xs font-semibold">
-              <th className="px-6 py-4">User Details</th>
-              <th className="px-6 py-4">Portfolio & Bio</th>
-              <th className="px-6 py-4 text-center">Actions</th>
+            <tr className="bg-slate-50 border-b border-slate-200">
+              <th className="p-4 text-[10px] font-black uppercase text-slate-500">
+                Applicant
+              </th>
+              <th className="p-4 text-[10px] font-black uppercase text-slate-500">
+                Links
+              </th>
+              <th className="p-4 text-[10px] font-black uppercase text-slate-500">
+                Bio / Background
+              </th>
+              <th className="p-4 text-[10px] font-black uppercase text-slate-500 text-right">
+                Actions
+              </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
-            {pendingApplications.length > 0 ? (
+          <tbody className="divide-y divide-slate-100">
+            {pendingApplications.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={4}
+                  className="p-20 text-center text-slate-400 font-medium italic"
+                >
+                  No pending applications found.
+                </td>
+              </tr>
+            ) : (
               pendingApplications.map((app) => (
                 <tr
                   key={app.userId}
-                  className="hover:bg-gray-50 transition-colors"
+                  className="hover:bg-slate-50/50 transition-colors"
                 >
-                  <td className="px-6 py-4">
-                    <div className="font-medium text-gray-900">
+                  <td className="p-4">
+                    <div className="font-bold text-slate-900">
                       {app.full_name}
                     </div>
-                    <div className="text-sm text-gray-500">@{app.username}</div>
-                    <div className="text-xs text-blue-500">{app.email}</div>
+                    <div className="text-xs text-slate-500">{app.email}</div>
                   </td>
-                  <td className="px-6 py-4">
-                    <a
-                      href={app.creatorProfile?.portfolioUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 underline text-sm block mb-1"
-                    >
-                      View Portfolio Link
-                    </a>
-                    <p className="text-gray-600 text-sm italic line-clamp-2">
-                      "{app.creatorProfile?.bio || "No bio provided"}"
+                  <td className="p-4">
+                    <div className="flex gap-3">
+                      <a
+                        href={app.creatorProfile?.githubUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 bg-slate-100 rounded-full hover:bg-slate-900 hover:text-white transition-all"
+                      >
+                        <FiGithub size={14} />
+                      </a>
+                      <a
+                        href={app.creatorProfile?.portfolioUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 bg-slate-100 rounded-full hover:bg-slate-900 hover:text-white transition-all"
+                      >
+                        <FiGlobe size={14} />
+                      </a>
+                    </div>
+                  </td>
+                  <td className="p-4 max-w-xs">
+                    <p className="text-xs text-slate-600 line-clamp-2">
+                      {app.creatorProfile?.bio}
                     </p>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex justify-center gap-3">
+                  <td className="p-4">
+                    <div className="flex justify-end gap-2">
                       <button
-                        disabled={isReviewing}
+                        disabled={isSubmitting}
                         onClick={() => handleReview(app.userId, "APPROVED")}
-                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50"
+                        className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white text-[10px] font-black uppercase rounded-sm hover:bg-emerald-600 transition-all disabled:opacity-50"
                       >
-                        Approve
+                        <FiCheck /> Approve
                       </button>
                       <button
-                        disabled={isReviewing}
-                        onClick={() => handleReview(app.userId, "REJECTED")}
-                        className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-4 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50"
+                        disabled={isSubmitting}
+                        onClick={() => setSelectedUser(app.userId)}
+                        className="flex items-center gap-2 px-4 py-2 bg-rose-500 text-white text-[10px] font-black uppercase rounded-sm hover:bg-rose-600 transition-all disabled:opacity-50"
                       >
-                        Reject
+                        <FiX /> Reject
                       </button>
                     </div>
                   </td>
                 </tr>
               ))
-            ) : (
-              <tr>
-                <td
-                  colSpan={3}
-                  className="px-6 py-12 text-center text-gray-500"
-                >
-                  <div className="text-4xl mb-2">🎉</div>
-                  <p className="text-lg font-medium">
-                    No pending applications!
-                  </p>
-                  <p className="text-sm">You've cleared the entire queue.</p>
-                </td>
-              </tr>
             )}
           </tbody>
         </table>
       </div>
 
-      {isReviewing && (
-        <div className="bg-blue-50 px-6 py-2 text-center text-blue-700 text-xs animate-pulse">
-          Processing decision... please wait.
+      {/* --- REJECTION MODAL --- */}
+      {selectedUser && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-6">
+          <div className="bg-white w-full max-w-md p-8 rounded-sm shadow-xl">
+            <div className="flex items-center gap-3 mb-6">
+              <FiMessageSquare className="text-rose-500" size={24} />
+              <h2 className="text-xl font-black uppercase tracking-tighter">
+                Rejection Feedback
+              </h2>
+            </div>
+            <textarea
+              className="w-full border p-4 text-sm bg-slate-50 focus:outline-none focus:border-slate-900 rounded-sm"
+              rows={4}
+              placeholder="Explain why the application was denied..."
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+            />
+            <div className="flex gap-3 mt-8">
+              <button
+                onClick={() => {
+                  setSelectedUser(null);
+                  setRejectionReason("");
+                }}
+                className="flex-1 py-3 text-xs font-black uppercase border border-slate-200 hover:bg-slate-50 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={isSubmitting}
+                onClick={() => handleReview(selectedUser, "REJECTED")}
+                className="flex-1 py-3 bg-slate-900 text-white text-xs font-black uppercase hover:bg-slate-800 transition-all disabled:opacity-50"
+              >
+                {isSubmitting ? "Processing..." : "Confirm Reject"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
   );
-};
-
-export default AdminApplicationTable;
+}
