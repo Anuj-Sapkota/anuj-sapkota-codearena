@@ -1,5 +1,4 @@
 import { createSlice } from "@reduxjs/toolkit";
-
 import {
   getMeThunk,
   loginThunk,
@@ -8,6 +7,9 @@ import {
   setInitialPasswordThunk,
   updateThunk,
 } from "@/lib/store/features/auth/auth.actions";
+
+// 🚀 1. Import your Creator Thunk so the Auth slice can listen to it
+import { verifyCreatorOTPThunk } from "@/lib/store/features/creator/creator.actions";
 
 import type { AuthState } from "@/types/auth.types";
 
@@ -34,7 +36,7 @@ export const authSlice = createSlice({
       state.error = null;
       state.isLoading = false;
     },
-    //to manually clear the social id
+    // To manually clear the social id
     updateSocialLinks: (
       state,
       action: {
@@ -109,6 +111,7 @@ export const authSlice = createSlice({
         state.isAuthenticated = true;
         state.user = action.payload.user;
       })
+      
       /* --- LOGOUT --- */
       .addCase(logoutThunk.fulfilled, (state) => {
         state.user = null;
@@ -118,9 +121,28 @@ export const authSlice = createSlice({
         state.user = null;
         state.isAuthenticated = false;
       })
+
+      /* --- SET INITIAL PASSWORD --- */
       .addCase(setInitialPasswordThunk.fulfilled, (state) => {
         if (state.user) {
           state.user.has_password = true;
+        }
+      })
+
+      /* --- 🚀 CREATOR VERIFICATION SYNC --- */
+      // This is the "Magic Fix". When OTP is verified successfully, 
+      // we update the user object in the Auth slice so Redux Persist saves it.
+      .addCase(verifyCreatorOTPThunk.fulfilled, (state, action) => {
+        // action.payload.data should contain the updated user from your backend
+        const updatedUser = action.payload.data;
+        
+        if (state.user && updatedUser) {
+          state.user = {
+            ...state.user,
+            creatorStatus: updatedUser.creatorStatus || "PENDING",
+            // Also sync the profile if your backend returns it
+            creatorProfile: updatedUser.creatorProfile || state.user.creatorProfile
+          };
         }
       });
   },

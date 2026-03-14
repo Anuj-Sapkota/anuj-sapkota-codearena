@@ -28,7 +28,7 @@ app.use(cookieParser());
 app.use(express.json());
 
 const corsOptions = {
-  origin: ["http://localhost:3000"], //DEVELOPMENT ONLY ____________________________________
+  origin: ["http://localhost:3000"], //________________DEVELOPMENT ONLY ____________________________________
   credentials: true,
 };
 

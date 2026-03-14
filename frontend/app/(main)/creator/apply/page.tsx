@@ -18,18 +18,21 @@ import {
   FiArrowRight,
   FiXCircle,
 } from "react-icons/fi";
-import { resetCreatorState } from "@/lib/store/features/creator/creator.slice";
+import {
+  resetCreatorState,
+  setStep,
+} from "@/lib/store/features/creator/creator.slice";
 
 export default function CreatorApplyPage() {
   const dispatch = useDispatch<AppDispatch>();
 
-  // Get data from Redux
-  const { user } = useSelector((state: RootState) => state.auth);
-  const { step, isSubmitting, isVerifying, error } = useSelector(
+  const { user, isLoading: authLoading } = useSelector(
+    (state: RootState) => state.auth,
+  );
+  const { step, isSubmitting, error } = useSelector(
     (state: RootState) => state.creator,
   );
 
-  // Local Form State
   const [formData, setFormData] = useState({
     bio: "",
     portfolioUrl: "",
@@ -37,16 +40,22 @@ export default function CreatorApplyPage() {
   });
   const [otp, setOtp] = useState("");
 
-  // Clean up state on unmount
+  // 🚀 SYNC LOGIC
   useEffect(() => {
-    return () => {
-      dispatch(resetCreatorState());
-    };
-  }, [dispatch]);
+    // If user is already PENDING in DB, lock the UI
+    if (user?.creatorStatus === "PENDING") {
+      dispatch(setStep("PENDING_ADMIN"));
+    }
+
+    // If user is REJECTED in DB, but the local UI is still on "OTP" or "PENDING",
+    // reset them so they can see the rejection feedback.
+    if (user?.creatorStatus === "REJECTED" && step === "PENDING_ADMIN") {
+      dispatch(setStep("FORM"));
+    }
+  }, [user?.creatorStatus, dispatch, step]);
 
   const handleApply = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("This the form data", formData); // DEBUG----------------------
     dispatch(applyCreatorThunk(formData));
   };
 
@@ -56,19 +65,31 @@ export default function CreatorApplyPage() {
     }
   };
 
-  // --- VIEW 1: APPROVED STATE ---
+  if (authLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin" />
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+            Verifying Profile
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // --- VIEW 1: APPROVED ---
   if (user?.creatorStatus === "APPROVED") {
     return (
       <div className="max-w-2xl mx-auto mt-20 text-center p-12 border border-emerald-100 bg-white shadow-sm rounded-sm">
         <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6">
           <FiCheckCircle size={40} />
         </div>
-        <h1 className="text-3xl font-black text-slate-900 uppercase">
+        <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">
           Verification Successful
         </h1>
         <p className="text-slate-500 mt-4 text-sm leading-relaxed">
-          Congratulations! You are now a verified Creator on CodeArena. You can
-          now upload resources, set pricing, and manage your students.
+          Congratulations! You are now a verified Creator.
         </p>
         <button
           onClick={() => (window.location.href = "/creator/dashboard")}
@@ -80,208 +101,164 @@ export default function CreatorApplyPage() {
     );
   }
 
-  // --- VIEW 2: PENDING / UNDER REVIEW ---
-  if (step === "PENDING_ADMIN" || user?.creatorStatus === "PENDING") {
+  // --- VIEW 2: PENDING ---
+  if (user?.creatorStatus === "PENDING" || step === "PENDING_ADMIN") {
     return (
-      <div className="max-w-2xl mx-auto mt-20 text-center p-12 border border-slate-200 bg-white shadow-sm rounded-sm">
-        <FiClock
-          size={50}
-          className="text-blue-500 mx-auto mb-6 animate-pulse"
-        />
-        <h2 className="text-2xl font-black text-slate-900 uppercase">
-          Application Under Review
+      <div className="max-w-4xl mx-auto mt-20 p-6">
+        <h2 className="text-xl font-black text-slate-900 uppercase mb-6 tracking-tighter text-center md:text-left">
+          Application Status
         </h2>
-        <p className="text-slate-500 mt-4 text-sm">
-          Your portfolio and identity have been submitted to our administration
-          team. The vetting process usually takes{" "}
-          <span className="font-bold text-slate-800">24-48 hours</span>.
-        </p>
-        <div className="mt-8 p-4 bg-slate-50 rounded-sm flex items-start gap-3 text-left">
-          <FiInfo className="text-slate-400 mt-1 flex-shrink-0" />
-          <p className="text-[12px] text-slate-600">
-            We will send a confirmation email to <strong>{user?.email}</strong>{" "}
-            once a decision is made. Until then, your creator features remain
-            locked.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // --- VIEW 3: REJECTED STATE (Show reason and allow re-application) ---
-  if (user?.creatorStatus === "REJECTED") {
-    return (
-      <div className="max-w-2xl mx-auto mt-20 p-12 border border-rose-100 bg-white shadow-sm rounded-sm text-center">
-        <FiXCircle size={50} className="text-rose-500 mx-auto mb-6" />
-        <h2 className="text-2xl font-black text-slate-900 uppercase">
-          Application Denied
-        </h2>
-        <div className="mt-4 p-4 bg-rose-50 border border-rose-100 text-rose-700 text-sm rounded-sm italic">
-          &quot;
-          {user?.creatorProfile?.rejectionReason ||
-            "Your profile did not meet our community guidelines."}
-          &quot;
-        </div>
-        <button
-          onClick={() => dispatch(resetCreatorState())}
-          className="mt-8 text-sm font-black text-slate-900 underline uppercase tracking-tighter"
-        >
-          Update Details and Re-Apply
-        </button>
-      </div>
-    );
-  }
-
-  // --- VIEW 4: MAIN APPLICATION STEPS ---
-  return (
-    <div className="max-w-5xl mx-auto py-20 px-6">
-      <div className="mb-12">
-        <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tighter">
-          Creator <span className="text-primary-1">Onboarding</span>
-        </h1>
-        <p className="text-slate-500 mt-2 font-medium">
-          Elevate your account to start sharing professional coding resources.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-        {/* LEFT: Guidelines */}
-        <div className="lg:col-span-1 space-y-8">
-          <div className="space-y-4">
-            <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest">
-              Requirements
-            </h3>
-            <ul className="space-y-4">
-              {[
-                "Active GitHub profile with public repositories.",
-                "Professional bio highlighting your expertise.",
-                "Valid email for identity verification.",
-                "Ownership of all uploaded resource materials.",
-              ].map((text, i) => (
-                <li key={i} className="flex gap-3 text-sm text-slate-600">
-                  <FiArrowRight className="text-primary-1 mt-1 flex-shrink-0" />
-                  {text}
-                </li>
-              ))}
-            </ul>
+        <div className="border border-slate-200 bg-white p-10 rounded-sm shadow-sm">
+          <div className="flex flex-col md:flex-row items-center gap-10">
+            <div className="w-20 h-20 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center flex-shrink-0 animate-pulse">
+              <FiClock size={40} />
+            </div>
+            <div className="flex-1 text-center md:text-left">
+              <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
+                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">
+                  Under Review
+                </h3>
+              </div>
+              <p className="text-slate-500 text-sm leading-relaxed">
+                Our administration team is currently reviewing your GitHub and
+                Portfolio details.
+              </p>
+              <div className="mt-8 p-4 bg-slate-50 rounded-sm flex items-start gap-3 text-left">
+                <FiInfo className="text-slate-400 mt-1 flex-shrink-0" />
+                <p className="text-[12px] text-slate-600">
+                  The vetting process usually takes 24-48 hours. Notification
+                  sent to <strong>{user?.email}</strong>.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
+      </div>
+    );
+  }
 
-        {/* RIGHT: Form / OTP Interaction */}
+  // --- VIEW 3: REJECTED ---
+  if (user?.creatorStatus === "REJECTED" && step !== "FORM") {
+    return (
+      <div className="max-w-4xl mx-auto mt-20 p-6">
+        <h2 className="text-xl font-black text-slate-900 uppercase mb-6 text-center md:text-left">
+          Application Status
+        </h2>
+        <div className="border border-rose-100 bg-white p-10 rounded-sm shadow-sm text-center md:text-left">
+          <FiXCircle size={48} className="text-rose-500 mb-4 mx-auto md:mx-0" />
+          <h3 className="text-2xl font-black text-slate-900 uppercase mb-4">
+            Application Denied
+          </h3>
+          <div className="p-5 bg-rose-50 border-l-4 border-rose-500 text-rose-700 text-sm italic mb-6">
+            &quot;
+            {user?.creatorProfile?.rejectionReason || "Requirements not met."}
+            &quot;
+          </div>
+          <button
+            onClick={() => dispatch(setStep("FORM"))}
+            className="text-xs font-black text-slate-900 underline uppercase tracking-widest"
+          >
+            Update Details & Re-Apply
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // --- VIEW 4: FORM / OTP ---
+  return (
+    <div className="max-w-5xl mx-auto py-20 px-6">
+      <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tighter mb-12">
+        Creator <span className="text-primary-1">Onboarding</span>
+      </h1>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+        <div className="lg:col-span-1 space-y-4">
+          <h3 className="text-xs font-black uppercase text-slate-400">
+            Requirements
+          </h3>
+          <ul className="space-y-3 text-sm text-slate-600 font-medium">
+            {[
+              "Public GitHub Activity",
+              "Portfolio Link",
+              "Email Verification",
+            ].map((r, i) => (
+              <li key={i} className="flex gap-2 items-center">
+                <FiArrowRight className="text-primary-1" /> {r}
+              </li>
+            ))}
+          </ul>
+        </div>
+
         <div className="lg:col-span-2">
-          <div className="bg-white border border-slate-200 rounded-sm shadow-sm">
-            {step === "FORM" && (
+          <div className="bg-white border border-slate-200 rounded-sm shadow-sm overflow-hidden">
+            {step === "FORM" ? (
               <form onSubmit={handleApply} className="p-10 space-y-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black uppercase text-slate-500 flex items-center gap-2">
-                      <FiGlobe /> Portfolio URL
-                    </label>
-                    <input
-                      type="url"
-                      required
-                      className="w-full border-b-2 border-slate-100 py-2 focus:outline-none focus:border-slate-900 transition-colors text-sm"
-                      placeholder="https://janedoe.dev"
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          portfolioUrl: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black uppercase text-slate-500 flex items-center gap-2">
-                      <FiGithub /> GitHub URL
-                    </label>
-                    <input
-                      type="url"
-                      required
-                      className="w-full border-b-2 border-slate-100 py-2 focus:outline-none focus:border-slate-900 transition-colors text-sm"
-                      placeholder="https://github.com/jane-doe"
-                      onChange={(e) =>
-                        setFormData({ ...formData, githubUrl: e.target.value })
-                      }
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[11px] font-black uppercase text-slate-500">
-                    Professional Bio
-                  </label>
-                  <textarea
-                    rows={4}
+                  <input
+                    type="url"
                     required
-                    className="w-full border border-slate-100 p-4 focus:outline-none focus:border-slate-900 transition-colors text-sm bg-slate-50/50 rounded-sm"
-                    placeholder="Briefly describe your background in software engineering or teaching..."
+                    value={formData.portfolioUrl}
+                    className="w-full border-b-2 py-2 focus:outline-none focus:border-slate-900 text-sm"
+                    placeholder="Portfolio URL"
                     onChange={(e) =>
-                      setFormData({ ...formData, bio: e.target.value })
+                      setFormData({ ...formData, portfolioUrl: e.target.value })
+                    }
+                  />
+                  <input
+                    type="url"
+                    required
+                    value={formData.githubUrl}
+                    className="w-full border-b-2 py-2 focus:outline-none focus:border-slate-900 text-sm"
+                    placeholder="GitHub URL"
+                    onChange={(e) =>
+                      setFormData({ ...formData, githubUrl: e.target.value })
                     }
                   />
                 </div>
-
+                <textarea
+                  rows={4}
+                  required
+                  value={formData.bio}
+                  className="w-full border border-slate-100 p-4 focus:outline-none focus:border-slate-900 text-sm bg-slate-50/50"
+                  placeholder="Tell us about yourself..."
+                  onChange={(e) =>
+                    setFormData({ ...formData, bio: e.target.value })
+                  }
+                />
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full py-4 bg-slate-900 text-white font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full py-4 bg-slate-900 text-white font-black text-xs uppercase tracking-widest disabled:opacity-50"
                 >
-                  {isSubmitting
-                    ? "Processing Request..."
-                    : "Submit Application"}
-                  {!isSubmitting && <FiArrowRight />}
+                  {isSubmitting ? "Processing..." : "Submit Application"}
                 </button>
               </form>
-            )}
-
-            {step === "OTP" && (
+            ) : (
               <div className="p-16 text-center space-y-8">
-                <div className="w-16 h-16 bg-primary-1/10 rounded-full flex items-center justify-center mx-auto text-primary-1">
-                  <FiMail size={32} />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-black text-slate-900 uppercase">
-                    Verify Your Email
-                  </h2>
-                  <p className="text-sm text-slate-500 mt-1">
-                    We&apos;ve sent a 6-digit code to{" "}
-                    <span className="font-bold">{user?.email}</span>
-                  </p>
-                </div>
-
+                <FiMail size={32} className="mx-auto text-primary-1" />
+                <h2 className="text-2xl font-black text-slate-900 uppercase">
+                  Enter OTP
+                </h2>
                 <input
                   type="text"
                   maxLength={6}
-                  className="block w-full max-w-[240px] mx-auto text-center text-4xl font-black tracking-[12px] border-b-4 border-slate-900 focus:outline-none py-4"
-                  placeholder="000000"
                   value={otp}
+                  className="block w-full max-w-[200px] mx-auto text-center text-4xl font-black border-b-4 border-slate-900 focus:outline-none py-2"
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
                 />
-
-                <div className="pt-4">
-                  <button
-                    onClick={handleVerify}
-                    disabled={isVerifying || otp.length < 6}
-                    className="w-full py-4 bg-primary-1 text-white font-black text-xs uppercase tracking-widest hover:bg-primary-2 transition-all disabled:opacity-50"
-                  >
-                    {isVerifying
-                      ? "Validating Code..."
-                      : "Complete Verification"}
-                  </button>
-                  <p className="mt-6 text-[11px] text-slate-400 uppercase font-bold tracking-tighter">
-                    Didn&apos;t get the code?{" "}
-                    <span className="text-slate-900 cursor-pointer underline">
-                      Resend
-                    </span>
-                  </p>
-                </div>
+                <button
+                  onClick={handleVerify}
+                  disabled={otp.length < 6 || isSubmitting}
+                  className="w-full py-4 bg-primary-1 text-white font-black text-xs uppercase tracking-widest"
+                >
+                  {isSubmitting ? "Verifying..." : "Complete Application"}
+                </button>
               </div>
             )}
           </div>
-
           {error && (
-            <div className="mt-6 p-4 bg-rose-50 border border-rose-100 text-rose-600 text-[12px] font-bold flex items-center gap-3 animate-shake">
-              <FiAlertCircle className="flex-shrink-0" size={16} />
+            <div className="mt-4 p-4 bg-rose-50 text-rose-600 text-[12px] font-bold border border-rose-100">
               {error}
             </div>
           )}

@@ -1,8 +1,8 @@
 import api from "../api";
-import { 
-  CreatorApplicationDTO, 
-  VerifyOTPDTO, 
-  AdminReviewDTO 
+import {
+  CreatorApplicationDTO,
+  VerifyOTPDTO,
+  AdminReviewDTO,
 } from "@/types/creator.types";
 
 export const creatorService = {
@@ -18,9 +18,17 @@ export const creatorService = {
     return response.data;
   },
 
+  // Admin: Fetch all pending applications
+  // Updated to use your 'api' instance and correct endpoint
+  fetchPendingApplications: async () => {
+    const response = await api.get("/creator/pending-creators");
+    return response.data; // { success: true, data: [...] }
+  },
+
   // Admin: Review a pending application
   reviewApplication: async (data: AdminReviewDTO) => {
-    const response = await api.patch("/creator/admin/review", data);
+    // Note: Ensure this matches your backend route: "/admin/review-creator"
+    const response = await api.patch("/creator/review-creator", data);
     return response.data;
-  }
+  },
 };
