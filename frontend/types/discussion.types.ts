@@ -16,6 +16,7 @@ export interface Discussion {
   createdAt: string | Date;
   updatedAt: string | Date;
   reportCount: number;
+  isBlocked: boolean;
   // Relations
   user: UserBasicInfo;
   replies?: Discussion[];

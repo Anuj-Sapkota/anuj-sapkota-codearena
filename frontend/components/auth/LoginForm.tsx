@@ -32,7 +32,7 @@ const LoginForm = ({ onSuccess, onSwitch }: AuthModalProps) => {
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginCredentials>({
-    resolver: yupResolver(loginSchema),
+    resolver: yupResolver(loginSchema) as any,
   });
 
   const onSubmit = async (data: LoginCredentials) => {
@@ -66,7 +66,7 @@ const LoginForm = ({ onSuccess, onSwitch }: AuthModalProps) => {
       </div>
 
       <form
-        onSubmit={handleSubmit(onSubmit)}
+        onSubmit={handleSubmit(onSubmit as any)}
         className="flex flex-col gap-5 px-2"
       >
         {/* Email Field */}

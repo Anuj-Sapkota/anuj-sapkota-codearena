@@ -62,7 +62,7 @@ export const ProblemDescription = ({ problem }: { problem: Problem }) => {
         ).map((tab) => (
           <button
             key={tab.id}
-            onClick={() => dispatch(setDescriptionTab(tab.id))}
+            onClick={() => dispatch(setDescriptionTab(tab.id as any))}
             className={`flex cursor-pointer items-center gap-2 px-6 py-4 text-[10px] font-black uppercase tracking-[0.15em] transition-all relative ${
               isActive(tab.id)
                 ? "text-emerald-400 bg-[#27272a]"

@@ -33,7 +33,7 @@ const RegisterForm = ({ onSuccess, onSwitch }: AuthModalProps) => {
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<RegisterCredentials>({
-    resolver: yupResolver(registerSchema),
+    resolver: yupResolver(registerSchema) as any,
   });
 
   const onSubmit = async (data: RegisterCredentials) => {
@@ -67,7 +67,7 @@ const RegisterForm = ({ onSuccess, onSwitch }: AuthModalProps) => {
       </div>
 
       <form
-        onSubmit={handleSubmit(onSubmit)}
+        onSubmit={handleSubmit(onSubmit as any)}
         className="flex flex-col gap-5 px-2"
       >
         {/* Full Name */}

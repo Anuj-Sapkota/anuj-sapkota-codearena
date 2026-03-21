@@ -75,11 +75,13 @@ export const SubmissionDetail = ({
         <div className="bg-red-50 border-l-4 border-red-500 rounded-r-xl p-5">
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-2 text-red-700 font-black text-xs uppercase tracking-widest">
-              <span className="bg-red-500 text-white px-2 py-0.5 rounded text-[10px]">Error</span>
+              <span className="bg-red-500 text-white px-2 py-0.5 rounded text-[10px]">
+                Error
+              </span>
               Execution_Failure_Logs
             </div>
             <pre className="text-red-600 text-[13px] font-mono whitespace-pre-wrap leading-relaxed bg-white/50 p-3 rounded-lg border border-red-100">
-              {cleanError(submission.failMessage || output) ||
+              {cleanError((submission.failMessage || output) as string) ||
                 "System could not capture specific error trace."}
             </pre>
           </div>
@@ -91,13 +93,21 @@ export const SubmissionDetail = ({
         <MetricTile
           icon={<MdAccessTime />}
           label="Runtime"
-          value={isAccepted && submission.time ? `${(submission.time * 1000).toFixed(0)} ms` : "—"}
+          value={
+            isAccepted && submission.time
+              ? `${(submission.time * 1000).toFixed(0)} ms`
+              : "—"
+          }
           isAccepted={isAccepted}
         />
         <MetricTile
           icon={<MdMemory />}
           label="Memory"
-          value={isAccepted && submission.memory ? `${(submission.memory / 1024).toFixed(1)} MB` : "—"}
+          value={
+            isAccepted && submission.memory
+              ? `${(submission.memory / 1024).toFixed(1)} MB`
+              : "—"
+          }
           isAccepted={isAccepted}
         />
         <MetricTile
@@ -113,9 +123,15 @@ export const SubmissionDetail = ({
         <div className="bg-white border-2 border-slate-100 rounded-2xl p-6 space-y-4 shadow-sm">
           <div className="flex justify-between items-end">
             <div className="space-y-1">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Efficiency_Report</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                Efficiency_Report
+              </p>
               <p className="text-sm text-slate-700 font-medium">
-                Your solution is faster than <span className="text-emerald-600 font-black">{stats.runtimePercent}%</span> of peers
+                Your solution is faster than{" "}
+                <span className="text-emerald-600 font-black">
+                  {stats.runtimePercent}%
+                </span>{" "}
+                of peers
               </p>
             </div>
             <span className="text-2xl">🚀</span>
@@ -168,9 +184,13 @@ const MetricTile = ({ icon, label, value, isAccepted }: MetricTileProps) => (
   <div className="bg-white border-2 border-slate-100 p-4 rounded-2xl flex flex-col gap-1 shadow-sm transition-hover hover:border-slate-200">
     <div className="flex items-center gap-2 text-slate-400">
       <span className="text-lg">{icon}</span>
-      <span className="text-[9px] font-black uppercase tracking-[0.15em]">{label}</span>
+      <span className="text-[9px] font-black uppercase tracking-[0.15em]">
+        {label}
+      </span>
     </div>
-    <span className={`text-lg font-black font-mono tracking-tight ${isAccepted ? 'text-slate-800' : 'text-slate-300'}`}>
+    <span
+      className={`text-lg font-black font-mono tracking-tight ${isAccepted ? "text-slate-800" : "text-slate-300"}`}
+    >
       {value}
     </span>
   </div>

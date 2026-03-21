@@ -142,7 +142,6 @@ export default function AdminModerationPage() {
                       </p>
                     </div>
                   </div>
-                  
                 </div>
 
                 <div className="bg-slate-50 border border-slate-100 rounded-2xl p-5 mb-6 italic text-slate-700 leading-relaxed">
@@ -155,7 +154,7 @@ export default function AdminModerationPage() {
                     <MdWarning className="text-amber-500" /> Violation_Log
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {item.reports?.map((report: any, idx: number) => (
+                    {(item as any).reports?.map((report: any, idx: number) => (
                       <div
                         key={idx}
                         className="bg-white border border-slate-100 p-3 rounded-xl flex flex-col gap-1 shadow-sm"
@@ -165,7 +164,6 @@ export default function AdminModerationPage() {
                         </span>
                         <p className="text-[11px] text-slate-500 font-medium line-clamp-1 italic">
                           {report.details || "No additional details provided."}
-                          
                         </p>
                         <span className="text-[9px] text-slate-400 font-bold">
                           BY: @{report.user?.username}

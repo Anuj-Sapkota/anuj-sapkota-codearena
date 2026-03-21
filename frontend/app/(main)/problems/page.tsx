@@ -61,7 +61,7 @@ export default function UserProblemsPage() {
   const problemMeta = meta;
   const totalCount = problemMeta.total || 0;
   const solvedCount =
-    problemMeta.totalSolved ||
+    (problemMeta as any).totalSolved ||
     problems.filter((p) => p.status === "SOLVED").length ||
     0;
 

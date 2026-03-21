@@ -42,26 +42,24 @@ export default function BasicInfoPage() {
 
   //update form handler -- toast, redux update, data response
   const submitForm = (data: BasicSettingsFormValue) => {
-    const formData = new FormData();
-    formData.append("full_name", data.full_name);
-    formData.append("bio", data.bio);
     if (!user?.userId) return;
 
-    const promise = dispatch(
-      updateThunk({
-        userId: user.userId,
-        data: formData,
-      })
-    ).unwrap();
+    // 1. Prepare the data in the exact shape the error asked for
+    const payload = {
+      userId: Number(user.userId), // The error says it expects a 'number'
+      profileData: {
+        username: data.full_name, // Map full_name to username if that's your schema
+        bio: data.bio || "",
+      },
+    };
+
+    // 2. Dispatch with the clean object
+    const promise = dispatch(updateThunk(payload)).unwrap();
 
     toast.promise(promise, {
       loading: "Saving your changes...",
-      success: () => {
-        return `Profile updated successfully!`;
-      },
-      error: (err) => {
-        return err || "Failed to update profile";
-      },
+      success: "Profile updated successfully!",
+      error: (err) => err?.message || "Failed to update profile",
     });
   };
 

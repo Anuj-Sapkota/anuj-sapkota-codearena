@@ -35,16 +35,24 @@ export const useProblemForm = (
     categoryIds: [],
     testCases: [{ input: "", expectedOutput: "", isSample: true }],
     starterCode: DEFAULT_TEMPLATES,
+    inputType: "STRING",
+    points: 0,
   });
 
   useEffect(() => {
     if (isOpen && initialData) {
       // Logic to handle legacy data (if starterCode was stored as a string)
       let mappedStarterCode: Record<string, string>;
-      
+
       if (typeof initialData.starterCode === "string") {
-        mappedStarterCode = { ...DEFAULT_TEMPLATES, javascript: initialData.starterCode || DEFAULT_TEMPLATES.javascript };
-      } else if (initialData.starterCode && typeof initialData.starterCode === "object") {
+        mappedStarterCode = {
+          ...DEFAULT_TEMPLATES,
+          javascript: initialData.starterCode || DEFAULT_TEMPLATES.javascript,
+        };
+      } else if (
+        initialData.starterCode &&
+        typeof initialData.starterCode === "object"
+      ) {
         // If it's already an object, use it
         mappedStarterCode = initialData.starterCode as Record<string, string>;
       } else {
@@ -68,6 +76,8 @@ export const useProblemForm = (
           expectedOutput: tc.expectedOutput,
           isSample: tc.isSample,
         })) || [{ input: "", expectedOutput: "", isSample: true }],
+        inputType: initialData.inputType,
+        points: initialData.points,
       });
     } else if (isOpen) {
       // RESET to clean state for New Problem
@@ -81,6 +91,8 @@ export const useProblemForm = (
         memoryLimit: 128,
         categoryIds: [],
         testCases: [{ input: "", expectedOutput: "", isSample: true }],
+        inputType: "STRING",
+        points: 0,
       });
     }
   }, [initialData, isOpen]);
@@ -104,7 +116,8 @@ export const useProblemForm = (
       }
       onClose();
     } catch (err: unknown) {
-      const msg = typeof err === "string" ? err : "An unexpected error occurred";
+      const msg =
+        typeof err === "string" ? err : "An unexpected error occurred";
       toast.error(msg);
     } finally {
       setIsLoading(false);
