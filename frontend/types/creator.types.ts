@@ -1,4 +1,8 @@
-export type ApplicationStatus = "NOT_APPLIED" | "PENDING" | "APPROVED" | "REJECTED";
+export type ApplicationStatus =
+  | "NOT_APPLIED"
+  | "PENDING"
+  | "APPROVED"
+  | "REJECTED";
 
 export interface CreatorProfile {
   id: number;
@@ -22,4 +26,5 @@ export interface VerifyOTPDTO {
 export interface AdminReviewDTO {
   targetUserId: number;
   status: "APPROVED" | "REJECTED";
+  reason?: string;
 }
