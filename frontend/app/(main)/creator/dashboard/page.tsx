@@ -2,7 +2,7 @@
 
 import { useSelector } from "react-redux";
 import { RootState } from "@/lib/store/store";
-import { useMyResources } from "@/hooks/useResource";
+import { useMyResources, useDeleteResourceMutation } from "@/hooks/useResource"; // 🚀 Added delete mutation
 import { 
   FiPlus, 
   FiBook, 
@@ -10,13 +10,31 @@ import {
   FiActivity, 
   FiLoader,
   FiVideo,
-  FiArrowRight
+  FiArrowRight,
+  FiEdit3, // 🚀 Added Edit Icon
+  FiTrash2  // 🚀 Added Delete Icon
 } from "react-icons/fi";
 import Link from "next/link";
+import { toast } from "sonner";
 
 export default function CreatorDashboard() {
   const { user } = useSelector((state: RootState) => state.auth);
   const { data: resources, isLoading } = useMyResources();
+  const deleteResource = useDeleteResourceMutation(); // 🚀 Initialize delete hook
+
+  const handleDelete = async (e: React.MouseEvent, id: string, title: string) => {
+    e.preventDefault(); // Prevent navigating to the resource detail page
+    e.stopPropagation();
+
+    const confirmDelete = window.confirm(`Are you sure you want to delete "${title}"? This will permanently remove all videos from Cloudinary.`);
+    
+    if (confirmDelete) {
+      deleteResource.mutate(id, {
+        onSuccess: () => toast.success("Resource and assets deleted."),
+        onError: (err: any) => toast.error(err.message || "Delete failed"),
+      });
+    }
+  };
 
   if (user?.creatorStatus !== "APPROVED") {
     return (
@@ -75,45 +93,64 @@ export default function CreatorDashboard() {
       ) : resources && resources.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {resources.map((res: any) => (
-            <Link 
-              href={`/creator/dashboard/resource/${res.id}`} // 🚀 Navigation to the Player/Detail View
-              key={res.id} 
-              className="group border border-slate-200 bg-white rounded-sm overflow-hidden hover:shadow-2xl hover:border-slate-900 transition-all duration-500 block relative"
-            >
-              <div className="relative aspect-video overflow-hidden bg-slate-100">
-                <img 
-                  src={res.previewUrl} 
-                  alt={res.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-90 group-hover:opacity-100" 
-                />
-                <div className="absolute top-3 left-3 bg-slate-900 text-white text-[9px] font-black uppercase px-2 py-1 tracking-widest">
-                  {res.type}
-                </div>
-                {/* Hover Overlay */}
-                <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                   <div className="bg-white p-3 rounded-full translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-                      <FiArrowRight className="text-slate-900" size={20} />
-                   </div>
-                </div>
+            <div key={res.id} className="relative group">
+              {/* 🚀 ACTION BUTTONS (Edit & Delete) */}
+              <div className="absolute top-4 right-4 z-20 flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0">
+                <Link 
+                  href={`/creator/dashboard/edit/${res.id}`} 
+                  className="p-2 bg-white text-slate-900 hover:bg-slate-900 hover:text-white rounded-sm shadow-xl transition-all border border-slate-100"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <FiEdit3 size={14} />
+                </Link>
+                <button 
+                  onClick={(e) => handleDelete(e, res.id, res.title)}
+                  disabled={deleteResource.isPending}
+                  className="p-2 bg-white text-rose-500 hover:bg-rose-500 hover:text-white rounded-sm shadow-xl transition-all border border-slate-100 disabled:opacity-50"
+                >
+                  {deleteResource.isPending ? <FiLoader className="animate-spin" size={14} /> : <FiTrash2 size={14} />}
+                </button>
               </div>
-              <div className="p-5">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-black uppercase text-sm tracking-tight truncate flex-1 group-hover:text-primary-1 transition-colors">{res.title}</h3>
-                  <span className="font-bold text-sm text-emerald-600 ml-2">${res.price}</span>
+
+              <Link 
+                href={`/creator/dashboard/resource/${res.id}`} 
+                className="border border-slate-200 bg-white rounded-sm overflow-hidden hover:shadow-2xl hover:border-slate-900 transition-all duration-500 block relative"
+              >
+                <div className="relative aspect-video overflow-hidden bg-slate-100">
+                  <img 
+                    src={res.previewUrl} 
+                    alt={res.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-90 group-hover:opacity-100" 
+                  />
+                  <div className="absolute top-3 left-3 bg-slate-900 text-white text-[9px] font-black uppercase px-2 py-1 tracking-widest">
+                    {res.type}
+                  </div>
+                  {/* Hover Overlay */}
+                  <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <div className="bg-white p-3 rounded-full translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                        <FiArrowRight className="text-slate-900" size={20} />
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-4 mt-4 pt-4 border-t border-slate-50">
-                   <div className="flex items-center gap-1.5 text-slate-400">
-                     <FiVideo size={12} />
-                     <span className="text-[10px] font-bold">{res._count?.modules || 0} Lessons</span>
-                   </div>
-                   <div className="flex items-center gap-1.5 text-slate-400 ml-auto">
-                     <span className={`text-[9px] font-black uppercase tracking-tighter px-2 py-0.5 rounded-full ${res.isApproved ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
-                       {res.isApproved ? 'Live' : 'Review'}
-                     </span>
-                   </div>
+                <div className="p-5">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-black uppercase text-sm tracking-tight truncate flex-1 group-hover:text-primary-1 transition-colors">{res.title}</h3>
+                    <span className="font-bold text-sm text-emerald-600 ml-2">${res.price}</span>
+                  </div>
+                  <div className="flex items-center gap-4 mt-4 pt-4 border-t border-slate-50">
+                    <div className="flex items-center gap-1.5 text-slate-400">
+                      <FiVideo size={12} />
+                      <span className="text-[10px] font-bold">{res._count?.modules || 0} Lessons</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-slate-400 ml-auto">
+                      <span className={`text-[9px] font-black uppercase tracking-tighter px-2 py-0.5 rounded-full ${res.isApproved ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                        {res.isApproved ? 'Live' : 'Review'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </Link>
+              </Link>
+            </div>
           ))}
         </div>
       ) : (

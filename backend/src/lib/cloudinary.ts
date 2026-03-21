@@ -52,3 +52,24 @@ export const uploadToCloudinary = async (
     uploadStream.end(fileBuffer);
   });
 };
+
+const getPublicIdFromUrl = (url: string) => {
+  const parts = url.split("/");
+  const lastPart = parts[parts.length - 1]; // "video.mp4"
+  const folderPart = parts[parts.length - 2]; // "folder"
+  const fileName = lastPart.split(".")[0]; // "video"
+  return `${folderPart}/${fileName}`;
+};
+
+export const deleteFromCloudinary = async (
+  url: string,
+  type: "video" | "image" = "video",
+) => {
+  try {
+    const publicId = getPublicIdFromUrl(url);
+    await cloudinary.uploader.destroy(publicId, { resource_type: type });
+    console.log(`Successfully deleted ${type}: ${publicId}`);
+  } catch (error) {
+    console.error("Cloudinary Delete Error:", error);
+  }
+};

@@ -69,6 +69,7 @@ app.use("/api/upload", uploadRoutes);
 //resource
 app.use("/api/resources", resourceRoutes);
 
+//learn
 console.log("BACKEND123");
 // This is the "Catch-All" middleware
 app.use(notFoundHandler);

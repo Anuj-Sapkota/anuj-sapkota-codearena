@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
-import { useResource } from "@/hooks/useResource";
+import { useResourceById } from "@/hooks/useResource";
 import {
   FiArrowLeft,
   FiPlay,
@@ -16,7 +16,7 @@ import Link from "next/link";
 
 export default function ResourcePlayerPage() {
   const { id } = useParams();
-  const { data: resource, isLoading, error } = useResource(id as string);
+  const { data: resource, isLoading, error } = useResourceById(id as string);
 
   // Track which video is currently playing
   const [activeModuleIdx, setActiveModuleIdx] = useState(0);

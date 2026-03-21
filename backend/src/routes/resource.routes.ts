@@ -1,18 +1,27 @@
 import { Router } from "express";
 import {
   createSeries,
+  deleteResource,
   getMyResources,
   getResourceById,
+  updateResource,
+  getPublicResources, // 👈 Add this import
 } from "../controllers/resource.controller.js";
-import { authenticateRequest } from "../middleware/auth.middleware.js"; // Your auth guard
+import { authenticateRequest } from "../middleware/auth.middleware.js";
 
 const router = Router();
 
-// This makes the full path: /api/resources/create-series
-router.post("/create-series", authenticateRequest, createSeries);
+// 🔓 PUBLIC ROUTES (No login required)
+// This must stay ABOVE the authenticateRequest line
+router.get("/explore", getPublicResources);
 
-router.get("/my-resources", authenticateRequest, getMyResources);
+// 🚀 PROTECTED ROUTES (Login required)
+router.use(authenticateRequest);
 
-// backend/routes/resource.routes.ts
+router.post("/create-series", createSeries);
+router.get("/my-resources", getMyResources);
 router.get("/:id", getResourceById);
+router.put("/:id", updateResource);
+router.delete("/:id", deleteResource);
+
 export default router;

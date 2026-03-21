@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { prisma } from "../lib/prisma.js";
+import { deleteFromCloudinary } from "../lib/cloudinary.js";
 
 export const createSeries = async (req: Request, res: Response) => {
   try {
@@ -106,5 +107,164 @@ export const getResourceById = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Fetch Resource Error:", error);
     res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// backend/controllers/resource.controller.ts
+// --- DELETE RESOURCE ---
+export const deleteResource = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const userId = (req as any).user.sub;
+
+  try {
+    const resource = await prisma.resource.findUnique({
+      where: { id },
+      include: { modules: true },
+    });
+
+    if (!resource || resource.creatorId !== Number(userId)) {
+      return res.status(403).json({ message: "Unauthorized or not found" });
+    }
+
+    // 1. Delete all module videos from Cloudinary
+    for (const mod of resource.modules) {
+      await deleteFromCloudinary(mod.contentUrl, "video");
+    }
+
+    // 2. Delete thumbnail from Cloudinary
+    if (resource.previewUrl) {
+      await deleteFromCloudinary(resource.previewUrl, "image");
+    }
+
+    // 3. Delete from DB (onDelete: Cascade in Prisma handles the Module rows)
+    await prisma.resource.delete({ where: { id } });
+
+    res.json({ message: "Resource and cloud assets deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to delete resource" });
+  }
+};
+
+// --- UPDATE RESOURCE ---
+export const updateResource = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { title, description, price, thumbnail, modules } = req.body;
+  const userId = (req as any).user.sub;
+
+  try {
+    const oldResource = await prisma.resource.findUnique({
+      where: { id },
+      include: { modules: true },
+    });
+
+    if (!oldResource || oldResource.creatorId !== Number(userId)) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    // 🚀 CLOUDINARY CLEANUP
+    // Identify modules that were removed in the UI
+    const removedModules = oldResource.modules.filter(
+      (oldMod) =>
+        !modules.find((newMod: any) => newMod.url === oldMod.contentUrl),
+    );
+
+    for (const mod of removedModules) {
+      await deleteFromCloudinary(mod.contentUrl, "video");
+    }
+
+    // If thumbnail changed, delete the old one
+    if (thumbnail !== oldResource.previewUrl && oldResource.previewUrl) {
+      await deleteFromCloudinary(oldResource.previewUrl, "image");
+    }
+
+    // 🚀 DATABASE SYNC (Atomic Transaction)
+    const updated = await prisma.$transaction(async (tx) => {
+      // 1. Update Main Info
+      const resUpdate = await tx.resource.update({
+        where: { id },
+        data: {
+          title,
+          description,
+          price: Number(price),
+          previewUrl: thumbnail,
+        },
+      });
+
+      // 2. Wipe old modules and replace with the new ordered list
+      await tx.module.deleteMany({ where: { resourceId: id } });
+      await tx.module.createMany({
+        data: modules.map((m: any, index: number) => ({
+          title: m.title,
+          contentUrl: m.url,
+          order: index,
+          resourceId: id,
+        })),
+      });
+
+      return resUpdate;
+    });
+
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ message: "Update failed" });
+  }
+};
+// backend/controllers/resource.controller.ts
+
+export const getPublicResources = async (req: Request, res: Response) => {
+  try {
+    const search = String(req.query.search || "");
+
+    const rawResources = await prisma.resource.findMany({
+      where: {
+        isPublished: true, // Only show published courses
+        ...(search
+          ? {
+              OR: [
+                { title: { contains: search, mode: "insensitive" } },
+                { description: { contains: search, mode: "insensitive" } },
+              ],
+            }
+          : {}),
+      },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        price: true,
+        previewUrl: true, // 👈 Corrected from 'thumbnail' to 'previewUrl'
+        creator: {
+          select: {
+            full_name: true,
+            username: true,
+            profile_pic_url: true,
+          },
+        },
+        _count: {
+          select: { modules: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    // 🚀 Bridge the DB to the Frontend
+    const resources = rawResources.map((resource) => ({
+      id: resource.id,
+      title: resource.title,
+      description: resource.description,
+      price: resource.price,
+      // We map 'previewUrl' to 'thumbnail' so your frontend code doesn't have to change
+      thumbnail: resource.previewUrl,
+      moduleCount: resource._count.modules,
+      creator: {
+        name: resource.creator.full_name, // Maps full_name to name
+        avatar: resource.creator.profile_pic_url,
+      },
+    }));
+
+    return res.status(200).json(resources);
+  } catch (error) {
+    console.error("❌ DB ERROR:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 };

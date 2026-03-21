@@ -142,6 +142,7 @@ model Resource {
   avgRating    Float   @default(0.0)
   totalReviews Int     @default(0)
   isApproved   Boolean @default(false)
+  isPublished Boolean  @default(false)
 
   creatorId Int
   creator   User @relation(fields: [creatorId], references: [userId])
