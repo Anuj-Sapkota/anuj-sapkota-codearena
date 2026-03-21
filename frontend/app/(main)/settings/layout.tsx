@@ -13,32 +13,43 @@ import { AppDispatch, RootState } from "@/lib/store/store";
 import { updateThunk } from "@/lib/store/features/auth/auth.actions";
 import { useDispatch, useSelector } from "react-redux";
 
-export default function SettingsLayout({ children }: { children: React.ReactNode }) {
+export default function SettingsLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dispatch = useDispatch<AppDispatch>();
-  
+
   // 1. Get user and loading state from Redux
-  const { user, isLoading } = useSelector((state:RootState) => state.auth);
+  const { user, isLoading } = useSelector((state: RootState) => state.auth);
 
   // Fallback if user isn't loaded yet
-  const profilePic = user?.profile_pic_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix";
+  const profilePic =
+    user?.profile_pic_url ||
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix";
 
   const getActiveTab = () => {
-    if (pathname === "/settings/accounts-security") return "Account and Security";
+    if (pathname === "/settings/accounts-security")
+      return "Account and Security";
     if (pathname === "/settings/notifications") return "Notifications";
     return "Basic";
   };
-
+  // Uploading the file for profile picture
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user?.userId) return;
 
-    const formData = new FormData();
-    formData.append("profile_pic", file);
-
-    // 2. Use Sonner toast with the Redux Thunk
-    const promise = dispatch(updateThunk({ userId: user.userId, data: formData })).unwrap();
+    // 🚀 Logic change: We pass the raw file and an empty profileData object
+    // because we are only updating the picture in this specific handler.
+    const promise = dispatch(
+      updateThunk({
+        userId: user.userId,
+        file: file, // The raw File object
+        profileData: {}, // We aren't changing bio/username here
+      }),
+    ).unwrap();
 
     toast.promise(promise, {
       loading: "Uploading your new look...",
@@ -53,7 +64,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
         {/* Header Section */}
         <div className="bg-[#48855b] border-b border-green-100/50">
           <div className="pt-24 pb-20 px-12 max-w-7xl mx-auto">
-            <motion.h1 
+            <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="text-5xl font-extrabold text-gray-100 tracking-tight"
@@ -61,7 +72,8 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
               Settings
             </motion.h1>
             <p className="text-slate-300 mt-4 text-lg max-w-xl">
-              Manage your personal information, security preferences, and account settings.
+              Manage your personal information, security preferences, and
+              account settings.
             </p>
           </div>
         </div>
@@ -79,7 +91,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
               />
 
               {/* Avatar Container */}
-              <motion.div 
+              <motion.div
                 whileHover={{ scale: 1.02 }}
                 className="w-40 h-40 rounded-full border-8 border-white bg-gray-100 overflow-hidden shadow-2xl relative"
               >
@@ -87,14 +99,14 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                   src={profilePic}
                   alt="Profile"
                   fill
-                  className={`object-cover transition-all duration-500 group-hover:scale-110 ${isLoading ? 'blur-sm grayscale' : ''}`}
+                  className={`object-cover transition-all duration-500 group-hover:scale-110 ${isLoading ? "blur-sm grayscale" : ""}`}
                   priority
                 />
 
                 {/* Loading Spinner Overlay */}
                 <AnimatePresence>
                   {isLoading && (
-                    <motion.div 
+                    <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
@@ -124,7 +136,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
         {/* Layout Body */}
         <div className="flex px-12 gap-16 max-w-7xl mx-auto items-start">
           <SettingsSidebar activeTab={getActiveTab()} />
-          <motion.main 
+          <motion.main
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
@@ -136,4 +148,4 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
       </div>
     </ProtectedRoute>
   );
-} 
+}

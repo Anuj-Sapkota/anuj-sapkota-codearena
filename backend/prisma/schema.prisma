@@ -7,11 +7,27 @@ datasource db {
   provider = "postgresql"
 }
 
+// --- ENUMS ---
+
 enum Role {
   USER
+  CREATOR
   ADMIN
 }
 
+enum ApplicationStatus {
+  NOT_APPLIED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ResourceType {
+  VIDEO
+  PDF
+  ARTICLE
+  SERIES  
+}
 enum InputType {
   INT
   ARRAY
@@ -38,6 +54,15 @@ enum ReportType {
   OTHER
 }
 
+enum CreatorStatus {
+  NOT_APPLIED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// --- CORE MODELS ---
+
 model User {
   userId              Int       @id @default(autoincrement())
   full_name           String
@@ -54,78 +79,179 @@ model User {
   resetTokenExpiry    DateTime?
   bio                 String?
   role                Role      @default(USER)
-  total_points        Int       @default(0)
+
+  // This is your main "Gatekeeper" field for the frontend
+  creatorStatus CreatorStatus @default(NOT_APPLIED)
+
+  total_points Int @default(0)
 
   // Relations
-  submissions     Submission[]
-  problemStatuses UserProblemStatus[]
-  discussions     Discussion[] // Added link to discussions
-  discussionVotes DiscussionUpvote[] // Added link to track upvotes
-
-  created_at        DateTime           @default(now())
-  updated_at        DateTime           @updatedAt
+  submissions       Submission[]
+  problemStatuses   UserProblemStatus[]
+  discussions       Discussion[]
+  discussionVotes   DiscussionUpvote[]
   discussionReports DiscussionReport[]
+
+  // Learning & Marketplace Relations
+  creatorProfile CreatorProfile?
+  ownedResources Resource[]
+  purchases      Purchase[]
+  reviews        Review[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
   @@map("users")
 }
 
-model Problem {
-  problemId    Int       @id @default(autoincrement())
-  title        String
-  content      String    @db.Text
-  difficulty   String // EASY, MEDIUM, HARD
-  points       Int       @default(50)
-  functionName String    @default("solution")
-  starterCode  Json
-  inputType    InputType @default(ARRAY)
-  timeLimit    Float     @default(1.0)
-  memoryLimit  Int       @default(128)
+model CreatorProfile {
+  id     Int  @id @default(autoincrement())
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
-  // Relations
-  categories   Category[]
-  testCases    TestCase[]
-  submissions  Submission[]
-  userStatuses UserProblemStatus[]
-  challenges   ChallengeProblem[]
-  discussions  Discussion[] // Added link to discussions
+  // Sync this status with the User.creatorStatus in your backend logic
+  status CreatorStatus @default(PENDING)
+
+  bio             String? @db.Text
+  portfolioUrl    String?
+  rejectionReason String? @db.Text
+
+  githubUrl       String?
+  isEmailVerified Boolean   @default(false)
+  otpCode         String?
+  otpExpiresAt    DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("problems")
+  @@map("creator_profiles")
 }
 
-// --- NEW DISCUSSION MODELS ---
+// --- RESOURCE MARKETPLACE ---
+
+model Resource {
+  id          String       @id @default(cuid())
+  title       String
+  description String       @db.Text
+  type        ResourceType
+  contentUrl  String
+  previewUrl  String?
+  price       Float        @default(0.0)
+  language    String?
+
+  avgRating    Float   @default(0.0)
+  totalReviews Int     @default(0)
+  isApproved   Boolean @default(false)
+  isPublished Boolean  @default(false)
+
+  creatorId Int
+  creator   User @relation(fields: [creatorId], references: [userId])
+
+  problemId Int?
+  problem   Problem? @relation(fields: [problemId], references: [problemId])
+
+  reviews   Review[]
+  modules   Module[]
+  purchases Purchase[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("resources")
+}
+
+model Module {
+  id         String @id @default(cuid())
+  title      String
+  contentUrl String // This stores the Cloudinary URL
+  order      Int // This ensures Video 1 stays before Video 2
+
+  resourceId String
+  resource   Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("modules")
+}
+
+model Purchase {
+  id         String @id @default(cuid())
+  userId     Int
+  resourceId String
+  amount     Float
+
+  user     User     @relation(fields: [userId], references: [userId])
+  resource Resource @relation(fields: [resourceId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, resourceId])
+  @@map("purchases")
+}
+
+model Review {
+  id      String @id @default(cuid())
+  rating  Int
+  comment String @db.Text
+
+  userId     Int
+  resourceId String
+
+  user     User     @relation(fields: [userId], references: [userId])
+  resource Resource @relation(fields: [resourceId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, resourceId])
+  @@map("resource_reviews")
+}
+
+// --- DISCUSSIONS & MODERATION ---
 
 model Discussion {
   id       String  @id @default(cuid())
-  title    String? // Only for the main post
+  title    String?
   content  String  @db.Text
-  language String? // e.g., "cpp", "python"
+  language String?
+  isPinned Boolean @default(false)
 
-  // Relations to User and Problem (IDs changed to Int to match parents)
   userId Int
   user   User @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
   problemId Int
   problem   Problem @relation(fields: [problemId], references: [problemId], onDelete: Cascade)
 
-  // Self-relation for nested replies
   parentId String?
   parent   Discussion?  @relation("DiscussionToDiscussion", fields: [parentId], references: [id])
   replies  Discussion[] @relation("DiscussionToDiscussion")
 
-  // Upvotes handling
   upvotes      Int                @default(0)
   upvoteTracks DiscussionUpvote[]
   isBlocked    Boolean            @default(false)
   reportCount  Int                @default(0)
   reports      DiscussionReport[]
 
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("discussions")
+}
+
+model DiscussionReport {
+  id           Int        @id @default(autoincrement())
+  userId       Int
+  discussionId String
+  reportType   ReportType @default(OTHER)
+  details      String?    @db.Text
+
+  user       User       @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  discussion Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, discussionId])
+  @@map("discussion_reports")
 }
 
 model DiscussionUpvote {
@@ -136,31 +262,37 @@ model DiscussionUpvote {
   user       User       @relation(fields: [userId], references: [userId], onDelete: Cascade)
   discussion Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, discussionId]) // Ensures one upvote per user per comment
+  @@unique([userId, discussionId])
   @@map("discussion_upvotes")
 }
 
-model DiscussionReport {
-  id           Int      @id @default(autoincrement())
-  userId       Int
-  discussionId String
-  
-  // The category (e.g., SPAM, HARASSMENT)
-  reportType   ReportType   @default(OTHER)
-  
-  //The specific user input explanation
-  details      String?  @db.Text 
+// --- PROBLEMS & CHALLENGES ---
 
-  user       User       @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  discussion Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+model Problem {
+  problemId    Int       @id @default(autoincrement())
+  title        String
+  content      String    @db.Text
+  difficulty   String
+  points       Int       @default(50)
+  functionName String    @default("solution")
+  starterCode  Json
+  inputType    InputType @default(ARRAY)
+  timeLimit    Float     @default(1.0)
+  memoryLimit  Int       @default(128)
+
+  categories   Category[]
+  testCases    TestCase[]
+  submissions  Submission[]
+  userStatuses UserProblemStatus[]
+  challenges   ChallengeProblem[]
+  discussions  Discussion[]
+  resources    Resource[]
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@unique([userId, discussionId]) 
-  @@map("discussion_reports")
+  @@map("problems")
 }
-
-// --- REMAINING MODELS (Category, TestCase, Submission, etc.) ---
 
 model Category {
   categoryId  Int       @id @default(autoincrement())
@@ -224,7 +356,7 @@ model Challenge {
   slug        String              @unique
   description String?             @db.Text
   bannerUrl   String?
-  type        ChallengeType       @default(SCHEDULED) // Added static vs scheduled
+  type        ChallengeType       @default(SCHEDULED)
   difficulty  ChallengeDifficulty @default(MEDIUM)
   points      Int                 @default(100)
   isPublic    Boolean             @default(false)

@@ -38,9 +38,45 @@ export const sendResetEmail = async (email: string, token: string) => {
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log(`Reset email successfully sent to: ${email}`);  
+    console.log(`Reset email successfully sent to: ${email}`);
   } catch (error) {
     console.error("Error sending email:", error);
     throw new Error("Failed to send reset email");
+  }
+};
+
+/**
+ * Sends a verification OTP email to the user applying for Creator status.
+ */
+export const sendVerificationEmail = async (email: string, otp: string) => {
+  const mailOptions = {
+    from: `"CodeArena Creator Program" <${config.resetLink.emailUser}>`,
+    to: email,
+    subject: "Verify your Creator Identity",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; border: 1px solid #eee; padding: 20px;">
+        <h2 style="color: #10B981;">Welcome to the Creator Program</h2>
+        <p>Hello,</p>
+        <p>Thank you for applying to be a teacher on CodeArena. To complete your identity verification, please use the following One-Time Password (OTP):</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <span style="display: inline-block; background-color: #F3F4F6; color: #111827; padding: 15px 30px; font-size: 24px; font-weight: bold; border-radius: 8px; letter-spacing: 5px; border: 1px solid #D1D5DB;">
+            ${otp}
+          </span>
+        </div>
+        <p><strong>This code expires in 10 minutes.</strong></p>
+        <p style="color: #666; font-size: 12px;">If you did not initiate this application, please secure your account immediately.</p>
+        <hr style="border: none; border-top: 1px solid #eee;" />
+        <p style="font-size: 11px; color: #999;">CodeArena Platform &copy; 2026</p>
+      </div>
+    `,
+  };
+
+  try {
+    // Re-use the existing 'transporter' defined at the top of your file
+    await transporter.sendMail(mailOptions);
+    console.log(`Verification OTP successfully sent to: ${email}`);
+  } catch (error) {
+    console.error("Error sending verification email:", error);
+    throw new Error("Failed to send verification email");
   }
 };

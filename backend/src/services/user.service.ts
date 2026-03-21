@@ -1,11 +1,15 @@
 import { prisma } from "../lib/prisma.js";
 import uploadFile from "./cloudinary.service.js";
-import cloudinary from "../lib/cloudinary.js";
+import { v2 as cloudinary } from "cloudinary";
 import { ServiceError } from "../errors/service.error.js";
 import type { AuthUser } from "../types/auth.js";
 import formatAuthResponse from "../helper/format-auth-response.helper.js";
+
 const forbiddenFields = ["password", "role", "createdBy", "email"];
 
+/**
+ * -------------- UPDATE USER SERVICE -----------------
+ */
 export const updateUserService = async (
   userId: number,
   currUserId: number,
@@ -33,14 +37,26 @@ export const updateUserService = async (
   if (file && file.size > 0) {
     // A. Delete old file from Cloudinary if it exists
     if (user.profile_pic_url) {
-      const publicId = user.profile_pic_url.split("/").pop()?.split(".")[0];
-      if (publicId) {
-        await cloudinary.uploader.destroy(`codearena/profiles/${publicId}`);
+      try {
+        const urlParts = user.profile_pic_url.split("/");
+        const fileNameWithExtension = urlParts.pop(); // Safely get last element
+
+        if (fileNameWithExtension) {
+          const publicId = fileNameWithExtension.split(".")[0];
+          
+          // Cloudinary destroy requires the folder path if the file is in one
+          // We target the 'profiles' folder specifically
+          await cloudinary.uploader.destroy(`profiles/${publicId}`);
+        }
+      } catch (err) {
+        // We log but don't throw, so a missing old file doesn't block a new upload
+        console.error("Cloudinary Delete Error (Non-fatal):", err);
       }
     }
-    const filename = user.userId.toString();
-    // B. Upload new file using your utility
-    const uploadResult = await uploadFile(file, filename);
+
+    // B. Upload new file using our central service
+    // "profile" type triggers the 400x400 face-detection crop defined in lib/cloudinary
+    const uploadResult = await uploadFile(file, "profile");
     profilePicUrl = uploadResult.secure_url;
   }
 
@@ -58,7 +74,7 @@ export const updateUserService = async (
 };
 
 /**
- * --------------GET USER BY ID -----------------
+ * -------------- GET USER BY ID -----------------
  */
 export const getUserByID = async (userId: number): Promise<AuthUser> => {
   const user = await prisma.user.findUnique({
@@ -67,13 +83,12 @@ export const getUserByID = async (userId: number): Promise<AuthUser> => {
   if (!user) {
     throw new ServiceError("User does not exist!", 404);
   }
-  console.log("Returned formatted response: ", formatAuthResponse(user));
   return formatAuthResponse(user);
 };
 
 /**
- * -----------GET RAW USER DETAILS FROM ID -----------
- * this is used by other services
+ * ----------- GET RAW USER DETAILS FROM ID -----------
+ * Internal helper for other services
  */
 export const findUserRaw = async (userId: number) => {
   const user = await prisma.user.findUnique({ where: { userId } });

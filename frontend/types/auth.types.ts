@@ -6,12 +6,18 @@ export interface UserProfile {
   username: string;
   bio?: string;
   email: string;
-  role: string;
+  role: "USER" | "CREATOR" | "ADMIN"; 
+  creatorStatus: "NOT_APPLIED" | "PENDING" | "APPROVED" | "REJECTED"; 
   total_points: number;
   has_password: boolean;
   profile_pic_url?: string | null;
   google_id?: string | null;
   github_id?: string | null;
+  creatorProfile?: {
+    rejectionReason?: string | null;
+    portfolioUrl?: string | null;
+    githubUrl?: string | null;
+  } | null;
 }
 
 export interface AuthUser {
@@ -53,7 +59,7 @@ export interface AuthState {
 }
 // interface for modal forms
 export interface AuthModalProps {
-  onSuccess: (user:UserProfile) => void;
+  onSuccess: (user: UserProfile) => void;
   onSwitch: () => void;
 }
 

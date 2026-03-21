@@ -9,7 +9,7 @@ import {
   moderateDiscussion,  
   getFlaggedDiscussions
 } from "../controllers/discussion.controller.js";
-import { authenticateRequest } from "../middlewares/auth.middleware.js";
+import { authenticateRequest } from "../middleware/auth.middleware.js";
 
 const router = Router();
 

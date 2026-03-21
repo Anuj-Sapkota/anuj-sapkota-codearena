@@ -11,7 +11,9 @@ import {
   FiLogOut,
   FiSettings,
   FiChevronDown,
-  FiShield, // Added for Admin icon
+  FiShield,
+  FiPlusCircle,
+  FiBriefcase, // Added for Admin icon
 } from "react-icons/fi";
 import { useSelector, useDispatch } from "react-redux";
 
@@ -115,15 +117,19 @@ export default function Navbar() {
 
         {isAuthenticated ? (
           <div className="flex items-center gap-4">
-            
             {/* ADMIN PANEL ACCESS BUTTON */}
             {user?.role === "ADMIN" && (
               <button
                 onClick={() => router.push("/admin/")}
                 className="flex items-center gap-2 px-3 py-1.5 cursor-pointer bg-rose-50 border border-rose-100 text-rose-600 rounded-sm hover:bg-rose-600 hover:text-white transition-all duration-200 shadow-sm group"
               >
-                <FiShield size={14} className="group-hover:scale-110 transition-transform" />
-                <span className="text-[11px] font-black uppercase tracking-wider">Admin Panel</span>
+                <FiShield
+                  size={14}
+                  className="group-hover:scale-110 transition-transform"
+                />
+                <span className="text-[11px] font-black uppercase tracking-wider">
+                  Admin Panel
+                </span>
               </button>
             )}
 
@@ -172,6 +178,40 @@ export default function Navbar() {
                   >
                     <FiUser size={16} /> My Profile
                   </Link>
+                  {/* --- CREATOR SECTION START --- */}
+                  <div className="my-1 border-t border-slate-100" />
+
+                  {user?.role === "CREATOR" ? (
+                    // If already a teacher
+                    <Link
+                      href="/creator/dashboard"
+                      className="flex items-center gap-3 px-4 py-2.5 text-emerald-600 hover:bg-emerald-50 text-sm font-bold"
+                    >
+                      <FiPlusCircle size={16} /> Creator Studio
+                    </Link>
+                  ) : (
+                    // If a student (Applied, Pending, or Not Applied)
+                    <Link
+                      href="/creator/apply"
+                      className="flex items-center justify-between px-4 py-2.5 hover:bg-slate-50 group"
+                    >
+                      <div className="flex items-center gap-3 text-slate-600 group-hover:text-primary-1 text-sm font-medium transition-colors">
+                        <FiBriefcase size={16} />
+                        <span>
+                          {user?.creatorStatus === "PENDING"
+                            ? "Application Status"
+                            : "Become a Creator"}
+                        </span>
+                      </div>
+
+                      {/* Status dot indicator */}
+                      {user?.creatorStatus === "PENDING" && (
+                        <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                      )}
+                    </Link>
+                  )}
+                  <div className="my-1 border-t border-slate-100" />
+
                   <Link
                     href={ROUTES.MAIN.SETTINGS}
                     className="flex items-center gap-3 px-4 py-2.5 text-slate-600 hover:bg-slate-50 hover:text-primary-1 text-sm font-medium"

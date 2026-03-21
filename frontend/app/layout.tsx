@@ -4,6 +4,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import StoreProvider from "./StoreProvider";
 import { Toaster } from "sonner";
 import AuthHydrator from "../components/layout/AuthHydrator";
+import QueryProvider from "@/components/providers/QueryProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -33,12 +34,16 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${jetbrains.variable}`}>
       <body>
-        <StoreProvider>
-          <AuthHydrator>
-            <main>{children}</main>
-          </AuthHydrator>
-          <Toaster richColors position="top-right" closeButton />
-        </StoreProvider>
+        <QueryProvider>
+          {" "}
+          {/* 2. Wrap everything inside QueryProvider */}
+          <StoreProvider>
+            <AuthHydrator>
+              <main>{children}</main>
+            </AuthHydrator>
+            <Toaster richColors position="top-right" closeButton />
+          </StoreProvider>
+        </QueryProvider>
         <script
           src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
           defer

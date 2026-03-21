@@ -1,30 +1,23 @@
-import cloudinary from "../lib/cloudinary.js";
+// src/services/cloudinary.service.ts
+import { uploadToCloudinary } from "../lib/cloudinary.js";
+import type {UploadType} from "../lib/cloudinary.js"
 import type { UploadApiResponse } from "cloudinary";
 
-const CLOUDINARY_FOLDER = "codeArena";
-
-// Use Express.Multer.File for the file type
+/**
+ * Proper Service wrapper for Multer files
+ * @param file - The file from req.file (Multer)
+ * @param type - The preset type ('profile', 'thumbnail', or 'video')
+ */
 const uploadFile = async (
   file: Express.Multer.File,
-  filename?: string
+  type: UploadType = "thumbnail"
 ): Promise<UploadApiResponse> => {
-  return new Promise((resolve, reject) => {
-    cloudinary.uploader
-      .upload_stream(
-        {
-          folder: CLOUDINARY_FOLDER,
-          public_id: filename!,
-          overwrite: true,
-          resource_type: "auto", // Automatically detects if it's an image or video
-        },
-        (error, data) => {
-          if (error) return reject(error);
-          if (!data) return reject(new Error("Cloudinary upload failed"));
-          resolve(data);
-        }
-      )
-      .end(file.buffer); // Multer memoryStorage provides this buffer
-  });
+  if (!file.buffer) {
+    throw new Error("No file buffer found. Ensure Multer memoryStorage is used.");
+  }
+
+  // We call our utility which already contains the compression/folder logic
+  return await uploadToCloudinary(file.buffer, type);
 };
 
 export default uploadFile;

@@ -11,14 +11,18 @@ import submissionRoutes from "./routes/submission.routes.js";
 import githubRoutes from "./routes/github.routes.js";
 import challengeRoutes from "./routes/challenge.routes.js";
 import discussionRoutes from "./routes/discussion.routes.js";
+import creatorRoutes from "./routes/creator.routes.js";
+import uploadRoutes from "./routes/upload.routes.js";
+import resourceRoutes from "./routes/resource.routes.js";
+import paymentRoutes from "./routes/payment.routes.js";
 
 import config from "./configs/config.js";
 import { connectCloudinary } from "./configs/cloudinary.config.js";
-import { errorHandler } from "./middlewares/error.middleware.js";
+import { errorHandler } from "./middleware/error.middleware.js";
 
 import type { Request, Response, NextFunction } from "express";
 import { ServiceError } from "./errors/service.error.js";
-import { notFoundHandler } from "./middlewares/not-found.middleware.js";
+import { notFoundHandler } from "./middleware/not-found.middleware.js";
 
 const app = express();
 connectCloudinary();
@@ -27,7 +31,7 @@ app.use(cookieParser());
 app.use(express.json());
 
 const corsOptions = {
-  origin: ["http://localhost:3000"], //DEVELOPMENT ONLY ____________________________________
+  origin: ["http://localhost:3000"], //________________DEVELOPMENT ONLY ____________________________________
   credentials: true,
 };
 
@@ -56,6 +60,18 @@ app.use("/api/challenges", challengeRoutes);
 
 //Discussion
 app.use("/api/discussions", discussionRoutes);
+
+//Creator
+app.use("/api/creator", creatorRoutes);
+
+//Upload
+app.use("/api/upload", uploadRoutes);
+
+//resource
+app.use("/api/resources", resourceRoutes);
+
+//payment
+app.use("/api/payments", paymentRoutes);
 
 console.log("BACKEND123");
 // This is the "Catch-All" middleware
