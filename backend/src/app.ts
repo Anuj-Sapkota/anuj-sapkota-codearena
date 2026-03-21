@@ -14,6 +14,7 @@ import discussionRoutes from "./routes/discussion.routes.js";
 import creatorRoutes from "./routes/creator.routes.js";
 import uploadRoutes from "./routes/upload.routes.js";
 import resourceRoutes from "./routes/resource.routes.js";
+import paymentRoutes from "./routes/payment.routes.js";
 
 import config from "./configs/config.js";
 import { connectCloudinary } from "./configs/cloudinary.config.js";
@@ -69,7 +70,9 @@ app.use("/api/upload", uploadRoutes);
 //resource
 app.use("/api/resources", resourceRoutes);
 
-//learn
+//payment
+app.use("/api/payments", paymentRoutes);
+
 console.log("BACKEND123");
 // This is the "Catch-All" middleware
 app.use(notFoundHandler);
