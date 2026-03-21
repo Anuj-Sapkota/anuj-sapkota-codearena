@@ -6,7 +6,6 @@ import { useResourceById } from "@/hooks/useResource";
 import {
   FiArrowLeft,
   FiPlay,
-  FiLock,
   FiCheckCircle,
   FiLoader,
   FiClock,
@@ -17,8 +16,6 @@ import Link from "next/link";
 export default function ResourcePlayerPage() {
   const { id } = useParams();
   const { data: resource, isLoading, error } = useResourceById(id as string);
-
-  // Track which video is currently playing
   const [activeModuleIdx, setActiveModuleIdx] = useState(0);
 
   if (isLoading)
@@ -27,26 +24,19 @@ export default function ResourcePlayerPage() {
         <FiLoader className="animate-spin text-slate-300" size={40} />
       </div>
     );
-
   if (error || !resource)
     return (
       <div className="p-20 text-center">
         <h2 className="font-black uppercase italic">Resource Not Found</h2>
-        <Link
-          href="/creator/dashboard"
-          className="text-xs underline mt-4 block"
-        >
-          Return to Dashboard
-        </Link>
       </div>
     );
 
   const currentModule = resource.modules[activeModuleIdx];
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* 1. Header Bar */}
-      <header className="border-b border-slate-100 px-8 py-4 flex items-center justify-between sticky top-0 bg-white z-10">
+    <div className="h-screen flex flex-col bg-white overflow-hidden">
+      {/* 1. Header (Fixed) */}
+      <header className="h-[65px] border-b border-slate-100 px-8 flex items-center justify-between bg-white shrink-0 z-10">
         <div className="flex items-center gap-6">
           <Link
             href="/creator/dashboard"
@@ -63,42 +53,63 @@ export default function ResourcePlayerPage() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          <span className="text-[9px] font-black bg-slate-100 px-2 py-1 rounded-sm uppercase">
-            Preview Mode
-          </span>
-        </div>
       </header>
 
-      <div className="flex flex-col lg:flex-row">
-        {/* 2. Main Player Area */}
-        <main className="flex-1 bg-black aspect-video lg:aspect-auto lg:h-[calc(100vh-65px)] overflow-hidden flex items-center justify-center">
-          {currentModule ? (
-            <video
-              key={currentModule.contentUrl} // Force re-render when video changes
-              src={currentModule.contentUrl}
-              controls
-              className="w-full h-full max-h-full object-contain"
-              autoPlay
-            />
-          ) : (
-            <div className="text-white text-center">
-              <FiLayers size={48} className="mx-auto mb-4 opacity-20" />
-              <p className="text-[10px] font-black uppercase tracking-widest">
-                No Content Uploaded
-              </p>
-            </div>
-          )}
+      <div className="flex flex-1 overflow-hidden">
+        {/* 2. Main Player Area (Scrollable like YT) */}
+        <main className="flex-1 bg-[#050505] overflow-y-auto custom-scrollbar">
+          <div className="max-w-6xl mx-auto p-6 lg:p-10">
+            {currentModule?.contentUrl ? (
+              <>
+                {/* THE YT VIDEO BOX */}
+                <div className="w-48 h-32 aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/5">
+                  <video
+                    key={currentModule.contentUrl}
+                    src={currentModule.contentUrl}
+                    controls
+                    className="w-48 h-56 object-contain"
+                    autoPlay
+                  />
+                </div>
+
+                {/* VIDEO INFO BOX */}
+                <div className="mt-8 text-white">
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="bg-emerald-500 text-black text-[9px] font-black uppercase px-2 py-0.5 rounded">
+                      Now Playing
+                    </span>
+                    <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">
+                      Part {activeModuleIdx + 1}
+                    </span>
+                  </div>
+                  <h2 className="text-3xl font-black uppercase italic tracking-tighter mb-4">
+                    {currentModule?.title}
+                  </h2>
+                  <div className="h-px w-full bg-white/10 mb-6" />
+                  <p className="text-zinc-400 text-sm leading-relaxed max-w-3xl">
+                    This module is part of the {resource.title} series. Continue
+                    watching to complete your certification.
+                  </p>
+                </div>
+              </>
+            ) : (
+              <div className="h-[60vh] flex flex-col items-center justify-center text-white/10">
+                <FiLayers size={64} className="mb-4" />
+                <p className="text-xs font-black uppercase tracking-[0.4em]">
+                  No Video Uplink
+                </p>
+              </div>
+            )}
+          </div>
         </main>
 
-        {/* 3. Curriculum Sidebar */}
-        <aside className="w-full lg:w-96 border-l border-slate-100 h-[calc(100vh-65px)] overflow-y-auto bg-slate-50/30">
-          <div className="p-6 border-b border-slate-100 bg-white">
+        {/* 3. Curriculum Sidebar (Fixed Height) */}
+        <aside className="hidden lg:block w-96 border-l border-slate-100 bg-white overflow-y-auto">
+          <div className="p-6 border-b border-slate-100 sticky top-0 bg-white z-10">
             <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-              Series Curriculum
+              Course Content
             </h3>
           </div>
-
           <div className="divide-y divide-slate-100">
             {resource.modules.map((module: any, index: number) => (
               <button
@@ -106,7 +117,7 @@ export default function ResourcePlayerPage() {
                 onClick={() => setActiveModuleIdx(index)}
                 className={`w-full flex items-start gap-4 p-6 transition-all text-left ${
                   activeModuleIdx === index
-                    ? "bg-white border-l-4 border-l-slate-900"
+                    ? "bg-slate-50 border-l-4 border-l-slate-900"
                     : "hover:bg-slate-100"
                 }`}
               >
@@ -121,20 +132,13 @@ export default function ResourcePlayerPage() {
                 </div>
                 <div className="flex-1 overflow-hidden">
                   <p
-                    className={`text-[11px] font-black uppercase italic leading-tight ${
-                      activeModuleIdx === index
-                        ? "text-slate-900"
-                        : "text-slate-500"
-                    }`}
+                    className={`text-[11px] font-black uppercase italic leading-tight ${activeModuleIdx === index ? "text-slate-900" : "text-slate-500"}`}
                   >
                     {module.title}
                   </p>
-                  <div className="flex items-center gap-3 mt-2 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                    <span>Part {index + 1}</span>
-                    <span className="flex items-center gap-1">
-                      <FiClock /> Video
-                    </span>
-                  </div>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase mt-2 tracking-widest">
+                    Part {index + 1} • Video
+                  </p>
                 </div>
               </button>
             ))}

@@ -6,32 +6,29 @@ import { prisma } from "../lib/prisma.js";
 export const initiateEsewaPayment = async (req: Request, res: Response) => {
   try {
     const { resourceId } = req.body;
-    // @ts-ignore
-    const userId = req.user.id; // Ensure your auth middleware provides this
+    const userId = (req as any).user.sub;
 
-    const amount = "100";
-    const tax_amount = "0";
-    const total_amount = "100";
-    const product_code = "EPAYTEST";
+    // 1. DEFINE EXACT STRINGS
+    const amountValue = "100"; // No decimals, no spaces
+    const productCode = "EPAYTEST";
+    const txnUuid = `${userId}-${resourceId}-${Date.now()}`;
     const secret = "8gBm/:&EnhH.1/q";
 
-    // CRITICAL: Format this to match your verify split logic
-    // Format: userId-resourceId-timestamp
-    const transaction_uuid = `${userId}-${resourceId}-${Date.now()}`;
-
-    const hashString = `total_amount=${total_amount},transaction_uuid=${transaction_uuid},product_code=${product_code}`;
+    // 2. CREATE HASH (Order matters: total_amount, transaction_uuid, product_code)
+    const hashString = `total_amount=${amountValue},transaction_uuid=${txnUuid},product_code=${productCode}`;
 
     const signature = crypto
       .createHmac("sha256", secret)
       .update(hashString)
       .digest("base64");
 
+    // 3. RETURN RESPONSE (Ensure keys match the form fields eSewa expects)
     res.json({
-      amount,
-      tax_amount,
-      total_amount,
-      transaction_uuid,
-      product_code,
+      amount: amountValue,
+      tax_amount: "0",
+      total_amount: amountValue, // MUST match the hashString exactly
+      transaction_uuid: txnUuid,
+      product_code: productCode,
       product_service_charge: "0",
       product_delivery_charge: "0",
       success_url: "http://localhost:3000/payment/success",
@@ -44,54 +41,53 @@ export const initiateEsewaPayment = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Initialization error" });
   }
 };
+// backend/src/controllers/payment.controller.ts
 
 export const verifyEsewaPayment = async (req: Request, res: Response) => {
   try {
-    const { data } = req.body;
-    if (!data) return res.status(400).json({ message: "No data received" });
+    console.log("Full Body Received:", req.body);
 
-    // 1. Decode eSewa Response
-    const decodedString = Buffer.from(data, "base64").toString("utf-8");
-    const decodedData = JSON.parse(decodedString);
+    // CHANGE THIS LINE to match your frontend key
+    const { encodedData } = req.body;
 
-    console.log("✅ eSewa Decoded Data:", decodedData);
-
-    if (decodedData.status !== "COMPLETE") {
-      return res.status(400).json({ message: "Payment status not complete" });
+    if (!encodedData) {
+      console.error("❌ Error: 'encodedData' field is missing");
+      return res
+        .status(400)
+        .json({ message: "Payload missing 'encodedData' field" });
     }
 
-    // 2. Extract UUID Parts safely
-    const parts = decodedData.transaction_uuid.split("-");
-    const userId = parts[0];
-    const resourceId = parts[1];
+    // Now use encodedData here
+    const decodedString = Buffer.from(encodedData, "base64").toString("utf-8");
+    const decodedData = JSON.parse(decodedString);
 
-    console.log(
-      `🔍 Attempting to save: User ${userId}, Resource ${resourceId}`,
-    );
+    console.log("Decoded eSewa Data:", decodedData);
 
-    // 3. Save to Database with Type Safety
-    const newPurchase = await prisma.purchase.create({
-      data: {
-        // If your schema uses Strings for IDs, remove parseInt()
-        // If your schema uses Integers, keep it but check for NaN
-        userId: isNaN(Number(userId)) ? userId : parseInt(userId),
-        resourceId: resourceId,
+    // ... rest of your logic (splitting uuid, prisma create, etc.)
+    const [uId, resId] = decodedData.transaction_uuid.split("-");
+
+    await prisma.purchase.upsert({
+      where: {
+        userId_resourceId: {
+          userId: parseInt(uId),
+          resourceId: resId,
+        },
+      },
+      update: {
         amount: parseFloat(decodedData.total_amount.replace(/,/g, "")),
-        status: "COMPLETED",
-        // Optional: Save the eSewa transaction ref for your records
-        transactionId: decodedData.transaction_code,
+      },
+      create: {
+        userId: parseInt(uId),
+        resourceId: resId,
+        amount: parseFloat(decodedData.total_amount.replace(/,/g, "")),
       },
     });
 
-    console.log("🎉 Purchase successful:", newPurchase.id);
-    return res.status(200).json({ success: true, message: "Access unlocked" });
+    return res
+      .status(200)
+      .json({ success: true, message: "Purchase recorded!" });
   } catch (error) {
-    // THIS LOG IS CRITICAL - Look at your terminal for this!
-    console.error("❌ VERIFICATION CRASHED:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal Server Error",
-      error: error instanceof Error ? error.message : "Unknown error",
-    });
+    console.error("CRITICAL VERIFY ERROR:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 };
