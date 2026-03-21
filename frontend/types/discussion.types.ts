@@ -9,17 +9,17 @@ export interface Discussion {
   content: string;
   language: string | null;
   upvotes: number;
-  
+
   userId: number;
   problemId: number;
   parentId: string | null;
   createdAt: string | Date;
   updatedAt: string | Date;
-  
+  reportCount: number;
   // Relations
   user: UserBasicInfo;
   replies?: Discussion[];
-  
+
   // UI Helpers (Calculated by Backend Service/Controller)
   hasUpvoted?: boolean;
   _count?: {
@@ -39,7 +39,7 @@ export interface CreateDiscussionDTO {
 }
 
 /**
- * Interface for the API Response structure 
+ * Interface for the API Response structure
  * matching your Challenge service pattern
  */
 export interface DiscussionResponse<T> {
