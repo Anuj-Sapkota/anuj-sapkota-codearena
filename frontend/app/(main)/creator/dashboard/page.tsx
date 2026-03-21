@@ -1,0 +1,137 @@
+"use client";
+
+import { useSelector } from "react-redux";
+import { RootState } from "@/lib/store/store";
+import { useMyResources } from "@/hooks/useResource";
+import { 
+  FiPlus, 
+  FiBook, 
+  FiLayout, 
+  FiActivity, 
+  FiLoader,
+  FiVideo,
+  FiArrowRight
+} from "react-icons/fi";
+import Link from "next/link";
+
+export default function CreatorDashboard() {
+  const { user } = useSelector((state: RootState) => state.auth);
+  const { data: resources, isLoading } = useMyResources();
+
+  if (user?.creatorStatus !== "APPROVED") {
+    return (
+      <div className="p-20 text-center">
+        <h2 className="text-xl font-black uppercase italic tracking-tighter">Access Denied</h2>
+        <p className="text-slate-500 text-sm mt-2">You must be a verified creator to view this page.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto py-12 px-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+        <div>
+          <h1 className="text-4xl font-black uppercase tracking-tighter text-slate-900">
+            Creator <span className="text-primary-1">Studio</span>
+          </h1>
+          <p className="text-slate-500 text-sm mt-1 font-medium">
+            Welcome back, {user?.full_name}. Manage your assets and earnings.
+          </p>
+        </div>
+        
+        <Link 
+          href="/creator/dashboard/create"
+          className="flex items-center gap-2 bg-slate-900 text-white px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-slate-800 transition-all rounded-sm shadow-lg hover:-translate-y-1 active:scale-95"
+        >
+          <FiPlus size={16} /> Create New Resource
+        </Link>
+      </div>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        {[
+          { label: "Active Resources", value: resources?.length || 0, icon: <FiLayout /> },
+          { label: "Total Sales", value: "$0.00", icon: <FiActivity /> },
+          { label: "Profile Views", value: "0", icon: <FiBook /> },
+        ].map((stat, i) => (
+          <div key={i} className="border border-slate-200 p-8 bg-white rounded-sm shadow-sm hover:border-slate-300 transition-colors">
+            <div className="text-slate-400 mb-4">{stat.icon}</div>
+            <div className="text-3xl font-black text-slate-900 tracking-tighter">{stat.value}</div>
+            <div className="text-[10px] font-black uppercase text-slate-500 tracking-widest mt-1">{stat.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Resources List */}
+      <div className="mb-6 flex items-center justify-between">
+         <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Your Marketplace</h2>
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center py-20">
+          <FiLoader className="animate-spin text-slate-300" size={32} />
+        </div>
+      ) : resources && resources.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          {resources.map((res: any) => (
+            <Link 
+              href={`/creator/dashboard/resource/${res.id}`} // 🚀 Navigation to the Player/Detail View
+              key={res.id} 
+              className="group border border-slate-200 bg-white rounded-sm overflow-hidden hover:shadow-2xl hover:border-slate-900 transition-all duration-500 block relative"
+            >
+              <div className="relative aspect-video overflow-hidden bg-slate-100">
+                <img 
+                  src={res.previewUrl} 
+                  alt={res.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-90 group-hover:opacity-100" 
+                />
+                <div className="absolute top-3 left-3 bg-slate-900 text-white text-[9px] font-black uppercase px-2 py-1 tracking-widest">
+                  {res.type}
+                </div>
+                {/* Hover Overlay */}
+                <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                   <div className="bg-white p-3 rounded-full translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                      <FiArrowRight className="text-slate-900" size={20} />
+                   </div>
+                </div>
+              </div>
+              <div className="p-5">
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="font-black uppercase text-sm tracking-tight truncate flex-1 group-hover:text-primary-1 transition-colors">{res.title}</h3>
+                  <span className="font-bold text-sm text-emerald-600 ml-2">${res.price}</span>
+                </div>
+                <div className="flex items-center gap-4 mt-4 pt-4 border-t border-slate-50">
+                   <div className="flex items-center gap-1.5 text-slate-400">
+                     <FiVideo size={12} />
+                     <span className="text-[10px] font-bold">{res._count?.modules || 0} Lessons</span>
+                   </div>
+                   <div className="flex items-center gap-1.5 text-slate-400 ml-auto">
+                     <span className={`text-[9px] font-black uppercase tracking-tighter px-2 py-0.5 rounded-full ${res.isApproved ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                       {res.isApproved ? 'Live' : 'Review'}
+                     </span>
+                   </div>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      ) : (
+        /* Empty State */
+        <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-sm p-20 text-center">
+          <div className="max-w-xs mx-auto">
+            <FiLayout className="mx-auto text-slate-300 mb-4" size={48} />
+            <h3 className="text-lg font-black uppercase text-slate-900">No resources yet</h3>
+            <p className="text-slate-500 text-xs mt-2 mb-8 font-medium">Start by creating your first digital product, masterclass, or series.</p>
+            <Link 
+              href="/creator/dashboard/create"
+              className="text-xs font-black uppercase underline tracking-widest hover:text-slate-900 transition-colors"
+            >
+              Launch Creator Wizard →
+            </Link>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

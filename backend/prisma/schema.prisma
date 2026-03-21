@@ -6,6 +6,7 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
 // --- ENUMS ---
 
 enum Role {
@@ -25,8 +26,8 @@ enum ResourceType {
   VIDEO
   PDF
   ARTICLE
+  SERIES  
 }
-
 enum InputType {
   INT
   ARRAY
@@ -63,126 +64,143 @@ enum CreatorStatus {
 // --- CORE MODELS ---
 
 model User {
-  userId              Int               @id @default(autoincrement())
+  userId              Int       @id @default(autoincrement())
   full_name           String
-  username            String            @unique
-  email               String            @unique
+  username            String    @unique
+  email               String    @unique
   password_hash       String?
-  has_password        Boolean           @default(false)
+  has_password        Boolean   @default(false)
   auth_provider       String?
   github_id           String?
   github_access_token String?
   google_id           String?
   profile_pic_url     String?
-  resetToken          String?           @unique
+  resetToken          String?   @unique
   resetTokenExpiry    DateTime?
   bio                 String?
-  role                Role              @default(USER)
-  
+  role                Role      @default(USER)
+
   // This is your main "Gatekeeper" field for the frontend
-  creatorStatus       CreatorStatus     @default(NOT_APPLIED)
-  
-  total_points        Int               @default(0)
+  creatorStatus CreatorStatus @default(NOT_APPLIED)
+
+  total_points Int @default(0)
 
   // Relations
-  submissions         Submission[]
-  problemStatuses     UserProblemStatus[]
-  discussions         Discussion[]
-  discussionVotes     DiscussionUpvote[]
-  discussionReports   DiscussionReport[]
-  
-  // Learning & Marketplace Relations
-  creatorProfile      CreatorProfile?
-  ownedResources      Resource[]        
-  purchases           Purchase[]        
-  reviews             Review[]          
+  submissions       Submission[]
+  problemStatuses   UserProblemStatus[]
+  discussions       Discussion[]
+  discussionVotes   DiscussionUpvote[]
+  discussionReports DiscussionReport[]
 
-  created_at          DateTime           @default(now())
-  updated_at          DateTime           @updatedAt
+  // Learning & Marketplace Relations
+  creatorProfile CreatorProfile?
+  ownedResources Resource[]
+  purchases      Purchase[]
+  reviews        Review[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
   @@map("users")
 }
 
 model CreatorProfile {
-  id              Int           @id @default(autoincrement())
-  userId          Int           @unique
-  user            User          @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  
+  id     Int  @id @default(autoincrement())
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
   // Sync this status with the User.creatorStatus in your backend logic
-  status          CreatorStatus @default(PENDING) 
-  
-  bio             String?       @db.Text
+  status CreatorStatus @default(PENDING)
+
+  bio             String? @db.Text
   portfolioUrl    String?
-  rejectionReason String?       @db.Text
-  
+  rejectionReason String? @db.Text
+
   githubUrl       String?
-  isEmailVerified Boolean       @default(false)
-  otpCode         String?  
+  isEmailVerified Boolean   @default(false)
+  otpCode         String?
   otpExpiresAt    DateTime?
 
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("creator_profiles")
 }
+
 // --- RESOURCE MARKETPLACE ---
 
 model Resource {
-  id            String       @id @default(cuid())
-  title         String
-  description   String       @db.Text
-  type          ResourceType
-  contentUrl    String       
-  previewUrl    String?      
-  price         Float        @default(0.0)
-  language      String?      
-  
-  avgRating     Float        @default(0.0)
-  totalReviews  Int          @default(0)
-  isApproved    Boolean      @default(false)
+  id          String       @id @default(cuid())
+  title       String
+  description String       @db.Text
+  type        ResourceType
+  contentUrl  String
+  previewUrl  String?
+  price       Float        @default(0.0)
+  language    String?
 
-  creatorId     Int
-  creator       User         @relation(fields: [creatorId], references: [userId])
-  
-  problemId     Int?         
-  problem       Problem?     @relation(fields: [problemId], references: [problemId])
-  
-  reviews       Review[]
-  purchases     Purchase[]
+  avgRating    Float   @default(0.0)
+  totalReviews Int     @default(0)
+  isApproved   Boolean @default(false)
 
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  creatorId Int
+  creator   User @relation(fields: [creatorId], references: [userId])
+
+  problemId Int?
+  problem   Problem? @relation(fields: [problemId], references: [problemId])
+
+  reviews   Review[]
+  modules   Module[]
+  purchases Purchase[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("resources")
 }
 
+model Module {
+  id         String @id @default(cuid())
+  title      String
+  contentUrl String // This stores the Cloudinary URL
+  order      Int // This ensures Video 1 stays before Video 2
+
+  resourceId String
+  resource   Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("modules")
+}
+
 model Purchase {
-  id         String   @id @default(cuid())
+  id         String @id @default(cuid())
   userId     Int
   resourceId String
   amount     Float
-  
-  user       User     @relation(fields: [userId], references: [userId])
-  resource   Resource @relation(fields: [resourceId], references: [id])
 
-  createdAt  DateTime @default(now())
+  user     User     @relation(fields: [userId], references: [userId])
+  resource Resource @relation(fields: [resourceId], references: [id])
+
+  createdAt DateTime @default(now())
 
   @@unique([userId, resourceId])
   @@map("purchases")
 }
 
 model Review {
-  id         String   @id @default(cuid())
-  rating     Int      
-  comment    String   @db.Text
-  
+  id      String @id @default(cuid())
+  rating  Int
+  comment String @db.Text
+
   userId     Int
   resourceId String
-  
-  user       User     @relation(fields: [userId], references: [userId])
-  resource   Resource @relation(fields: [resourceId], references: [id])
 
-  createdAt  DateTime @default(now())
+  user     User     @relation(fields: [userId], references: [userId])
+  resource Resource @relation(fields: [resourceId], references: [id])
+
+  createdAt DateTime @default(now())
 
   @@unique([userId, resourceId])
   @@map("resource_reviews")
@@ -191,21 +209,21 @@ model Review {
 // --- DISCUSSIONS & MODERATION ---
 
 model Discussion {
-  id        String   @id @default(cuid())
-  title     String?  
-  content   String   @db.Text
-  language  String?  
-  isPinned  Boolean  @default(false) 
-  
-  userId    Int
-  user      User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  
+  id       String  @id @default(cuid())
+  title    String?
+  content  String  @db.Text
+  language String?
+  isPinned Boolean @default(false)
+
+  userId Int
+  user   User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
   problemId Int
   problem   Problem @relation(fields: [problemId], references: [problemId], onDelete: Cascade)
 
-  parentId  String?
-  parent    Discussion?  @relation("DiscussionToDiscussion", fields: [parentId], references: [id])
-  replies   Discussion[] @relation("DiscussionToDiscussion")
+  parentId String?
+  parent   Discussion?  @relation("DiscussionToDiscussion", fields: [parentId], references: [id])
+  replies  Discussion[] @relation("DiscussionToDiscussion")
 
   upvotes      Int                @default(0)
   upvoteTracks DiscussionUpvote[]
@@ -213,25 +231,25 @@ model Discussion {
   reportCount  Int                @default(0)
   reports      DiscussionReport[]
 
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("discussions")
 }
 
 model DiscussionReport {
-  id           Int      @id @default(autoincrement())
+  id           Int        @id @default(autoincrement())
   userId       Int
   discussionId String
-  reportType   ReportType   @default(OTHER)
-  details      String?  @db.Text 
+  reportType   ReportType @default(OTHER)
+  details      String?    @db.Text
 
   user       User       @relation(fields: [userId], references: [userId], onDelete: Cascade)
   discussion Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 
-  @@unique([userId, discussionId]) 
+  @@unique([userId, discussionId])
   @@map("discussion_reports")
 }
 
@@ -253,7 +271,7 @@ model Problem {
   problemId    Int       @id @default(autoincrement())
   title        String
   content      String    @db.Text
-  difficulty   String 
+  difficulty   String
   points       Int       @default(50)
   functionName String    @default("solution")
   starterCode  Json
@@ -267,7 +285,7 @@ model Problem {
   userStatuses UserProblemStatus[]
   challenges   ChallengeProblem[]
   discussions  Discussion[]
-  resources    Resource[] 
+  resources    Resource[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -276,10 +294,10 @@ model Problem {
 }
 
 model Category {
-  categoryId  Int      @id @default(autoincrement())
-  name        String   @unique
-  slug        String   @unique
-  description String?  @db.Text
+  categoryId  Int       @id @default(autoincrement())
+  name        String    @unique
+  slug        String    @unique
+  description String?   @db.Text
   problems    Problem[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -337,7 +355,7 @@ model Challenge {
   slug        String              @unique
   description String?             @db.Text
   bannerUrl   String?
-  type        ChallengeType @default(SCHEDULED)
+  type        ChallengeType       @default(SCHEDULED)
   difficulty  ChallengeDifficulty @default(MEDIUM)
   points      Int                 @default(100)
   isPublic    Boolean             @default(false)

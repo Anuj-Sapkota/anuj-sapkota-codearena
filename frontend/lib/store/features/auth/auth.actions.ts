@@ -1,7 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 
 import { authService } from "@/lib/services/auth.service";
-import { userService } from "@/lib/services/user.service";
+import  {userService}  from "@/lib/services/user.service";
 import { handleAxiosError } from "@/utils/axios-error.util";
 
 import type {
@@ -9,6 +9,7 @@ import type {
   LoginCredentials,
   RegisterCredentials,
 } from "@/types/auth.types";
+import { uploadService } from "@/lib/services/upload.service";
 
 /**
  * AUTHENTICATION--------------------------------------------------
@@ -21,7 +22,7 @@ export const registerThunk = createAsyncThunk(
     } catch (error: unknown) {
       return rejectWithValue(handleAxiosError(error, "Registration failed"));
     }
-  }
+  },
 );
 
 export const loginThunk = createAsyncThunk(
@@ -32,7 +33,7 @@ export const loginThunk = createAsyncThunk(
     } catch (error: unknown) {
       return rejectWithValue(handleAxiosError(error, "Login failed"));
     }
-  }
+  },
 );
 
 /**
@@ -41,17 +42,40 @@ export const loginThunk = createAsyncThunk(
 export const updateThunk = createAsyncThunk(
   "auth/updateUser",
   async (
-    { userId, data }: { userId: number; data: FormData },
-    { rejectWithValue }
+    {
+      userId,
+      profileData,
+      file,
+    }: {
+      userId: number;
+      profileData: { username?: string; bio?: string };
+      file?: File;
+    },
+    { rejectWithValue },
   ) => {
     try {
-      return await userService.updateProfile(userId, data);
+      let profile_pic_url = "";
+
+      // 1. If a new file is provided, upload it to the dedicated upload route first
+      if (file) {
+        const uploadResult = await uploadService.uploadFile(file, "profile");
+        profile_pic_url = uploadResult.url;
+      }
+
+      // 2. Prepare the final JSON payload
+      const finalData = {
+        ...profileData,
+        ...(profile_pic_url && { profile_pic: profile_pic_url }),
+      };
+
+      // 3. Update the user profile in the database with JSON
+      return await userService.updateProfile(userId, finalData);
     } catch (error: unknown) {
       return rejectWithValue(
-        handleAxiosError(error, "Failed to update profile")
+        handleAxiosError(error, "Failed to update profile"),
       );
     }
-  }
+  },
 );
 
 export const getMeThunk = createAsyncThunk(
@@ -62,7 +86,7 @@ export const getMeThunk = createAsyncThunk(
     } catch (error: unknown) {
       return rejectWithValue(handleAxiosError(error, "Session expired"));
     }
-  }
+  },
 );
 
 export const logoutThunk = createAsyncThunk(
@@ -73,7 +97,7 @@ export const logoutThunk = createAsyncThunk(
     } catch (error: unknown) {
       return rejectWithValue(handleAxiosError(error, "Logout failed"));
     }
-  }
+  },
 );
 /**
  * SECURITY ACTIONS ---------------------------------------------------------
@@ -87,7 +111,7 @@ export const setInitialPasswordThunk = createAsyncThunk(
     } catch (error: unknown) {
       return rejectWithValue(handleAxiosError(error, "Failed to set password"));
     }
-  }
+  },
 );
 
 export const changePasswordThunk = createAsyncThunk(
@@ -97,8 +121,8 @@ export const changePasswordThunk = createAsyncThunk(
       return await authService.changePasswordApi(data);
     } catch (error: unknown) {
       return rejectWithValue(
-        handleAxiosError(error, "Failed to change password")
+        handleAxiosError(error, "Failed to change password"),
       );
     }
-  }
+  },
 );

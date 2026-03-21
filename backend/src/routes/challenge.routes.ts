@@ -7,8 +7,8 @@ import {
   deleteChallenge,
   getPublicChallenge,
 } from "../controllers/challenge.controller.js";
-import { authenticateRequest } from "../middlewares/auth.middleware.js";
-import { authorizeRequest } from "../middlewares/authorize.middleware.js";
+import { authenticateRequest } from "../middleware/auth.middleware.js";
+import { authorizeRequest } from "../middleware/authorize.middleware.js";
 
 const router = Router();
 
