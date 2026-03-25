@@ -44,9 +44,8 @@ backend/prisma/migrations/
 .vscode/
 
     # ======================
-# Judge0 FOLDER
-# ======================
-judge0-v1.13.1/judge0.conf
-judge0-v1.13.1/data/
-judge0-v1.13.1/log/
-judge0-v1.13.1/redis-data/
+    # Judge0 FOLDER
+    # ======================
+    judge0-v1.13.1/judge0.conf
+    judge0-v1.13.1/data/
+    judge0-v1.13.1/log/

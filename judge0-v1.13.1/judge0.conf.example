@@ -196,7 +196,7 @@ REDIS_PORT=
 
 # Specify Redis password. Cannot be blank.
 # Default: NO DEFAULT! MUST BE SET!
-REDIS_PASSWORD=REDIS_PASSWORD_HERE-------------------------------------------------
+REDIS_PASSWORD=
 
 
 ################################################################################
@@ -207,8 +207,8 @@ REDIS_PASSWORD=REDIS_PASSWORD_HERE----------------------------------------------
 POSTGRES_HOST=db
 
 # Specify Postgres port.
-# Default: 5432 -----------------------------------------------
-POSTGRES_PORT=PORT_HERE
+# Default: 5432
+POSTGRES_PORT=
 
 # Name of the database to use. Used only in production.
 # Default: postgres
@@ -220,7 +220,7 @@ POSTGRES_USER=judge0
 
 # Password of the user. Cannot be blank. Used only in production.
 # Default: NO DEFAULT, YOU MUST SET YOUR PASSWORD
-POSTGRES_PASSWORD=YOUR_PASSWORD HERE------------------------------------------------
+POSTGRES_PASSWORD=
 
 
 ################################################################################
