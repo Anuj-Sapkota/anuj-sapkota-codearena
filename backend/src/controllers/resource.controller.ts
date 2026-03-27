@@ -223,7 +223,6 @@ export const getPublicResources = async (req: Request, res: Response) => {
 
     const rawResources = await prisma.resource.findMany({
       where: {
-        isPublished: true, // Only show published courses
         ...(search
           ? {
               OR: [
