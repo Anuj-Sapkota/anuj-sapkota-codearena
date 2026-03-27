@@ -19,6 +19,26 @@
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
   --font-code: "JetBrains Mono", "Fira Code", monospace;
 }
+/* Heatmap Colors */
+.react-calendar-heatmap .color-empty {
+  fill: #2d2d2d;
+}
+.react-calendar-heatmap .color-scale-1 {
+  fill: #0e4429;
+}
+.react-calendar-heatmap .color-scale-2 {
+  fill: #006d32;
+}
+.react-calendar-heatmap .color-scale-3 {
+  fill: #26a641;
+}
+.react-calendar-heatmap .color-scale-4 {
+  fill: #39d353;
+}
+
+.react-calendar-heatmap rect {
+  rx: 2; /* Rounded corners for squares */
+}
 
 body {
   font-family: var(--font-sans);
@@ -44,7 +64,6 @@ body {
     scrollbar-width: none; /* Firefox */
   }
 }
-
 
 /* Add this to your globals.css */
 

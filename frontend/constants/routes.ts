@@ -15,7 +15,6 @@ export const ROUTES = {
   // Protected Main Routes
   MAIN: {
     EXPLORE: "/explore",
-    PROFILE: "/profile",
     SETTINGS: "/settings",
     ACCOUNTS_SECURITY: "/settings/accounts-security",
     PROBLEMS: "/problems",

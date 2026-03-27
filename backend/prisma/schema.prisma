@@ -81,17 +81,23 @@ model User {
   bio                 String?
   role                Role      @default(USER)
 
+  // --- Gamification Fields ---
+  xp               Int       @default(0)
+  level            Int       @default(1)
+  streak           Int       @default(0)
+  lastActivityDate DateTime?
+
   // This is your main "Gatekeeper" field for the frontend
   creatorStatus CreatorStatus @default(NOT_APPLIED)
-
-  total_points Int @default(0)
+  total_points  Int           @default(0)
 
   // Relations
-  submissions       Submission[]
   problemStatuses   UserProblemStatus[]
   discussions       Discussion[]
   discussionVotes   DiscussionUpvote[]
   discussionReports DiscussionReport[]
+  activities        Activity[]
+  submissions       Submission[] // Track all code submissions
 
   // Learning & Marketplace Relations
   creatorProfile CreatorProfile?
@@ -103,6 +109,20 @@ model User {
   updated_at DateTime @updatedAt
 
   @@map("users")
+}
+
+// NEW: Activity Model for the Contribution Heatmap
+model Activity {
+  id     String @id @default(cuid())
+  userId Int // FIXED: Must be Int to match User.userId
+  user   User   @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  type     String // e.g., "EASY_SOLVED", "COURSE_COMPLETED", "DAILY_LOGIN"
+  xpGained Int    @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model CreatorProfile {
@@ -325,7 +345,7 @@ model Submission {
   challengeId Int?
   code        String   @db.Text
   languageId  Int
-  status      String
+  status      String // Values like "Accepted", "Wrong Answer"
   totalPassed Int      @default(0)
   totalCases  Int      @default(0)
   memory      Int?
@@ -333,19 +353,21 @@ model Submission {
   token       String?  @unique
   failMessage String?
   createdAt   DateTime @default(now())
-  problem     Problem  @relation(fields: [problemId], references: [problemId])
-  user        User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  problem Problem @relation(fields: [problemId], references: [problemId])
+  user    User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
   @@map("submissions")
 }
 
 model UserProblemStatus {
-  id        Int     @id @default(autoincrement())
+  id        Int    @id @default(autoincrement())
   userId    Int
   problemId Int
-  status    String
-  user      User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  problem   Problem @relation(fields: [problemId], references: [problemId])
+  status    String // e.g. "SOLVED", "ATTEMPTED"
+
+  user    User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  problem Problem @relation(fields: [problemId], references: [problemId])
 
   @@unique([userId, problemId])
   @@map("user_problem_status")

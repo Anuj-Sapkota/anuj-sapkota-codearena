@@ -173,7 +173,7 @@ export default function Navbar() {
               {showProfileOptions && (
                 <div className="absolute right-0 mt-2 w-52 bg-white border border-slate-200 shadow-xl py-1 z-60 rounded-sm">
                   <Link
-                    href={ROUTES.MAIN.PROFILE}
+                    href={`/u/${user?.userId}/`}
                     className="flex items-center gap-3 px-4 py-2.5 text-slate-600 hover:bg-slate-50 hover:text-primary-1 text-sm font-medium"
                   >
                     <FiUser size={16} /> My Profile
