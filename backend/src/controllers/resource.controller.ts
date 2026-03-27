@@ -81,41 +81,32 @@ export const getMyResources = async (req: Request, res: Response) => {
 export const getResourceById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    // req.user might be undefined if your middleware allows guest access
-    const userId = (req as any).user.sub;
+    const userId = (req as any).user?.sub ? parseInt((req as any).user.sub) : null;
 
     const resource = await prisma.resource.findUnique({
       where: { id },
       include: {
-        modules: {
-          orderBy: { order: "asc" }, // Ensure videos are in order
-        },
-        // We only fetch the purchase record for the CURRENT logged-in user
-        purchases: userId
-          ? {
-              where: { userId: userId },
-            }
-          : false,
+        modules: { orderBy: { order: "asc" } },
+        purchases: userId ? { where: { userId: userId } } : false,
       },
     });
 
-    if (!resource)
-      return res.status(404).json({ message: "Resource not found" });
+    if (!resource) return res.status(404).json({ message: "Resource not found" });
 
-    // logic: If the purchases array has any entry, they own it.
-    const isOwned = userId ? resource.purchases.length > 0 : false;
+    // 🛠️ FIX: Creator can always view their own contentUrl
+    const isOwned = userId 
+      ? (resource.purchases.length > 0 || resource.creatorId === userId) 
+      : false;
 
-    // Send the data back, but hide sensitive contentUrl if not owned
     res.json({
       ...resource,
       isOwned,
-      // Security: Don't send the full contentUrl to people who haven't paid
       modules: isOwned
         ? resource.modules
         : resource.modules.map((m: any) => ({
             id: m.id,
             title: m.title,
-            contentUrl: null, // Hide the actual video link
+            contentUrl: null, 
             order: m.order,
           })),
     });
@@ -232,7 +223,6 @@ export const getPublicResources = async (req: Request, res: Response) => {
 
     const rawResources = await prisma.resource.findMany({
       where: {
-        isPublished: true, // Only show published courses
         ...(search
           ? {
               OR: [

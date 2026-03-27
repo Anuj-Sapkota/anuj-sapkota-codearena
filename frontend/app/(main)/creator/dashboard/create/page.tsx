@@ -13,12 +13,12 @@ import {
   FiTrash2,
   FiImage,
   FiEdit3,
-  FiMenu, // 🚀 Added for the drag handle
+  FiMenu,
 } from "react-icons/fi";
 import Link from "next/link";
 import { toast } from "sonner";
 
-// 🚀 DND Kit Imports
+// DND Kit Imports
 import {
   DndContext,
   closestCenter,
@@ -37,7 +37,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-// 🚀 Sortable Wrapper Component for the Module Card
+// --- 1. SORTABLE MODULE COMPONENT ---
 function SortableModule({ m, i, updateModuleTitle, removeModule }: any) {
   const {
     attributes,
@@ -46,7 +46,7 @@ function SortableModule({ m, i, updateModuleTitle, removeModule }: any) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: m.url }); // Use unique URL as ID
+  } = useSortable({ id: m.contentUrl }); // Using contentUrl as the unique identifier
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -63,23 +63,20 @@ function SortableModule({ m, i, updateModuleTitle, removeModule }: any) {
     >
       <div className="relative aspect-video bg-slate-900">
         <video
-          src={m.localPreview}
-          className="w-full h-full object-cover opacity-80"
+          src={m.contentUrl || m.localPreview}
+          className="w-full h-full object-cover"
+          controls
+          // 🛠️ STOP PROPAGATION: Allows clicking play/pause without starting a drag
+          onPointerDown={(e) => e.stopPropagation()}
         />
 
-        {/* 🚀 DRAG HANDLE (Only this part triggers the drag) */}
+        {/* DRAG HANDLE: The ONLY part that triggers movement */}
         <div
           {...attributes}
           {...listeners}
           className="absolute top-2 right-2 p-2 bg-white/90 rounded-sm cursor-grab active:cursor-grabbing hover:bg-white transition-colors shadow-sm z-10"
         >
           <FiMenu className="text-slate-900" size={14} />
-        </div>
-
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-          <span className="text-white text-[10px] font-black uppercase tracking-widest">
-            Previewing...
-          </span>
         </div>
       </div>
 
@@ -88,8 +85,10 @@ function SortableModule({ m, i, updateModuleTitle, removeModule }: any) {
           <FiEdit3 className="text-slate-300" size={12} />
           <input
             type="text"
-            className="flex-1 text-[11px] font-black uppercase italic focus:outline-none focus:text-primary-1"
+            className="flex-1 text-[11px] font-black uppercase italic focus:outline-none focus:text-slate-900"
             value={m.title}
+            // 🛠️ STOP PROPAGATION: Allows focusing the input without starting a drag
+            onPointerDown={(e) => e.stopPropagation()}
             onChange={(e) => updateModuleTitle(i, e.target.value)}
             placeholder="Enter Chapter Title"
           />
@@ -99,7 +98,7 @@ function SortableModule({ m, i, updateModuleTitle, removeModule }: any) {
           <div className="flex items-center gap-2">
             <FiCheck className="text-emerald-500" />
             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
-              Verified Order: {i + 1}
+              Order: {i + 1}
             </span>
           </div>
           <button
@@ -115,6 +114,7 @@ function SortableModule({ m, i, updateModuleTitle, removeModule }: any) {
   );
 }
 
+// --- 2. MAIN PAGE COMPONENT ---
 export default function CreateResourcePage() {
   const router = useRouter();
   const [series, setSeries] = useState({
@@ -124,15 +124,19 @@ export default function CreateResourcePage() {
     thumbnail: "",
     modules: [] as {
       title: string;
-      url: string;
+      contentUrl: string; // Updated to match Prisma
       type: string;
       localPreview?: string;
     }[],
   });
 
-  // 🚀 DND Sensors Setup
+  // 🛠️ ACTIVATION CONSTRAINT: Prevents accidental drags when just clicking
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 8px of movement required to start a drag
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
@@ -169,7 +173,7 @@ export default function CreateResourcePage() {
                 ...prev.modules,
                 {
                   title: file.name.replace(/\.[^/.]+$/, ""),
-                  url: res.url,
+                  contentUrl: res.url, // Corrected key
                   type: "video",
                   localPreview,
                 },
@@ -185,13 +189,16 @@ export default function CreateResourcePage() {
     );
   };
 
-  // 🚀 DND Reorder Logic
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (active.id !== over?.id) {
       setSeries((prev) => {
-        const oldIndex = prev.modules.findIndex((m) => m.url === active.id);
-        const newIndex = prev.modules.findIndex((m) => m.url === over?.id);
+        const oldIndex = prev.modules.findIndex(
+          (m) => m.contentUrl === active.id,
+        );
+        const newIndex = prev.modules.findIndex(
+          (m) => m.contentUrl === over?.id,
+        );
         return {
           ...prev,
           modules: arrayMove(prev.modules, oldIndex, newIndex),
@@ -224,7 +231,7 @@ export default function CreateResourcePage() {
 
     createResource.mutate(series, {
       onSuccess: () => {
-        toast.success("Series published successfully!");
+        toast.success("Masterclass published to CodeArena!");
         router.push("/creator/dashboard");
       },
       onError: (err: any) => toast.error(err.message || "Publishing failed"),
@@ -250,7 +257,6 @@ export default function CreateResourcePage() {
       </div>
 
       <form onSubmit={handlePublish} className="space-y-10">
-        {/* RESOURCE BASICS */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
           <div className="lg:col-span-2 space-y-6 bg-white p-8 border border-slate-200 rounded-sm shadow-sm">
             <div className="space-y-2">
@@ -260,7 +266,7 @@ export default function CreateResourcePage() {
               <input
                 type="text"
                 required
-                className="w-full border-b-2 border-slate-100 py-3 focus:outline-none focus:border-slate-900 text-lg font-bold transition-all"
+                className="w-full border-b-2 border-slate-100 py-3 focus:outline-none focus:border-slate-900 text-lg font-bold"
                 placeholder="e.g. Advanced Backend Architecture"
                 onChange={(e) =>
                   setSeries({ ...series, title: e.target.value })
@@ -288,20 +294,15 @@ export default function CreateResourcePage() {
               <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
                 Price (USD)
               </label>
-              <div className="relative">
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 font-bold text-slate-400">
-                  $
-                </span>
-                <input
-                  type="number"
-                  required
-                  className="w-full border-b-2 border-slate-100 py-3 pl-4 focus:outline-none focus:border-slate-900 font-bold"
-                  placeholder="29.99"
-                  onChange={(e) =>
-                    setSeries({ ...series, price: Number(e.target.value) })
-                  }
-                />
-              </div>
+              <input
+                type="number"
+                required
+                className="w-full border-b-2 border-slate-100 py-3 focus:outline-none focus:border-slate-900 font-bold"
+                placeholder="29.99"
+                onChange={(e) =>
+                  setSeries({ ...series, price: Number(e.target.value) })
+                }
+              />
             </div>
 
             <div className="space-y-2">
@@ -312,7 +313,7 @@ export default function CreateResourcePage() {
                 {series.thumbnail ? (
                   <img
                     src={series.thumbnail}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover"
                   />
                 ) : (
                   <div className="flex flex-col items-center text-slate-300">
@@ -337,11 +338,11 @@ export default function CreateResourcePage() {
           </div>
         </div>
 
-        {/* 🚀 WRAPPED MODULES SECTION IN DND CONTEXT */}
+        {/* CURRICULUM SECTION */}
         <div className="bg-white border border-slate-200 p-8 rounded-sm shadow-sm">
           <div className="flex justify-between items-end mb-8">
             <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">
-              Course Curriculum (Drag to Reorder)
+              Course Curriculum
             </h3>
             <span className="text-[10px] font-bold text-slate-900 bg-slate-100 px-3 py-1 italic">
               {series.modules.length} Modules Uploaded
@@ -354,13 +355,13 @@ export default function CreateResourcePage() {
             onDragEnd={handleDragEnd}
           >
             <SortableContext
-              items={series.modules.map((m) => m.url)}
+              items={series.modules.map((m) => m.contentUrl)}
               strategy={verticalListSortingStrategy}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                 {series.modules.map((m, i) => (
                   <SortableModule
-                    key={m.url}
+                    key={m.contentUrl}
                     m={m}
                     i={i}
                     updateModuleTitle={updateModuleTitle}
@@ -368,40 +369,29 @@ export default function CreateResourcePage() {
                   />
                 ))}
 
-                {/* UPLOADING STATE */}
                 {isUploading && variables?.type === "video" && (
-                  <div className="aspect-video border-2 border-slate-900 border-dashed rounded-sm bg-slate-50 flex flex-col items-center justify-center p-8 text-center animate-pulse">
+                  <div className="aspect-video border-2 border-slate-900 border-dashed rounded-sm bg-slate-50 flex flex-col items-center justify-center p-8 animate-pulse">
                     <FiLoader
                       className="animate-spin text-slate-900 mb-4"
                       size={28}
                     />
-                    <span className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em]">
+                    <span className="text-[11px] font-black uppercase">
                       Processing: {progress}%
                     </span>
-                    <div className="w-full max-w-[180px] h-1.5 bg-slate-200 rounded-full mt-4 overflow-hidden">
-                      <div
-                        className="h-full bg-slate-900 transition-all duration-300"
-                        style={{ width: `${progress}%` }}
-                      />
-                    </div>
                   </div>
                 )}
 
-                {/* ADD MODULE BUTTON */}
                 {!isUploading && (
-                  <label className="flex flex-col items-center justify-center aspect-video border-2 border-dashed border-slate-200 rounded-sm cursor-pointer hover:border-slate-900 hover:bg-slate-50 transition-all group active:scale-95">
-                    <div className="flex flex-col items-center text-slate-300 group-hover:text-slate-900 transition-colors">
-                      <FiPlus size={32} />
-                      <span className="text-[10px] font-black mt-3 uppercase tracking-[0.2em] italic">
-                        Add Chapter
-                      </span>
-                    </div>
+                  <label className="flex flex-col items-center justify-center aspect-video border-2 border-dashed border-slate-200 rounded-sm cursor-pointer hover:border-slate-900 hover:bg-slate-50 transition-all">
+                    <FiPlus size={32} className="text-slate-300" />
+                    <span className="text-[10px] font-black mt-3 uppercase">
+                      Add Chapter
+                    </span>
                     <input
                       type="file"
                       hidden
                       accept="video/*"
                       onChange={(e) => handleFile(e, "video")}
-                      disabled={isUploading}
                     />
                   </label>
                 )}
@@ -410,21 +400,17 @@ export default function CreateResourcePage() {
           </DndContext>
         </div>
 
-        {/* STICKY PUBLISH BUTTON */}
         <div className="flex justify-end sticky bottom-8 z-20">
           <button
             type="submit"
-            disabled={
-              createResource.isPending || isUploading || !series.thumbnail
-            }
-            className="px-20 py-7 bg-slate-900 text-white text-[11px] font-black uppercase tracking-[0.4em] shadow-2xl hover:bg-slate-800 disabled:opacity-20 transition-all flex items-center gap-6 group"
+            disabled={createResource.isPending || isUploading}
+            className="px-20 py-7 bg-slate-900 text-white text-[11px] font-black uppercase tracking-[0.4em] shadow-2xl hover:bg-slate-800 disabled:opacity-20 transition-all flex items-center gap-6"
           >
             {createResource.isPending ? (
               <FiLoader className="animate-spin" />
             ) : (
               <>
-                <FiSave className="group-hover:rotate-12 transition-transform" />
-                Publish Masterclass
+                <FiSave /> Publish Masterclass
               </>
             )}
           </button>
