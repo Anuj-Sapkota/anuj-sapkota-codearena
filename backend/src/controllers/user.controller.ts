@@ -90,15 +90,19 @@ export const getUserProfile = async (
     // 1. Run parallel queries
     const [
       user,
-      acceptedSubmissions, // For unique solved stats and languages
+      acceptedSubmissions,
       recentSubmissions,
-      heatmapSubmissions, // For total activity volume
+      heatmapSubmissions,
+      participatedChallenges,
+      boughtResources,
+      globalDifficultyTotals, // NEW: Fetch total problems available in DB
     ] = await Promise.all([
       // A. User Info
       prisma.user.findUnique({
         where: { userId: targetId },
         select: {
           full_name: true,
+          profile_pic_url: true,
           username: true,
           xp: true,
           level: true,
@@ -109,26 +113,24 @@ export const getUserProfile = async (
       }),
 
       // B. All Accepted Submissions (Unique Problems)
-      // We use distinct to ensure we only count a problem once
       prisma.submission.findMany({
         where: {
           userId: targetId,
-          status: "ACCEPTED", // CHECK: Ensure this matches your DB exactly (likely all caps)
+          status: "ACCEPTED",
         },
         distinct: ["problemId"],
         include: { problem: { select: { difficulty: true } } },
       }),
 
-      // C. Recent Submissions (Latest 10)
+      // C. Recent Submissions (Latest 5)
       prisma.submission.findMany({
         where: { userId: targetId, status: "ACCEPTED" },
-        take: 10,
+        take: 5,
         orderBy: { createdAt: "desc" },
         include: { problem: { select: { title: true } } },
       }),
 
-      // D. Heatmap Data (All Submissions - Volume of Activity)
-      // We remove status filter here to show "amount of submission"
+      // D. Heatmap Data
       prisma.submission.findMany({
         where: {
           userId: targetId,
@@ -138,7 +140,43 @@ export const getUserProfile = async (
         },
         select: { createdAt: true },
       }),
+
+      // E. Participated Challenges
+      prisma.submission.findMany({
+        where: { userId: targetId, challengeId: { not: null } },
+        distinct: ["challengeId"],
+        select: {
+          challengeId: true,
+          createdAt: true,
+        },
+      }),
+
+      // F. Bought Resources
+      prisma.purchase.findMany({
+        where: { userId: targetId },
+        include: {
+          resource: {
+            select: { title: true, type: true, id: true },
+          },
+        },
+      }),
+
+      // G. NEW: Global Totals grouped by difficulty
+      prisma.problem.groupBy({
+        by: ["difficulty"],
+        _count: {
+          problemId: true,
+        },
+      }),
     ]);
+
+    const challengeIds = participatedChallenges.map(
+      (c) => c.challengeId as number,
+    );
+    const challengeDetails = await prisma.challenge.findMany({
+      where: { challengeId: { in: challengeIds } },
+      select: { title: true, challengeId: true, difficulty: true },
+    });
 
     if (!user) {
       return res
@@ -146,20 +184,35 @@ export const getUserProfile = async (
         .json({ success: false, message: "User not found" });
     }
 
-    // 2. Process Difficulty Stats (Unique count)
+    // --- Process Difficulty Stats ---
+    // Extract totals from the groupBy result
+    const getGlobalTotal = (diff: string) =>
+      globalDifficultyTotals.find(
+        (g) => g.difficulty.toUpperCase() === diff.toUpperCase(),
+      )?._count.problemId || 0;
+
     const stats = {
-      easy: acceptedSubmissions.filter(
-        (s) => s.problem.difficulty.toUpperCase() === "EASY",
-      ).length,
-      medium: acceptedSubmissions.filter(
-        (s) => s.problem.difficulty.toUpperCase() === "MEDIUM",
-      ).length,
-      hard: acceptedSubmissions.filter(
-        (s) => s.problem.difficulty.toUpperCase() === "HARD",
-      ).length,
+      easy: {
+        solved: acceptedSubmissions.filter(
+          (s) => s.problem.difficulty.toUpperCase() === "EASY",
+        ).length,
+        total: getGlobalTotal("EASY"),
+      },
+      medium: {
+        solved: acceptedSubmissions.filter(
+          (s) => s.problem.difficulty.toUpperCase() === "MEDIUM",
+        ).length,
+        total: getGlobalTotal("MEDIUM"),
+      },
+      hard: {
+        solved: acceptedSubmissions.filter(
+          (s) => s.problem.difficulty.toUpperCase() === "HARD",
+        ).length,
+        total: getGlobalTotal("HARD"),
+      },
     };
 
-    // 3. Process Language Stats (Unique problems per language)
+    // --- Process Language Stats ---
     const languageCounts: Record<number, number> = {};
     acceptedSubmissions.forEach((s) => {
       languageCounts[s.languageId] = (languageCounts[s.languageId] || 0) + 1;
@@ -172,7 +225,7 @@ export const getUserProfile = async (
       }))
       .sort((a, b) => b.count - a.count);
 
-    // 4. Heatmap Aggregation (Total Volume)
+    // --- Heatmap Aggregation ---
     const heatmapData = heatmapSubmissions.reduce((acc: any[], curr) => {
       const date = curr.createdAt.toISOString().split("T")[0];
       const existing = acc.find((item) => item.date === date);
@@ -189,19 +242,30 @@ export const getUserProfile = async (
       user: {
         name: user.full_name,
         username: user.username,
+        profile_pic_url: user.profile_pic_url,
         xp: user.xp,
         level: user.level,
         streak: user.streak,
         bio: user.bio,
         joined: user.created_at,
       },
-      stats,
+      stats, // Now includes both .solved and .total
       languageStats,
       heatmapData,
       recentSubmissions: recentSubmissions.map((s) => ({
         id: s.id,
         title: s.problem.title,
         createdAt: s.createdAt,
+      })),
+      challenges: challengeDetails.map((c) => ({
+        id: c.challengeId,
+        title: c.title,
+        difficulty: c.difficulty,
+      })),
+      resources: boughtResources.map((p) => ({
+        id: p.resource.id,
+        title: p.resource.title,
+        type: p.resource.type,
       })),
     });
   } catch (error) {

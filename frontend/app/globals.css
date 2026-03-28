@@ -51,6 +51,29 @@
   stroke-width: 1px;
 }
 
+/* Light Mode Heatmap Colors */
+.react-calendar-heatmap .color-empty-light {
+  fill: #f1f5f9;
+} /* slate-100 */
+.react-calendar-heatmap .color-blue-1 {
+  fill: #dbeafe;
+} /* blue-100 */
+.react-calendar-heatmap .color-blue-2 {
+  fill: #93c5fd;
+} /* blue-300 */
+.react-calendar-heatmap .color-blue-3 {
+  fill: #3b82f6;
+} /* blue-500 */
+.react-calendar-heatmap .color-blue-4 {
+  fill: #1d4ed8;
+} /* blue-700 */
+
+/* Global Heatmap Overrides */
+.react-calendar-heatmap text {
+  font-size: 10px;
+  fill: #64748b; /* slate-500 */
+}
+
 body {
   font-family: var(--font-sans);
 }
