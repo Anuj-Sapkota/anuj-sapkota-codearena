@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, use } from "react";
+import { Tooltip } from "react-tooltip";
 import CalendarHeatmap from "react-calendar-heatmap";
 import "react-calendar-heatmap/dist/styles.css";
 import { Trophy, Flame, CheckCircle, Code, Loader2 } from "lucide-react";
@@ -87,6 +88,9 @@ export default function PublicProfile({ params }: PageProps) {
   const totalSolved =
     (stats.easy || 0) + (stats.medium || 0) + (stats.hard || 0);
 
+  // Inside your PublicProfile component, before the return (...)
+  console.log("🔥 FULL DATA FROM API:", data);
+  console.log("📊 HEATMAP DATA:", data?.heatmapData);
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-gray-300 p-4 md:p-8 font-sans">
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -187,11 +191,22 @@ export default function PublicProfile({ params }: PageProps) {
             </div>
           </div>
 
-          {/* HEATMAP */}
+          {/* --- UPDATED SUBMISSION HEATMAP --- */}
+          {/* --- SUBMISSION HEATMAP --- */}
           <div className="bg-[#1a1a1a] p-6 rounded-xl border border-gray-800 shadow-xl">
-            <h3 className="text-white mb-6 font-bold text-lg">
-              Activity History
-            </h3>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-white font-bold text-lg">Activity History</h3>
+              <div className="flex items-center gap-1 text-[10px] text-gray-500 uppercase font-bold">
+                <span>Less</span>
+                <div className="w-3 h-3 bg-[#161b22] rounded-sm"></div>
+                <div className="w-3 h-3 bg-[#0e4429] rounded-sm"></div>
+                <div className="w-3 h-3 bg-[#006d32] rounded-sm"></div>
+                <div className="w-3 h-3 bg-[#26a641] rounded-sm"></div>
+                <div className="w-3 h-3 bg-[#39d353] rounded-sm"></div>
+                <span>More</span>
+              </div>
+            </div>
+
             <div className="heatmap-container overflow-x-auto pb-2">
               <CalendarHeatmap
                 startDate={
@@ -203,10 +218,21 @@ export default function PublicProfile({ params }: PageProps) {
                   if (!value || value.count === 0) return "color-empty";
                   return `color-scale-${Math.min(value.count, 4)}`;
                 }}
+                tooltipDataAttrs={(value: any) => {
+                  const dateStr = value?.date
+                    ? new Date(value.date).toDateString()
+                    : "";
+                  return {
+                    "data-tooltip-id": "heatmap-tooltip",
+                    "data-tooltip-content": value?.count
+                      ? `${value.count} submissions on ${dateStr}`
+                      : `No submissions`,
+                  } as any;
+                }}
+                showWeekdayLabels={true}
               />
             </div>
           </div>
-
           {/* RECENT SUBMISSIONS */}
           <div className="bg-[#1a1a1a] rounded-xl border border-gray-800 shadow-xl overflow-hidden">
             <div className="p-5 border-b border-gray-800 bg-[#222]">
@@ -242,6 +268,17 @@ export default function PublicProfile({ params }: PageProps) {
           </div>
         </div>
       </div>
+      <Tooltip
+        id="heatmap-tooltip"
+        style={{
+          backgroundColor: "#222",
+          color: "#fff",
+          borderRadius: "8px",
+          fontSize: "12px",
+          fontWeight: "bold",
+          border: "1px solid #444",
+        }}
+      />
     </div>
   );
 }

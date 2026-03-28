@@ -110,27 +110,31 @@ export const getUserProfile = async (req: Request, res: Response) => {
         (s) => s.problem.difficulty.toUpperCase() === "HARD",
       ).length,
     };
-
-    // 2. Get Heatmap Data (Last 365 Days)
+    // 2. FIXED HEATMAP DATA: Query Submissions instead of Activity
     const oneYearAgo = new Date();
     oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
-    const activities = await prisma.activity.findMany({
+    const submissionActivities = await prisma.submission.findMany({
       where: {
         userId: Number(userId),
+        status: "ACCEPTED",
         createdAt: { gte: oneYearAgo },
       },
-      select: { createdAt: true, xpGained: true },
+      select: { createdAt: true },
     });
 
-    // Format for React Calendar Heatmap: [{ date: '2026-01-01', count: 5 }]
-    const heatmapData = activities.reduce((acc: any, curr) => {
-      const date = curr.createdAt.toISOString().split("T")[0];
-      const existing = acc.find((item: any) => item.date === date);
-      if (existing) existing.count += 1;
-      else acc.push({ date, count: 1 });
+    // Format for React Calendar Heatmap
+    const heatmapData = submissionActivities.reduce((acc: any[], curr) => {
+      const date = curr.createdAt.toISOString().split("T")[0]; // Result: "2026-03-28"
+      const existing = acc.find((item) => item.date === date);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        acc.push({ date, count: 1 });
+      }
       return acc;
     }, []);
+
     // MAKE SEPERATE FUNCTION FOR THIS DURING TESTING
     const recentSubmissions = await prisma.submission.findMany({
       where: {

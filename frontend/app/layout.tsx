@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "react-tooltip/dist/react-tooltip.css";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import StoreProvider from "./StoreProvider";
 import { Toaster } from "sonner";
