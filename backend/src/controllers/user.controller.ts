@@ -65,67 +65,116 @@ export const getUserById = async (
     next(err);
   }
 };
-
-export const getUserProfile = async (req: Request, res: Response) => {
+const LANGUAGE_MAP: Record<number, string> = {
+  63: "JavaScript",
+  74: "TypeScript",
+  71: "Python",
+  62: "Java",
+  54: "C++",
+  50: "C",
+  // Add other IDs as you support them
+};
+export const getUserProfile = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   const { userId } = req.params;
+  const targetId = Number(userId);
 
-  console.log("User id in backend: ", userId);
+  if (isNaN(targetId)) {
+    return res.status(400).json({ success: false, message: "Invalid User ID" });
+  }
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { userId: Number(userId) },
-      include: {
-        _count: {
-          select: { submissions: { where: { status: "ACCEPTED" } } },
+    // 1. Run parallel queries
+    const [
+      user,
+      acceptedSubmissions, // For unique solved stats and languages
+      recentSubmissions,
+      heatmapSubmissions, // For total activity volume
+    ] = await Promise.all([
+      // A. User Info
+      prisma.user.findUnique({
+        where: { userId: targetId },
+        select: {
+          full_name: true,
+          username: true,
+          xp: true,
+          level: true,
+          streak: true,
+          bio: true,
+          created_at: true,
         },
-      },
-    });
+      }),
 
-    if (!user) return res.status(404).json({ message: "User not found" });
+      // B. All Accepted Submissions (Unique Problems)
+      // We use distinct to ensure we only count a problem once
+      prisma.submission.findMany({
+        where: {
+          userId: targetId,
+          status: "ACCEPTED", // CHECK: Ensure this matches your DB exactly (likely all caps)
+        },
+        distinct: ["problemId"],
+        include: { problem: { select: { difficulty: true } } },
+      }),
 
-    // 1. Get Solved Counts by Difficulty
-    const solvedStats = await prisma.submission.groupBy({
-      by: ["status"],
-      where: {
-        userId: Number(userId),
-        status: "ACCEPTED",
-      },
-      _count: true,
-    });
+      // C. Recent Submissions (Latest 10)
+      prisma.submission.findMany({
+        where: { userId: targetId, status: "ACCEPTED" },
+        take: 10,
+        orderBy: { createdAt: "desc" },
+        include: { problem: { select: { title: true } } },
+      }),
 
-    // To get specific difficulty counts, we query the Problem relation
-    const difficultyCounts = await prisma.submission.findMany({
-      where: { userId: Number(userId), status: "ACCEPTED" },
-      include: { problem: { select: { difficulty: true } } },
-    });
+      // D. Heatmap Data (All Submissions - Volume of Activity)
+      // We remove status filter here to show "amount of submission"
+      prisma.submission.findMany({
+        where: {
+          userId: targetId,
+          createdAt: {
+            gte: new Date(new Date().setFullYear(new Date().getFullYear() - 1)),
+          },
+        },
+        select: { createdAt: true },
+      }),
+    ]);
 
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    // 2. Process Difficulty Stats (Unique count)
     const stats = {
-      easy: difficultyCounts.filter(
+      easy: acceptedSubmissions.filter(
         (s) => s.problem.difficulty.toUpperCase() === "EASY",
       ).length,
-      medium: difficultyCounts.filter(
+      medium: acceptedSubmissions.filter(
         (s) => s.problem.difficulty.toUpperCase() === "MEDIUM",
       ).length,
-      hard: difficultyCounts.filter(
+      hard: acceptedSubmissions.filter(
         (s) => s.problem.difficulty.toUpperCase() === "HARD",
       ).length,
     };
-    // 2. FIXED HEATMAP DATA: Query Submissions instead of Activity
-    const oneYearAgo = new Date();
-    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
-    const submissionActivities = await prisma.submission.findMany({
-      where: {
-        userId: Number(userId),
-        status: "ACCEPTED",
-        createdAt: { gte: oneYearAgo },
-      },
-      select: { createdAt: true },
+    // 3. Process Language Stats (Unique problems per language)
+    const languageCounts: Record<number, number> = {};
+    acceptedSubmissions.forEach((s) => {
+      languageCounts[s.languageId] = (languageCounts[s.languageId] || 0) + 1;
     });
 
-    // Format for React Calendar Heatmap
-    const heatmapData = submissionActivities.reduce((acc: any[], curr) => {
-      const date = curr.createdAt.toISOString().split("T")[0]; // Result: "2026-03-28"
+    const languageStats = Object.keys(languageCounts)
+      .map((id) => ({
+        name: LANGUAGE_MAP[Number(id)] || `Lang ${id}`,
+        count: languageCounts[Number(id)],
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    // 4. Heatmap Aggregation (Total Volume)
+    const heatmapData = heatmapSubmissions.reduce((acc: any[], curr) => {
+      const date = curr.createdAt.toISOString().split("T")[0];
       const existing = acc.find((item) => item.date === date);
       if (existing) {
         existing.count += 1;
@@ -135,20 +184,8 @@ export const getUserProfile = async (req: Request, res: Response) => {
       return acc;
     }, []);
 
-    // MAKE SEPERATE FUNCTION FOR THIS DURING TESTING
-    const recentSubmissions = await prisma.submission.findMany({
-      where: {
-        userId: Number(userId),
-        status: "ACCEPTED",
-      },
-      take: 10,
-      orderBy: { createdAt: "desc" },
-      include: {
-        problem: { select: { title: true } },
-      },
-    });
-
-    res.status(200).json({
+    return res.status(200).json({
+      success: true,
       user: {
         name: user.full_name,
         username: user.username,
@@ -159,6 +196,7 @@ export const getUserProfile = async (req: Request, res: Response) => {
         joined: user.created_at,
       },
       stats,
+      languageStats,
       heatmapData,
       recentSubmissions: recentSubmissions.map((s) => ({
         id: s.id,
@@ -167,6 +205,7 @@ export const getUserProfile = async (req: Request, res: Response) => {
       })),
     });
   } catch (error) {
-    res.status(500).json({ message: "Error fetching profile" });
+    console.error(`[Profile Error for User ${userId}]:`, error);
+    next(error);
   }
 };
