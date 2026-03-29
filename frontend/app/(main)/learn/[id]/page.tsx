@@ -29,56 +29,6 @@ export default function CourseDetailPage() {
     queryFn: () => resourceService.getResourceById(id as string),
   });
 
-  //   const handlePayment = async () => {
-  //     const toastId = toast.loading("Syncing with eSewa...");
-  //     try {
-  //       const data = await paymentService.initiateEsewa(id as string);
-
-  //       // 1. Create the form
-  //       const form = document.createElement("form");
-  //       form.method = "POST";
-  //       form.action = "https://rc-epay.esewa.com.np/api/epay/main/v2/form";
-
-  //       // 2. These 11 fields are MANDATORY for eSewa v2
-  //       // We use a Map to ensure the keys are exactly what eSewa expects
-  //       const payload: Record<string, string> = {
-  //         amount: String(data.amount),
-  //         tax_amount: String(data.tax_amount),
-  //         total_amount: String(data.total_amount),
-  //         transaction_uuid: String(data.transaction_uuid),
-  //         product_code: String(data.product_code),
-  //         product_service_charge: String(data.product_service_charge),
-  //         product_delivery_charge: String(data.product_delivery_charge),
-  //         success_url: String(data.success_url),
-  //         failure_url: String(data.failure_url),
-  //         signed_field_names: String(data.signed_field_names),
-  //         signature: String(data.signature),
-  //       };
-
-  //       // 3. Append to form
-  //       Object.entries(payload).forEach(([key, value]) => {
-  //         const input = document.createElement("input");
-  //         input.type = "hidden";
-  //         input.name = key;
-  //         input.value = value;
-  //         form.appendChild(input);
-  //       });
-
-  //       document.body.appendChild(form);
-
-  //       // 4. Debug: Log the frontend payload to console before submitting
-  //       console.log("Form Payload being sent to eSewa:", payload);
-
-  //       form.submit();
-
-  //       // Cleanup
-  //       setTimeout(() => document.body.removeChild(form), 1000);
-  //     } catch (error) {
-  //       console.error("Payment Step Error:", error);
-  //       toast.error("Uplink failed", { id: toastId });
-  //     }
-  //   };
-
  const handlePayment = async () => {
   try {
     const data = await paymentService.initiateEsewa(id);

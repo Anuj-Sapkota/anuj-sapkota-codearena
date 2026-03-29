@@ -82,10 +82,14 @@ export const verifyEsewaPayment = async (req: Request, res: Response) => {
         amount: parseFloat(decodedData.total_amount.replace(/,/g, "")),
       },
     });
-
+    console.log("Resource ID: ",resId);
     return res
       .status(200)
-      .json({ success: true, message: "Purchase recorded!" });
+      .json({
+        success: true,
+        message: "Purchase recorded! 121212121",
+        resourceId: resId,
+      });
   } catch (error) {
     console.error("CRITICAL VERIFY ERROR:", error);
     return res.status(500).json({ message: "Internal Server Error" });

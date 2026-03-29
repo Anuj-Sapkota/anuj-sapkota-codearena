@@ -1,36 +1,59 @@
 "use client";
-import { useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { FiCheckCircle, FiLoader } from "react-icons/fi";
-import api from "@/lib/api";
 
-export default function SuccessPage() {
+import { useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { FiLoader, FiCheckCircle } from "react-icons/fi";
+import { toast } from "sonner";
+
+export default function PaymentSuccessPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const data = searchParams.get("data");
+  const [verifying, setVerifying] = useState(true);
 
   useEffect(() => {
     const verify = async () => {
+      const data = searchParams.get("data"); // eSewa v2 encoded response
+      if (!data) return;
+
       try {
-        // Send the encoded data string to the backend to verify and grant access
-        await api.post("/payments/verify-esewa", { encodedData: data });
-        setTimeout(() => router.push("/dashboard"), 3000);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/payments/verify-esewa`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ encodedData: data }),
+        });
+        console.log("Rewsponse from the vewification: ", res)
+        const result = await res.json();
+        if (result.success) {
+          toast.success("Payment Successful! Resource Unlocked.");
+
+          console.log("Result: ", result)
+          // Redirect to the actual course viewer
+          router.push(`/resource/${result.resourceId}`);
+        }
       } catch (err) {
-        router.push("/payment/failure");
+        toast.error("Verification failed. Contact support.");
+      } finally {
+        setVerifying(false);
       }
     };
-    if (data) verify();
-  }, [data]);
+
+    verify();
+  }, [searchParams]);
 
   return (
-    <div className="h-screen flex flex-col items-center justify-center text-center">
-      <FiCheckCircle className="text-emerald-500 mb-6" size={80} />
-      <h1 className="text-4xl font-black uppercase tracking-tighter">
-        Payment Successful
-      </h1>
-      <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.4em] mt-4 flex items-center gap-2">
-        <FiLoader className="animate-spin" /> Syncing your license...
-      </p>
+    <div className="h-screen flex flex-col items-center justify-center gap-4">
+      {verifying ? (
+        <>
+          <FiLoader className="animate-spin" size={40} />
+          <p className="font-black uppercase tracking-widest">Verifying Transaction...</p>
+        </>
+      ) : (
+        <div className="text-center">
+          <FiCheckCircle className="text-emerald-500 mx-auto mb-4" size={60} />
+          <h1 className="text-2xl font-black uppercase">Purchase Confirmed</h1>
+          <p className="text-slate-500 text-sm mt-2">Redirecting to your content...</p>
+        </div>
+      )}
     </div>
   );
 }

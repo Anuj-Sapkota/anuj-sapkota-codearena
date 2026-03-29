@@ -273,3 +273,46 @@ export const getPublicResources = async (req: Request, res: Response) => {
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+
+export const getCreatorStats = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.sub ? parseInt((req as any).user.sub) : null;
+
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    // 1. Fetch all resources owned by this creator to get their IDs
+    const creatorResources = await prisma.resource.findMany({
+      where: { creatorId: userId },
+      select: { id: true }
+    });
+
+    const resourceIds = creatorResources.map(r => r.id);
+
+    // 2. Aggregate all purchases for these resources
+    const totalGrossRevenue = await prisma.purchase.aggregate({
+      where: { resourceId: { in: resourceIds } },
+      _sum: { amount: true }
+    });
+
+    // 3. Fetch Profile Views from CreatorProfile
+    const profile = await prisma.creatorProfile.findUnique({
+      where: { userId },
+      select: { views: true }
+    });
+
+    const gross = totalGrossRevenue._sum.amount || 0;
+    const platformFeeRate = 0.20; // 20% platform cut
+    const creatorEarnings = gross * (1 - platformFeeRate); // 80% to creator
+
+    res.status(200).json({
+      totalEarnings: creatorEarnings,
+      grossRevenue: gross,
+      profileViews: profile?.views || 0,
+      resourceCount: creatorResources.length
+    });
+  } catch (error) {
+    console.error("Stats Error:", error);
+    res.status(500).json({ message: "Failed to fetch creator stats" });
+  }
+};

@@ -78,3 +78,16 @@ export const usePublicResourceDetail = (id: string) => {
     enabled: !!id, // Only run if ID exists
   });
 };
+
+export const useCreatorStats = () => {
+  return useQuery({
+    queryKey: ["creator-stats"],
+    queryFn: async () => {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/resources/creator/stats`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+      });
+      if (!res.ok) throw new Error("Failed to fetch stats");
+      return res.json();
+    },
+  });
+};

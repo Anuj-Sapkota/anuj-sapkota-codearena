@@ -5,7 +5,8 @@ import {
   getMyResources,
   getResourceById,
   updateResource,
-  getPublicResources, // 👈 Add this import
+  getPublicResources,
+  getCreatorStats, // 👈 Add this import
 } from "../controllers/resource.controller.js";
 import { authenticateRequest } from "../middleware/auth.middleware.js";
 
@@ -23,5 +24,7 @@ router.get("/my-resources", getMyResources);
 router.get("/:id", getResourceById);
 router.put("/:id", updateResource);
 router.delete("/:id", deleteResource);
+
+router.get("/creator/stats", getCreatorStats); // 🚀 Add this
 
 export default router;
