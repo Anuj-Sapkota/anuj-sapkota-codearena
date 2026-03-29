@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import { useResourceById } from "@/hooks/useResource";
+// 🚀 Using your custom API instance to handle cookies/auth automatically
+import api from "@/lib/api";
 import {
   FiArrowLeft,
   FiPlay,
@@ -20,6 +22,9 @@ export default function ResourcePlayerPage() {
   const [activeModuleIdx, setActiveModuleIdx] = useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  // 🚀 YouTube-style View Tracking State
+  const hasTrackedView = useRef(false);
+
   if (isLoading)
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-[#050505]">
@@ -31,14 +36,14 @@ export default function ResourcePlayerPage() {
     return (
       <div className="h-screen flex items-center justify-center bg-white p-10 text-center">
         <div>
-          <h2 className="text-xl font-black uppercase italic italic tracking-tighter">
+          <h2 className="text-xl font-black uppercase italic tracking-tighter">
             Resource Not Found
           </h2>
           <Link
-            href="/creator/dashboard"
+            href="/dashboard"
             className="text-[10px] font-bold uppercase mt-4 block text-slate-400 underline"
           >
-            Return to Dashboard
+            Return to Learning
           </Link>
         </div>
       </div>
@@ -46,13 +51,40 @@ export default function ResourcePlayerPage() {
 
   const currentModule = resource.modules[activeModuleIdx];
 
+  // 🚀 Handle View Logic
+  const handleVideoTimeUpdate = (e: any) => {
+    const currentTime = e.target.currentTime;
+
+    // Trigger sync after 5 seconds of watch time
+    if (currentTime > 5 && !hasTrackedView.current) {
+      hasTrackedView.current = true;
+
+      // Using your 'api' instance which already has baseURL and withCredentials
+      api
+        .patch(`/resources/${id}/view`)
+        .then(() => {
+          console.log("✅ View Count Synchronized");
+        })
+        .catch((err) => {
+          console.error(
+            "❌ View Sync Failed:",
+            err.response?.data || err.message,
+          );
+          // Reset only if it wasn't an auth error, to allow retry on network gltiches
+          if (err.response?.status !== 401) {
+            hasTrackedView.current = false;
+          }
+        });
+    }
+  };
+
   return (
     <div className="h-screen flex flex-col bg-white overflow-hidden">
       {/* HEADER */}
       <header className="h-[65px] border-b border-slate-100 px-6 flex items-center justify-between bg-white shrink-0 z-30">
         <div className="flex items-center gap-4 lg:gap-6">
           <Link
-            href="/creator/dashboard"
+            href="/dashboard"
             className="text-slate-400 hover:text-slate-900 transition-colors"
           >
             <FiArrowLeft size={20} />
@@ -82,11 +114,13 @@ export default function ResourcePlayerPage() {
               <div className="animate-in fade-in duration-500">
                 <div className="w-full aspect-video bg-black rounded-sm overflow-hidden shadow-2xl border border-white/5">
                   <video
-                    key={currentModule.contentUrl}
+                    key={currentModule.id} // Forces re-render on module change
                     src={currentModule.contentUrl}
                     controls
+                    onTimeUpdate={handleVideoTimeUpdate}
                     className="w-full h-full object-contain"
                     autoPlay
+                    controlsList="nodownload"
                   />
                 </div>
 
@@ -143,6 +177,8 @@ export default function ResourcePlayerPage() {
                 onClick={() => {
                   setActiveModuleIdx(index);
                   setIsSidebarOpen(false);
+                  // Reset tracking when switching modules so we can track views per video
+                  hasTrackedView.current = false;
                 }}
                 className={`w-full flex items-start gap-4 p-6 transition-all text-left ${
                   activeModuleIdx === index

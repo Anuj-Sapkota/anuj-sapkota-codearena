@@ -6,7 +6,8 @@ export const createSeries = async (req: Request, res: Response) => {
   try {
     const { title, description, price, thumbnail, modules } = req.body;
 
-    // Convert sub to Int for the creatorId relation
+    // 1. Identify and Validate User ID
+    // Using (req as any) to bypass strict type checking for the 'user' property
     const rawUserId = (req as any).user?.sub;
     const userId = rawUserId ? parseInt(rawUserId) : null;
 
@@ -14,43 +15,71 @@ export const createSeries = async (req: Request, res: Response) => {
       return res.status(401).json({ message: "Unauthorized: Invalid User ID" });
     }
 
-    // Use the first video URL as the primary contentUrl
-    const mainUrl = modules && modules.length > 0 ? modules[0].url : "";
+    // 2. Determine Primary Content URL
+    // Prisma requires a String for contentUrl. If no modules exist, we use an empty string.
+    // 🚀 Update: Added a null-check for 'm.url' to prevent the "missing" error.
+    const mainUrl = modules && modules.length > 0 ? modules[0].url || "" : "";
 
+    // 3. Database Transaction
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Create the Parent Resource
+      // Step A: Create the Parent Resource
       const resource = await tx.resource.create({
         data: {
           title,
           description,
-          price: Number(price),
-          previewUrl: thumbnail, // Mapping frontend 'thumbnail' to schema 'previewUrl'
-          type: "SERIES", // ✅ This will now work!
-          contentUrl: mainUrl,
+          price: parseFloat(price) || 0,
+          previewUrl: thumbnail || "",
+          type: "SERIES",
+          contentUrl: mainUrl, // This will now always be a String (even if empty)
           creatorId: userId,
           isApproved: false,
+          isPublished: true,
         },
       });
 
-      // 2. Create the Modules (Ensure you added the Module model to your schema!)
+      // Step B: Create associated Modules if they exist
       if (modules && modules.length > 0) {
-        await (tx as any).module.createMany({
+        await tx.module.createMany({
           data: modules.map((m: any, index: number) => ({
-            title: m.title,
-            contentUrl: m.url,
-            order: index,
+            title: m.title || `Module ${index + 1}`,
+            contentUrl: m.url || "", // Ensuring no module crashes the DB
+            order: index + 1,
             resourceId: resource.id,
           })),
         });
       }
 
-      return resource;
+      // Final Step: Fetch the complete object with module count to return to frontend
+      return await tx.resource.findUnique({
+        where: { id: resource.id },
+        include: {
+          _count: {
+            select: { modules: true },
+          },
+        },
+      });
     });
 
-    res.status(201).json(result);
+    // 4. Success Response
+    return res.status(201).json({
+      success: true,
+      message: "Series created successfully",
+      data: result,
+    });
   } catch (error: any) {
-    console.error("Resource Creation Error:", error);
-    res.status(500).json({ message: error.message || "Internal Server Error" });
+    console.error("Critical Resource Creation Error:", error);
+
+    // Prisma specific error handling
+    if (error.code === "P2002") {
+      return res.status(400).json({
+        message: "A resource with this unique constraint already exists.",
+      });
+    }
+
+    return res.status(500).json({
+      message: "Failed to create resource series",
+      error: error.message,
+    });
   }
 };
 
@@ -81,7 +110,9 @@ export const getMyResources = async (req: Request, res: Response) => {
 export const getResourceById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const userId = (req as any).user?.sub ? parseInt((req as any).user.sub) : null;
+    const userId = (req as any).user?.sub
+      ? parseInt((req as any).user.sub)
+      : null;
 
     const resource = await prisma.resource.findUnique({
       where: { id },
@@ -91,11 +122,12 @@ export const getResourceById = async (req: Request, res: Response) => {
       },
     });
 
-    if (!resource) return res.status(404).json({ message: "Resource not found" });
+    if (!resource)
+      return res.status(404).json({ message: "Resource not found" });
 
     // 🛠️ FIX: Creator can always view their own contentUrl
-    const isOwned = userId 
-      ? (resource.purchases.length > 0 || resource.creatorId === userId) 
+    const isOwned = userId
+      ? resource.purchases.length > 0 || resource.creatorId === userId
       : false;
 
     res.json({
@@ -106,7 +138,7 @@ export const getResourceById = async (req: Request, res: Response) => {
         : resource.modules.map((m: any) => ({
             id: m.id,
             title: m.title,
-            contentUrl: null, 
+            contentUrl: null,
             order: m.order,
           })),
     });
@@ -215,12 +247,18 @@ export const updateResource = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Update failed" });
   }
 };
+
+// backend/controllers/resource.controller.ts
 // backend/controllers/resource.controller.ts
 
 export const getPublicResources = async (req: Request, res: Response) => {
   try {
     const search = String(req.query.search || "");
 
+    // 🚀 1. Get current userId if available (depends on your auth middleware/setup)
+    // If this route is behind an optional auth guard, you'll have req.user.id
+    const userId = (req as any).user?.sub;
+    console.log("User id: ", userId);
     const rawResources = await prisma.resource.findMany({
       where: {
         ...(search
@@ -237,7 +275,8 @@ export const getPublicResources = async (req: Request, res: Response) => {
         title: true,
         description: true,
         price: true,
-        previewUrl: true, // 👈 Corrected from 'thumbnail' to 'previewUrl'
+        previewUrl: true,
+        creatorId: true, // Need this to check if user is the owner/creator
         creator: {
           select: {
             full_name: true,
@@ -245,6 +284,13 @@ export const getPublicResources = async (req: Request, res: Response) => {
             profile_pic_url: true,
           },
         },
+        // 🚀 2. Check for existing purchase for this specific user
+        purchases: userId
+          ? {
+              where: { userId: userId },
+              select: { id: true },
+            }
+          : false,
         _count: {
           select: { modules: true },
         },
@@ -252,17 +298,20 @@ export const getPublicResources = async (req: Request, res: Response) => {
       orderBy: { createdAt: "desc" },
     });
 
-    // 🚀 Bridge the DB to the Frontend
     const resources = rawResources.map((resource) => ({
       id: resource.id,
       title: resource.title,
       description: resource.description,
       price: resource.price,
-      // We map 'previewUrl' to 'thumbnail' so your frontend code doesn't have to change
       thumbnail: resource.previewUrl,
       moduleCount: resource._count.modules,
+      // 🚀 3. Calculate isOwned
+      // It's true if: they bought it OR they are the one who created it
+      isOwned: userId
+        ? resource.purchases.length > 0 || resource.creatorId === userId
+        : false,
       creator: {
-        name: resource.creator.full_name, // Maps full_name to name
+        name: resource.creator.full_name,
         avatar: resource.creator.profile_pic_url,
       },
     }));
@@ -273,46 +322,75 @@ export const getPublicResources = async (req: Request, res: Response) => {
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
-
-
 export const getCreatorStats = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.sub ? parseInt((req as any).user.sub) : null;
+    // 💡 Fix: Ensure userId is parsed correctly as an Integer
+    const userId = (req as any).user?.sub
+      ? parseInt((req as any).user.sub)
+      : null;
+    console.log("USER ID for creator stats: ", userId);
 
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-    // 1. Fetch all resources owned by this creator to get their IDs
+    // 1. Fetch total views across ALL resources + resource IDs
+    const resourceAggregation = await prisma.resource.aggregate({
+      where: { creatorId: userId },
+      _sum: {
+        views: true, // 🚀 Summing the views column from the Resource table
+      },
+      _count: {
+        id: true,
+      },
+    });
+
+    // 2. Fetch all purchases for these resources to calculate revenue
+    // First, we need the IDs to filter the Purchase table
     const creatorResources = await prisma.resource.findMany({
       where: { creatorId: userId },
-      select: { id: true }
+      select: { id: true },
     });
+    const resourceIds = creatorResources.map((r) => r.id);
 
-    const resourceIds = creatorResources.map(r => r.id);
-
-    // 2. Aggregate all purchases for these resources
     const totalGrossRevenue = await prisma.purchase.aggregate({
       where: { resourceId: { in: resourceIds } },
-      _sum: { amount: true }
-    });
-
-    // 3. Fetch Profile Views from CreatorProfile
-    const profile = await prisma.creatorProfile.findUnique({
-      where: { userId },
-      select: { views: true }
+      _sum: { amount: true },
     });
 
     const gross = totalGrossRevenue._sum.amount || 0;
-    const platformFeeRate = 0.20; // 20% platform cut
-    const creatorEarnings = gross * (1 - platformFeeRate); // 80% to creator
+    const platformFeeRate = 0.2;
+    const creatorEarnings = gross * (1 - platformFeeRate);
 
     res.status(200).json({
       totalEarnings: creatorEarnings,
       grossRevenue: gross,
-      profileViews: profile?.views || 0,
-      resourceCount: creatorResources.length
+      totalResourceViews: resourceAggregation._sum.views || 0, // 🚀 Total views of all content
+      resourceCount: resourceAggregation._count.id || 0,
     });
   } catch (error) {
     console.error("Stats Error:", error);
     res.status(500).json({ message: "Failed to fetch creator stats" });
+  }
+};
+// backend/controllers/resource.controller.ts
+
+export const incrementViewCount = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const resource = await prisma.resource.update({
+      where: { id: id },
+      data: {
+        views: { increment: 1 },
+      },
+      select: { views: true },
+    });
+
+    return res.status(200).json({
+      success: true,
+      currentViews: resource.views,
+    });
+  } catch (error) {
+    console.error("View Track Error:", error);
+    return res.status(500).json({ message: "Could not track view" });
   }
 };
