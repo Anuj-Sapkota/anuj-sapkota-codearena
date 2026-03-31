@@ -122,6 +122,7 @@ export default function CreateResourcePage() {
     description: "",
     price: 0,
     thumbnail: "",
+    badgeId: "",
     modules: [] as {
       title: string;
       contentUrl: string; // Updated to match Prisma

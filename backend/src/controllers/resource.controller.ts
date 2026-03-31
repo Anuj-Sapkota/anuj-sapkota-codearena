@@ -4,7 +4,7 @@ import { deleteFromCloudinary } from "../lib/cloudinary.js";
 
 export const createSeries = async (req: Request, res: Response) => {
   try {
-    const { title, description, price, thumbnail, modules } = req.body;
+    const { title, description, price, thumbnail, modules, badgeId } = req.body;
 
     // 1. Identify and Validate User ID
     // Using (req as any) to bypass strict type checking for the 'user' property
@@ -31,6 +31,7 @@ export const createSeries = async (req: Request, res: Response) => {
           previewUrl: thumbnail || "",
           type: "SERIES",
           contentUrl: mainUrl, // This will now always be a String (even if empty)
+          badgeId: badgeId || null,
           creatorId: userId,
           isApproved: false,
           isPublished: true,
@@ -115,20 +116,30 @@ export const getResourceById = async (req: Request, res: Response) => {
       : null;
 
     const resource = await prisma.resource.findUnique({
-      where: { id },
+      where: { id: id },
       include: {
-        modules: { orderBy: { order: "asc" } },
+        modules: {
+          orderBy: { order: "asc" },
+          include: {
+            // This will now be recognized!
+            completedBy: userId ? { where: { userId: userId } } : false,
+          },
+        },
         purchases: userId ? { where: { userId: userId } } : false,
       },
     });
-
-    if (!resource)
-      return res.status(404).json({ message: "Resource not found" });
-
-    // 🛠️ FIX: Creator can always view their own contentUrl
     const isOwned = userId
       ? resource.purchases.length > 0 || resource.creatorId === userId
       : false;
+    // Map the modules to include a simple boolean 'isCompleted'
+    const modulesWithProgress = resource.modules.map((m) => ({
+      ...m,
+      isCompleted: m.completedBy && m.completedBy.length > 0,
+      contentUrl: isOwned ? m.contentUrl : null, // Keep your security logic
+    }));
+
+    if (!resource)
+      return res.status(404).json({ message: "Resource not found" });
 
     res.json({
       ...resource,
@@ -392,5 +403,94 @@ export const incrementViewCount = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("View Track Error:", error);
     return res.status(500).json({ message: "Could not track view" });
+  }
+};
+export const completeModule = async (req: Request, res: Response) => {
+  try {
+    const { moduleId } = req.body;
+
+    // 1. Identify User
+    const userId = (req as any).user?.sub
+      ? parseInt((req as any).user.sub)
+      : null;
+
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    // 2. Mark module as completed (Upsert prevents duplicates)
+    await prisma.userProgress.upsert({
+      where: {
+        userId_moduleId: { userId, moduleId },
+      },
+      update: {},
+      create: { userId, moduleId },
+    });
+
+    // 3. CHECK FOR COURSE COMPLETION
+    const currentModule = await prisma.module.findUnique({
+      where: { id: moduleId },
+      select: { resourceId: true },
+    });
+
+    if (currentModule) {
+      const resourceId = currentModule.resourceId;
+
+      // Get counts for progress calculation
+      const totalModules = await prisma.module.count({
+        where: { resourceId },
+      });
+
+      const completedModules = await prisma.userProgress.count({
+        where: {
+          userId: userId,
+          module: { resourceId },
+        },
+      });
+
+      const isCourseFinished = totalModules === completedModules;
+
+      // 🚀 4. BADGE AWARDING LOGIC
+      if (isCourseFinished) {
+        // Find the badge linked to this specific course
+        const resource = await prisma.resource.findUnique({
+          where: { id: resourceId },
+          select: { badgeId: true },
+        });
+
+        if (resource?.badgeId) {
+          // Award the badge (upsert ensures they don't get the same badge twice)
+          await prisma.userBadge.upsert({
+            where: {
+              userId_badgeId: {
+                userId,
+                badgeId: resource.badgeId,
+              },
+            },
+            update: {},
+            create: {
+              userId,
+              badgeId: resource.badgeId,
+            },
+          });
+          console.log(`🏆 Badge ${resource.badgeId} awarded to User ${userId}`);
+        }
+      }
+
+      return res.status(200).json({
+        success: true,
+        isCourseFinished,
+        progress: (completedModules / totalModules) * 100,
+        message: isCourseFinished
+          ? "Course finished and badge awarded!"
+          : "Progress saved",
+      });
+    }
+
+    return res.status(200).json({ success: true });
+  } catch (error: any) {
+    console.error("❌ Progress Error:", error);
+    return res.status(500).json({
+      message: "Error saving progress",
+      error: error.message,
+    });
   }
 };

@@ -100,14 +100,15 @@ model User {
   submissions       Submission[] // Track all code submissions
 
   // Learning & Marketplace Relations
-
+  progress       UserProgress[]
   creatorProfile CreatorProfile?
   ownedResources Resource[]
   purchases      Purchase[]
   reviews        Review[]
 
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  created_at DateTime    @default(now())
+  updated_at DateTime    @updatedAt
+  userBadges UserBadge[]
 
   @@map("users")
 }
@@ -124,6 +125,41 @@ model Activity {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+model UserProgress {
+  id          String   @id @default(cuid())
+  userId      Int
+  moduleId    String
+  isCompleted Boolean  @default(true)
+  completedAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, moduleId]) // A user can only complete a module once
+}
+
+model Badge {
+  id          String      @id @default(cuid())
+  name        String
+  description String
+  iconUrl     String // Cloudinary URL for the icon
+  resources   Resource[] 
+  userBadges  UserBadge[]
+  createdAt   DateTime   @default(now())
+}
+
+model UserBadge {
+  id       String   @id @default(cuid())
+  userId   Int
+  badgeId  String
+  earnedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId]) // Student only gets the badge once
 }
 
 model CreatorProfile {
@@ -173,6 +209,8 @@ model Resource {
 
   problemId Int?
   problem   Problem? @relation(fields: [problemId], references: [problemId])
+  badgeId   String? // The ID of the badge the creator picks
+  badge     Badge?   @relation(fields: [badgeId], references: [id])
 
   reviews   Review[]
   modules   Module[]
@@ -195,6 +233,8 @@ model Module {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  completedBy UserProgress[]
 
   @@map("modules")
 }

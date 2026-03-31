@@ -7,7 +7,8 @@ import {
   updateResource,
   getPublicResources,
   getCreatorStats,
-  incrementViewCount, // 👈 Add this import
+  incrementViewCount,
+  completeModule,
 } from "../controllers/resource.controller.js";
 import { authenticateRequest } from "../middleware/auth.middleware.js";
 const router = Router();
@@ -20,7 +21,9 @@ router.use(authenticateRequest);
 
 // 1. Specific Action Routes (Put these FIRST)
 router.get("/creator/stats", getCreatorStats);
-router.patch("/:id/view", incrementViewCount); // 👈 Move this above the GET /:id
+router.patch("/:id/view", incrementViewCount);
+
+router.post("/complete-module", completeModule);
 
 // 2. Resource CRUD Routes
 router.post("/create-series", createSeries);
