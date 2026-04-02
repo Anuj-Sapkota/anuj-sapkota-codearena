@@ -3,27 +3,54 @@
 import React, { useEffect, useState, use } from "react";
 import { Tooltip } from "react-tooltip";
 import {
-  Trophy,
-  CheckCircle,
-  Code,
-  Loader2,
-  History,
-  BookOpen,
-  ChevronRight,
-  Flame,
+  Trophy, CheckCircle, Code, Loader2, History,
+  BookOpen, ChevronRight, Flame, Award, X, Download,
 } from "lucide-react";
 import "react-calendar-heatmap/dist/styles.css";
 import "react-tooltip/dist/react-tooltip.css";
 
-// Components
 import UserProfileSidebar from "@/components/profile/Sidebar";
 import { StatCard, DifficultyCircle } from "@/components/profile/Stats";
 import { ActivityHeatmap } from "@/components/profile/Activity";
 import LanguageStats from "@/components/profile/LanguageStats";
 
 type TabType = "submissions" | "challenges" | "resources";
-
 type PageProps = { params: Promise<{ userId: string }> };
+
+// ─── Badge Detail Modal ───────────────────────────────────────────────────────
+function BadgeDetailModal({ badge, onClose }: { badge: any; onClose: () => void }) {
+  const earnedDate = badge.earnedAt
+    ? new Date(badge.earnedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
+    : null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm relative animate-in zoom-in-95 duration-200 overflow-hidden">
+        <div className="h-1.5 w-full bg-gradient-to-r from-amber-400 to-amber-600" />
+        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-900 transition-colors">
+          <X size={18} />
+        </button>
+        <div className="p-8 text-center">
+          <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-amber-50 border-4 border-amber-100 flex items-center justify-center overflow-hidden shadow-lg">
+            {badge.iconUrl
+              ? <img src={badge.iconUrl} alt={badge.name} className="w-full h-full object-cover" />
+              : <Award size={40} className="text-amber-400" />}
+          </div>
+          <div className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-600 text-[9px] font-black uppercase px-3 py-1.5 rounded-full tracking-wider mb-3">
+            <CheckCircle size={11} /> Badge Earned
+          </div>
+          <h2 className="text-xl font-black uppercase italic tracking-tighter text-slate-900 mb-1">{badge.name}</h2>
+          <p className="text-xs text-slate-500 mb-4">{badge.description}</p>
+          {earnedDate && (
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              Earned on {earnedDate}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function PublicProfile({ params }: PageProps) {
   const resolvedParams = use(params);
@@ -33,6 +60,7 @@ export default function PublicProfile({ params }: PageProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>("submissions");
+  const [selectedBadge, setSelectedBadge] = useState<any>(null);
 
   useEffect(() => {
     if (!userId || userId === "undefined") return;
@@ -67,8 +95,7 @@ export default function PublicProfile({ params }: PageProps) {
       </div>
     );
 
-  const { user, stats, heatmapData, recentSubmissions, challenges, resources } =
-    data;
+  const { user, stats, heatmapData, recentSubmissions, challenges, resources, badges } = data;
   console.log("STATA: ", stats);
   const totalSolved =
     (stats?.easy.solved || 0) + (stats?.medium.solved || 0) + (stats?.hard.solved || 0);
@@ -85,6 +112,8 @@ export default function PublicProfile({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 p-4 md:p-8 font-sans">
+      {selectedBadge && <BadgeDetailModal badge={selectedBadge} onClose={() => setSelectedBadge(null)} />}
+
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Sidebar Column */}
         <div className="lg:col-span-3 space-y-6">
@@ -150,6 +179,40 @@ export default function PublicProfile({ params }: PageProps) {
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
             <ActivityHeatmap heatmapData={heatmapData} />
           </div>
+
+          {/* Badges Section */}
+          {badges?.length > 0 && (
+            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-slate-800 font-bold text-lg flex items-center gap-2">
+                  <Award size={18} className="text-amber-500" />
+                  Badges
+                </h3>
+                <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                  {badges.length} earned
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-4">
+                {badges.map((badge: any) => (
+                  <button
+                    key={badge.id}
+                    onClick={() => setSelectedBadge(badge)}
+                    data-tooltip-id="badge-tooltip"
+                    data-tooltip-content={badge.name}
+                    className="group relative w-16 h-16 rounded-full bg-amber-50 border-2 border-amber-100 overflow-hidden hover:border-amber-400 hover:scale-110 transition-all duration-200 shadow-sm hover:shadow-md"
+                  >
+                    {badge.iconUrl
+                      ? <img src={badge.iconUrl} alt={badge.name} className="w-full h-full object-cover" />
+                      : <div className="w-full h-full flex items-center justify-center">
+                          <Award size={24} className="text-amber-400" />
+                        </div>}
+                    {/* Shine overlay on hover */}
+                    <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-full" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Tabbed Activity Section */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -231,6 +294,10 @@ export default function PublicProfile({ params }: PageProps) {
       <Tooltip
         id="heatmap-tooltip"
         style={{ backgroundColor: "#1e293b", color: "#f8fafc" }}
+      />
+      <Tooltip
+        id="badge-tooltip"
+        style={{ backgroundColor: "#1e293b", color: "#f8fafc", fontSize: "11px", fontWeight: "bold" }}
       />
     </div>
   );

@@ -178,6 +178,13 @@ export const getUserProfile = async (
       select: { title: true, challengeId: true, difficulty: true },
     });
 
+    // H. Earned badges
+    const earnedBadges = await prisma.userBadge.findMany({
+      where: { userId: targetId },
+      include: { badge: { select: { id: true, name: true, description: true, iconUrl: true } } },
+      orderBy: { earnedAt: "desc" },
+    });
+
     if (!user) {
       return res
         .status(404)
@@ -266,6 +273,13 @@ export const getUserProfile = async (
         id: p.resource.id,
         title: p.resource.title,
         type: p.resource.type,
+      })),
+      badges: earnedBadges.map((ub) => ({
+        id: ub.badge.id,
+        name: ub.badge.name,
+        description: ub.badge.description,
+        iconUrl: ub.badge.iconUrl,
+        earnedAt: ub.earnedAt,
       })),
     });
   } catch (error) {
