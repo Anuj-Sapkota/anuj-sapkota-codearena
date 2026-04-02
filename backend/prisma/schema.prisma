@@ -105,6 +105,7 @@ model User {
   ownedResources Resource[]
   purchases      Purchase[]
   reviews        Review[]
+  assignmentAttempts AssignmentAttempt[]
 
   created_at DateTime    @default(now())
   updated_at DateTime    @updatedAt
@@ -209,12 +210,13 @@ model Resource {
 
   problemId Int?
   problem   Problem? @relation(fields: [problemId], references: [problemId])
-  badgeId   String? // The ID of the badge the creator picks
+  badgeId   String?
   badge     Badge?   @relation(fields: [badgeId], references: [id])
 
-  reviews   Review[]
-  modules   Module[]
-  purchases Purchase[]
+  reviews    Review[]
+  modules    Module[]
+  purchases  Purchase[]
+  assignment Assignment?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -225,9 +227,12 @@ model Resource {
 model Module {
   id           String  @id @default(cuid())
   title        String
-  contentUrl   String // This stores the Cloudinary URL
-  order        Int // This ensures Video 1 stays before Video 2
-  sectionTitle String? // Groups lessons into sections (e.g. "Getting Started")
+  description  String? @db.Text
+  contentUrl   String
+  fileType     String  @default("video") // "video" | "code" | "file"
+  fileName     String? // original filename for code/file uploads
+  order        Int
+  sectionTitle String?
 
   resourceId String
   resource   Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
@@ -445,4 +450,53 @@ model ChallengeProblem {
 
   @@id([challengeId, problemId])
   @@map("challenge_problems")
+}
+
+// --- COURSE ASSIGNMENTS (MCQ) ---
+
+model Assignment {
+  id         String @id @default(cuid())
+  resourceId String @unique
+  resource   Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  passScore  Int // e.g. 70 means 70% needed to pass
+  questions  AssignmentQuestion[]
+  attempts   AssignmentAttempt[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("assignments")
+}
+
+model AssignmentQuestion {
+  id           String @id @default(cuid())
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  question      String   @db.Text
+  options       Json     // String[] — the 4 choices
+  correctIndex  Int      // 0-3, index of the correct option
+
+  order Int @default(0)
+
+  @@map("assignment_questions")
+}
+
+model AssignmentAttempt {
+  id           String @id @default(cuid())
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  userId   Int
+  user     User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  score    Int     // number of correct answers
+  total    Int     // total questions
+  passed   Boolean
+  answers  Json    // Int[] — user's chosen indices
+
+  createdAt DateTime @default(now())
+
+  @@map("assignment_attempts")
 }

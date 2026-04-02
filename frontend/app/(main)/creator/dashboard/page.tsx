@@ -161,7 +161,7 @@ export default function CreatorDashboard() {
               </div>
 
               <Link
-                href={`/resource/${res.id}`}
+                href={`/creator/dashboard/${res.id}`}
                 className="border border-slate-200 bg-white rounded-sm overflow-hidden block hover:border-slate-900 transition-all duration-500"
               >
                 <div className="relative aspect-video overflow-hidden bg-slate-100">

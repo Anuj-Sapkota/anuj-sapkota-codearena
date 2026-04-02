@@ -43,7 +43,10 @@ export const createSeries = async (req: Request, res: Response) => {
         await tx.module.createMany({
           data: modules.map((m: any, index: number) => ({
             title: m.title || `Module ${index + 1}`,
+            description: m.description || null,
             contentUrl: m.url || "",
+            fileType: m.fileType || "video",
+            fileName: m.fileName || null,
             order: index + 1,
             sectionTitle: m.sectionTitle || null,
             resourceId: resource.id,
@@ -94,9 +97,7 @@ export const getMyResources = async (req: Request, res: Response) => {
     const resources = await prisma.resource.findMany({
       where: { creatorId: userId as number },
       include: {
-        _count: {
-          select: { modules: true }, // This shows how many videos are in the series
-        },
+        _count: { select: { modules: true, purchases: true } },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -104,6 +105,51 @@ export const getMyResources = async (req: Request, res: Response) => {
     res.status(200).json(resources);
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch resources" });
+  }
+};
+
+// Per-course dashboard stats for creator
+export const getResourceDashboard = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = (req as any).user?.sub ? parseInt((req as any).user.sub) : null;
+
+    const resource = await prisma.resource.findUnique({
+      where: { id },
+      include: {
+        modules: { orderBy: { order: "asc" } },
+        purchases: {
+          include: { user: { select: { userId: true, full_name: true, username: true, profile_pic_url: true, created_at: true } } },
+          orderBy: { createdAt: "desc" },
+        },
+        badge: { select: { id: true, name: true, iconUrl: true } },
+        assignment: { select: { id: true, passScore: true, _count: { select: { questions: true, attempts: true } } } },
+      },
+    });
+
+    if (!resource || resource.creatorId !== userId)
+      return res.status(403).json({ message: "Unauthorized" });
+
+    const grossRevenue = resource.purchases.reduce((sum, p) => sum + p.amount, 0);
+    const creatorEarnings = grossRevenue * 0.8;
+
+    const passedAttempts = resource.assignment
+      ? await prisma.assignmentAttempt.count({ where: { assignmentId: resource.assignment.id, passed: true } })
+      : 0;
+
+    res.json({
+      ...resource,
+      stats: {
+        views: resource.views,
+        students: resource.purchases.length,
+        grossRevenue,
+        creatorEarnings,
+        passedAssignment: passedAttempts,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to fetch course dashboard" });
   }
 };
 
@@ -126,6 +172,17 @@ export const getResourceById = async (req: Request, res: Response) => {
           },
         },
         purchases: userId ? { where: { userId } } : false,
+        assignment: {
+          select: {
+            id: true,
+            passScore: true,
+            _count: { select: { questions: true } },
+            attempts: userId
+              ? { where: { userId, passed: true }, select: { id: true }, take: 1 }
+              : false,
+          },
+        },
+        badge: { select: { id: true, name: true, iconUrl: true, description: true } },
       },
     });
 
@@ -134,8 +191,6 @@ export const getResourceById = async (req: Request, res: Response) => {
     const isCreator = userId ? resource.creatorId === userId : false;
     const isOwned = isCreator || (userId ? (resource.purchases as any[]).length > 0 : false);
 
-    // Build modules with isCompleted + sequential unlock logic
-    // Rule: lesson[0] always unlocked; lesson[i] unlocked if lesson[i-1] isCompleted OR user is creator
     const modulesWithProgress = resource.modules.map((m, index) => {
       const isCompleted = Array.isArray(m.completedBy) && m.completedBy.length > 0;
       const prevCompleted =
@@ -149,20 +204,33 @@ export const getResourceById = async (req: Request, res: Response) => {
       return {
         id: m.id,
         title: m.title,
+        description: m.description,
         order: m.order,
         sectionTitle: m.sectionTitle,
+        fileType: m.fileType,
+        fileName: m.fileName,
         isCompleted,
         isUnlocked,
-        // Only expose contentUrl if owned AND unlocked
         contentUrl: isOwned && isUnlocked ? m.contentUrl : null,
       };
     });
+
+    // Assignment summary (no questions here, fetched separately)
+    const assignmentSummary = resource.assignment
+      ? {
+          id: resource.assignment.id,
+          passScore: resource.assignment.passScore,
+          questionCount: (resource.assignment as any)._count.questions,
+          hasPassed: isCreator || ((resource.assignment as any).attempts?.length > 0),
+        }
+      : null;
 
     res.json({
       ...resource,
       isOwned,
       isCreator,
       modules: modulesWithProgress,
+      assignment: assignmentSummary,
     });
   } catch (error) {
     console.error(error);
@@ -255,7 +323,10 @@ export const updateResource = async (req: Request, res: Response) => {
       await tx.module.createMany({
         data: modules.map((m: any, index: number) => ({
           title: m.title,
+          description: m.description || null,
           contentUrl: m.url,
+          fileType: m.fileType || "video",
+          fileName: m.fileName || null,
           order: index,
           sectionTitle: m.sectionTitle || null,
           resourceId: id,
@@ -460,40 +531,11 @@ export const completeModule = async (req: Request, res: Response) => {
 
       const isCourseFinished = totalModules === completedModules;
 
-      // 🚀 4. BADGE AWARDING LOGIC
-      if (isCourseFinished) {
-        // Find the badge linked to this specific course
-        const resource = await prisma.resource.findUnique({
-          where: { id: resourceId },
-          select: { badgeId: true },
-        });
-
-        if (resource?.badgeId) {
-          // Award the badge (upsert ensures they don't get the same badge twice)
-          await prisma.userBadge.upsert({
-            where: {
-              userId_badgeId: {
-                userId,
-                badgeId: resource.badgeId,
-              },
-            },
-            update: {},
-            create: {
-              userId,
-              badgeId: resource.badgeId,
-            },
-          });
-          console.log(`🏆 Badge ${resource.badgeId} awarded to User ${userId}`);
-        }
-      }
-
       return res.status(200).json({
         success: true,
         isCourseFinished,
         progress: (completedModules / totalModules) * 100,
-        message: isCourseFinished
-          ? "Course finished and badge awarded!"
-          : "Progress saved",
+        message: isCourseFinished ? "All lessons complete! Take the assignment to earn your badge." : "Progress saved",
       });
     }
 
