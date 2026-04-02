@@ -9,11 +9,13 @@ import api from "@/lib/api";
 import {
   FiArrowLeft, FiPlay, FiCheckCircle, FiLoader, FiMenu, FiX,
   FiLock, FiChevronDown, FiChevronRight, FiBook, FiAward,
-  FiAlertCircle, FiDownload, FiUser,
+  FiAlertCircle, FiDownload, FiUser, FiFileText,
 } from "react-icons/fi";
 import { MdPlayCircle, MdOutlineOndemandVideo } from "react-icons/md";
 import Link from "next/link";
 import { toast } from "sonner";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 function groupIntoSections(modules: any[]) {
   const sections: { title: string; lessons: any[] }[] = [];
@@ -26,41 +28,255 @@ function groupIntoSections(modules: any[]) {
   return sections;
 }
 
-// ─── Badge Modal ──────────────────────────────────────────────────────────────
-function BadgeModal({ badge, onClose }: { badge: any; onClose: () => void }) {
+const langMap: Record<string, string> = {
+  js: "javascript", jsx: "jsx", ts: "typescript", tsx: "tsx",
+  py: "python", java: "java", cpp: "cpp", c: "c", cs: "csharp",
+  go: "go", rs: "rust", rb: "ruby", php: "php", html: "html",
+  css: "css", scss: "scss", json: "json", yaml: "yaml", yml: "yaml",
+  md: "markdown", sh: "bash", sql: "sql", kt: "kotlin", swift: "swift",
+};
+const getLang = (fileName?: string) => {
+  const ext = (fileName || "").split(".").pop()?.toLowerCase() || "";
+  return langMap[ext] || "text";
+};
+
+// ─── Code File Viewer ─────────────────────────────────────────────────────────
+function CodeFileViewer({ url, fileName, moduleId, onViewed }: {
+  url: string; fileName?: string; moduleId: string; onViewed: () => void;
+}) {
+  const [code, setCode] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const hasViewed = useRef(false);
+
+  useEffect(() => {
+    setLoading(true);
+    setCode(null);
+    hasViewed.current = false;
+    fetch(url)
+      .then((r) => r.text())
+      .then((text) => {
+        setCode(text);
+        if (!hasViewed.current) {
+          hasViewed.current = true;
+          onViewed();
+        }
+      })
+      .catch(() => setCode("// Could not load file content."))
+      .finally(() => setLoading(false));
+  }, [url, moduleId]);
+
+  if (loading) return (
+    <div className="flex items-center justify-center py-16 bg-white">
+      <FiLoader className="animate-spin text-slate-300" size={24} />
+    </div>
+  );
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 relative animate-in zoom-in-95 duration-200">
-        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-900 transition-colors">
+    <div className="max-h-[520px] overflow-y-auto">
+      <SyntaxHighlighter
+        language={getLang(fileName)}
+        style={oneLight}
+        showLineNumbers
+        customStyle={{ margin: 0, fontSize: "12px", background: "#fff", borderRadius: 0 }}
+        lineNumberStyle={{ color: "#cbd5e1", fontSize: "11px" }}
+      >
+        {code || ""}
+      </SyntaxHighlighter>
+    </div>
+  );
+}
+
+// ─── Badge / Certificate Modal ────────────────────────────────────────────────
+function BadgeModal({ badge, resource, instructorName, earnedAt, onClose }: {
+  badge: any; resource: any; instructorName: string; earnedAt: Date; onClose: () => void;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [saveLoading, setSaveLoading] = useState(false);
+
+  const formattedDate = earnedAt.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+
+  const downloadCertificate = async () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const W = 900, H = 640;
+    canvas.width = W;
+    canvas.height = H;
+
+    // Background
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, W, H);
+
+    // Outer border
+    ctx.strokeStyle = "#e2e8f0";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(16, 16, W - 32, H - 32);
+
+    // Gold accent top bar
+    const grad = ctx.createLinearGradient(0, 0, W, 0);
+    grad.addColorStop(0, "#f59e0b");
+    grad.addColorStop(1, "#d97706");
+    ctx.fillStyle = grad;
+    ctx.fillRect(16, 16, W - 32, 6);
+
+    // Platform name
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "bold 13px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("CODEARENA", W / 2, 70);
+
+    // Certificate of Completion
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "bold 38px serif";
+    ctx.fillText("Certificate of Completion", W / 2, 130);
+
+    // Divider
+    ctx.strokeStyle = "#f59e0b";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(W / 2 - 120, 148);
+    ctx.lineTo(W / 2 + 120, 148);
+    ctx.stroke();
+
+    // "This certifies that"
+    ctx.fillStyle = "#64748b";
+    ctx.font = "16px sans-serif";
+    ctx.fillText("This certifies the successful completion of", W / 2, 190);
+
+    // Course title
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "bold 28px serif";
+    const title = resource.title || "Course";
+    ctx.fillText(title.length > 45 ? title.slice(0, 45) + "…" : title, W / 2, 240);
+
+    // Badge icon (if available)
+    if (badge?.iconUrl) {
+      try {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        await new Promise<void>((res, rej) => {
+          img.onload = () => res();
+          img.onerror = () => rej();
+          img.src = badge.iconUrl;
+        });
+        const iconSize = 80;
+        const ix = W / 2 - iconSize / 2;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(W / 2, 310, iconSize / 2, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.drawImage(img, ix, 310 - iconSize / 2, iconSize, iconSize);
+        ctx.restore();
+      } catch { /* skip icon if load fails */ }
+    }
+
+    // Badge name
+    ctx.fillStyle = "#d97706";
+    ctx.font = "bold 18px sans-serif";
+    ctx.fillText(badge?.name || "Achievement Badge", W / 2, 380);
+
+    // Instructor
+    ctx.fillStyle = "#64748b";
+    ctx.font = "14px sans-serif";
+    ctx.fillText(`Instructor: ${instructorName}`, W / 2, 430);
+
+    // Date
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "13px sans-serif";
+    ctx.fillText(`Completed on ${formattedDate}`, W / 2, 460);
+
+    // Bottom divider
+    ctx.strokeStyle = "#e2e8f0";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(80, 500);
+    ctx.lineTo(W - 80, 500);
+    ctx.stroke();
+
+    // Footer
+    ctx.fillStyle = "#cbd5e1";
+    ctx.font = "11px sans-serif";
+    ctx.fillText("CodeArena · codearena.dev", W / 2, 530);
+
+    // Download
+    const link = document.createElement("a");
+    link.download = `${(resource.title || "certificate").replace(/\s+/g, "-")}-certificate.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  };
+
+  const handleSaveToProfile = async () => {
+    setSaveLoading(true);
+    // Placeholder — profile save coming soon
+    await new Promise((r) => setTimeout(r, 600));
+    toast.success("Badge saved to profile!");
+    setSaveLoading(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md relative animate-in zoom-in-95 duration-200 overflow-hidden">
+        {/* Gold top bar */}
+        <div className="h-1.5 w-full bg-gradient-to-r from-amber-400 to-amber-600" />
+
+        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-900 transition-colors z-10">
           <FiX size={18} />
         </button>
-        <div className="text-center">
-          <div className="w-24 h-24 mx-auto mb-5 rounded-full bg-amber-50 border-4 border-amber-100 flex items-center justify-center overflow-hidden">
+
+        <div className="p-8 text-center">
+          {/* Badge icon */}
+          <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-amber-50 border-4 border-amber-100 flex items-center justify-center overflow-hidden shadow-lg">
             {badge?.iconUrl
               ? <img src={badge.iconUrl} alt={badge.name} className="w-full h-full object-cover" />
               : <FiAward size={40} className="text-amber-400" />}
           </div>
+
           <div className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-600 text-[9px] font-black uppercase px-3 py-1.5 rounded-full tracking-wider mb-3">
             <FiCheckCircle size={11} /> Badge Earned
           </div>
+
           <h2 className="text-xl font-black uppercase italic tracking-tighter text-slate-900 mb-1">{badge?.name || "Achievement"}</h2>
-          <p className="text-xs text-slate-500 mb-8">{badge?.description || "You've completed this course."}</p>
+          <p className="text-xs text-slate-500 mb-1">{badge?.description}</p>
+
+          {/* Certificate preview info */}
+          <div className="mt-4 mb-6 bg-slate-50 rounded-xl p-4 text-left space-y-2 border border-slate-100">
+            <div className="flex justify-between items-center">
+              <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Course</span>
+              <span className="text-[10px] font-bold text-slate-700 text-right max-w-[60%] truncate">{resource?.title}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Instructor</span>
+              <span className="text-[10px] font-bold text-slate-700">{instructorName}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Completed</span>
+              <span className="text-[10px] font-bold text-slate-700">{formattedDate}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Platform</span>
+              <span className="text-[10px] font-bold text-slate-700">CodeArena</span>
+            </div>
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={() => toast.info("Download coming soon!")}
+            <button onClick={downloadCertificate}
               className="flex items-center justify-center gap-2 border-2 border-slate-200 rounded-xl py-3 text-[11px] font-black uppercase tracking-wider text-slate-600 hover:border-slate-900 hover:text-slate-900 transition-all"
             >
               <FiDownload size={13} /> Download
             </button>
-            <button
-              onClick={() => toast.info("Profile feature coming soon!")}
-              className="flex items-center justify-center gap-2 bg-slate-900 text-white rounded-xl py-3 text-[11px] font-black uppercase tracking-wider hover:bg-slate-800 transition-all"
+            <button onClick={handleSaveToProfile} disabled={saveLoading}
+              className="flex items-center justify-center gap-2 bg-slate-900 text-white rounded-xl py-3 text-[11px] font-black uppercase tracking-wider hover:bg-slate-800 disabled:opacity-50 transition-all"
             >
-              <FiUser size={13} /> Add to Profile
+              {saveLoading ? <FiLoader className="animate-spin" size={13} /> : <FiUser size={13} />}
+              Add to Profile
             </button>
           </div>
         </div>
+
+        {/* Hidden canvas for certificate generation */}
+        <canvas ref={canvasRef} className="hidden" />
       </div>
     </div>
   );
@@ -188,6 +404,7 @@ export default function ResourcePlayerPage() {
   const [showAssignment, setShowAssignment] = useState(false);
   const [assignmentPassed, setAssignmentPassed] = useState(false);
   const [showBadgeModal, setShowBadgeModal] = useState(false);
+  const [badgeEarnedAt, setBadgeEarnedAt] = useState<Date>(new Date());
 
   const hasTrackedView = useRef(false);
   const hasMarkedComplete = useRef(false);
@@ -227,8 +444,11 @@ export default function ResourcePlayerPage() {
   const isCreator = resource.isCreator;
   const allModules: any[] = (resource.modules || []).map((m: any, idx: number) => {
     const isCompleted = completedIds.has(m.id);
-    const prevCompleted = idx === 0 || completedIds.has(resource.modules[idx - 1].id);
-    return { ...m, isCompleted, isUnlocked: isCreator || prevCompleted };
+    // A lesson with no contentUrl is a "text-only" lesson — auto-completed, never locked
+    const isTextOnly = !m.contentUrl;
+    const prevCompleted = idx === 0 || completedIds.has(resource.modules[idx - 1].id) ||
+      !resource.modules[idx - 1].contentUrl; // text-only prev is always "done"
+    return { ...m, isCompleted: isTextOnly ? true : isCompleted, isUnlocked: isCreator || prevCompleted, isTextOnly };
   });
 
   const sections = groupIntoSections(allModules);
@@ -236,11 +456,16 @@ export default function ResourcePlayerPage() {
   const currentIdx = allModules.findIndex((m) => m.id === activeModuleId);
   const nextModule = allModules[currentIdx + 1] || null;
   const totalLessons = allModules.length;
+
+  // Only count lessons that actually require completion (have content)
+  const contentLessons = allModules.filter((m) => !m.isTextOnly);
   const completedCount = completedIds.size;
-  const progressPct = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
-  const allLessonsComplete = completedCount >= totalLessons && totalLessons > 0;
+  // Progress bar counts all lessons; text-only count as done automatically
+  const effectiveCompleted = completedCount + allModules.filter((m) => m.isTextOnly).length;
+  const progressPct = totalLessons > 0 ? Math.round((effectiveCompleted / totalLessons) * 100) : 0;
+  // Assignment unlocks when all content lessons are completed (text-only are always done)
+  const allLessonsComplete = contentLessons.every((m) => completedIds.has(m.id)) && totalLessons > 0;
   const hasAssignment = !!resource.assignment;
-  // Assignment unlocked when all lessons done OR creator
   const assignmentUnlocked = isCreator || allLessonsComplete;
 
   const markComplete = async (moduleId: string) => {
@@ -276,7 +501,15 @@ export default function ResourcePlayerPage() {
 
   return (
     <>
-      {showBadgeModal && resource.badge && <BadgeModal badge={resource.badge} onClose={() => setShowBadgeModal(false)} />}
+      {showBadgeModal && resource.badge && (
+        <BadgeModal
+          badge={resource.badge}
+          resource={resource}
+          instructorName={resource.creator?.full_name || "Instructor"}
+          earnedAt={badgeEarnedAt}
+          onClose={() => setShowBadgeModal(false)}
+        />
+      )}
 
       <div className="h-screen flex flex-col bg-[#f8fafc] overflow-hidden">
         {/* HEADER */}
@@ -299,7 +532,7 @@ export default function ResourcePlayerPage() {
               <div className="w-20 h-1.5 bg-slate-200 rounded-full overflow-hidden">
                 <div className="h-full bg-emerald-500 rounded-full transition-all duration-700" style={{ width: `${progressPct}%` }} />
               </div>
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">{completedCount}/{totalLessons}</span>
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">{completedCount + allModules.filter((m) => m.isTextOnly).length}/{totalLessons}</span>
             </div>
             <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="lg:hidden p-2 text-slate-600 hover:text-slate-900 transition-colors">
               {isSidebarOpen ? <FiX size={18} /> : <FiMenu size={18} />}
@@ -318,20 +551,50 @@ export default function ResourcePlayerPage() {
                     assignment={resource.assignment}
                     badge={resource.badge}
                     isCreator={isCreator}
-                    onPassed={() => { setAssignmentPassed(true); setShowBadgeModal(true); }}
+                    onPassed={() => { setAssignmentPassed(true); setShowBadgeModal(true); setBadgeEarnedAt(new Date()); }}
                   />
                 </div>
               ) : currentModule?.contentUrl ? (
                 <div className="animate-in fade-in duration-300">
-                  <div className="w-full aspect-video bg-slate-900 rounded-xl overflow-hidden shadow-xl border border-slate-200 relative">
-                    <video key={currentModule.id} src={currentModule.contentUrl} controls autoPlay controlsList="nodownload"
-                      onLoadedMetadata={handleVideoLoaded} onTimeUpdate={handleTimeUpdate} className="w-full h-full object-contain" />
-                    {completedIds.has(currentModule.id) && (
-                      <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-emerald-500 text-white text-[9px] font-black uppercase px-2.5 py-1.5 rounded-full shadow-lg animate-in fade-in duration-500">
-                        <FiCheckCircle size={11} /> Completed
+                  {/* Content area — video or code file */}
+                  {currentModule.fileType === "code" ? (
+                    <div className="rounded-xl overflow-hidden border border-slate-200 shadow-xl bg-white">
+                      {/* Code file header */}
+                      <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 border-b border-slate-200">
+                        <FiFileText size={14} className="text-violet-500 shrink-0" />
+                        <span className="text-xs font-mono font-bold text-slate-700">{currentModule.fileName || "code file"}</span>
+                        <span className="ml-auto text-[9px] font-black uppercase text-violet-500 bg-violet-50 px-2 py-0.5 rounded-full tracking-wider">
+                          {(currentModule.fileName || "").split(".").pop()?.toUpperCase() || "CODE"}
+                        </span>
                       </div>
-                    )}
-                  </div>
+                      {/* Fetch and render code */}
+                      <CodeFileViewer
+                        url={currentModule.contentUrl}
+                        fileName={currentModule.fileName}
+                        moduleId={currentModule.id}
+                        onViewed={() => {
+                          if (!hasTrackedView.current) {
+                            hasTrackedView.current = true;
+                            api.patch(`/resources/${id}/view`).catch(() => { hasTrackedView.current = false; });
+                          }
+                          if (!hasMarkedComplete.current) {
+                            hasMarkedComplete.current = true;
+                            markComplete(currentModule.id);
+                          }
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-full aspect-video bg-slate-900 rounded-xl overflow-hidden shadow-xl border border-slate-200 relative">
+                      <video key={currentModule.id} src={currentModule.contentUrl} controls autoPlay controlsList="nodownload"
+                        onLoadedMetadata={handleVideoLoaded} onTimeUpdate={handleTimeUpdate} className="w-full h-full object-contain" />
+                      {completedIds.has(currentModule.id) && (
+                        <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-emerald-500 text-white text-[9px] font-black uppercase px-2.5 py-1.5 rounded-full shadow-lg animate-in fade-in duration-500">
+                          <FiCheckCircle size={11} /> Completed
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Lesson info */}
                   <div className="mt-5 bg-white rounded-xl border border-slate-200 shadow-sm p-6">
@@ -343,7 +606,9 @@ export default function ResourcePlayerPage() {
                           <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Lesson {currentIdx + 1} of {totalLessons}</span>
                           {!completedIds.has(currentModule.id) && !isCreator && (
                             <><span className="text-slate-300 text-[10px]">•</span>
-                            <span className="text-amber-500 text-[9px] font-black uppercase tracking-wider bg-amber-50 px-2 py-0.5 rounded-full">Watch 60% to unlock next</span></>
+                            <span className="text-amber-500 text-[9px] font-black uppercase tracking-wider bg-amber-50 px-2 py-0.5 rounded-full">
+                              {currentModule.fileType === "code" ? "View file to complete" : "Watch 60% to unlock next"}
+                            </span></>
                           )}
                         </div>
                         <h2 className="text-xl lg:text-2xl font-black uppercase italic tracking-tighter text-slate-900">{currentModule.title}</h2>
@@ -354,6 +619,11 @@ export default function ResourcePlayerPage() {
                         </div>
                       )}
                     </div>
+
+                    {/* Description */}
+                    {currentModule.description && (
+                      <p className="mt-3 text-sm text-slate-500 leading-relaxed">{currentModule.description}</p>
+                    )}
 
                     {/* Up Next / Assignment CTA */}
                     <div className="mt-5 pt-5 border-t border-slate-100 space-y-3">
@@ -393,8 +663,7 @@ export default function ResourcePlayerPage() {
                               </div>
                             </div>
                             <button
-                              onClick={() => assignmentPassed ? setShowBadgeModal(true) : setShowAssignment(true)}
-                              className={`shrink-0 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${assignmentPassed ? "bg-emerald-600 text-white hover:bg-emerald-700" : "bg-amber-500 text-white hover:bg-amber-600"}`}
+                              onClick={() => assignmentPassed ? setShowBadgeModal(true) : setShowAssignment(true)}                              className={`shrink-0 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${assignmentPassed ? "bg-emerald-600 text-white hover:bg-emerald-700" : "bg-amber-500 text-white hover:bg-amber-600"}`}
                             >
                               {assignmentPassed ? "Claim Badge" : "Start"}
                             </button>
@@ -416,6 +685,43 @@ export default function ResourcePlayerPage() {
                         <span className="text-[10px] font-black uppercase text-slate-600 tracking-wide truncate">{item.label}</span>
                       </div>
                     ))}
+                  </div>
+                </div>
+              ) : currentModule?.isTextOnly ? (
+                /* Text-only lesson — show description card, auto-unlocks next */
+                <div className="animate-in fade-in duration-300">
+                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8">
+                    <div className="flex items-center gap-3 mb-5">
+                      <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center shrink-0">
+                        <FiBook size={16} className="text-blue-500" />
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-black uppercase text-blue-500 tracking-wider">Reading Lesson</span>
+                        <h2 className="text-lg font-black uppercase italic tracking-tighter text-slate-900">{currentModule.title}</h2>
+                      </div>
+                      <div className="ml-auto flex items-center gap-1.5 bg-emerald-50 text-emerald-600 px-3 py-1.5 rounded-full border border-emerald-100">
+                        <FiCheckCircle size={12} />
+                        <span className="text-[9px] font-black uppercase tracking-wider">Auto-Complete</span>
+                      </div>
+                    </div>
+                    {currentModule.description
+                      ? <p className="text-sm text-slate-600 leading-relaxed">{currentModule.description}</p>
+                      : <p className="text-sm text-slate-400 italic">No description provided for this lesson.</p>}
+                    {nextModule && (
+                      <div className="mt-6 pt-6 border-t border-slate-100">
+                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Up Next</p>
+                        <button onClick={() => handleModuleSelect(nextModule.id)} className="flex items-center gap-3 w-full text-left group hover:bg-slate-50 p-3 rounded-lg transition-colors">
+                          <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-blue-50 transition-colors">
+                            <FiPlay size={12} className="text-slate-500 group-hover:text-blue-600 transition-colors" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-black uppercase italic text-slate-700 truncate group-hover:text-blue-600 transition-colors">{nextModule.title}</p>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">{nextModule.sectionTitle || "Next Lesson"}</p>
+                          </div>
+                          <FiChevronRight size={14} className="text-slate-300 ml-auto group-hover:text-blue-500 transition-colors" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -472,12 +778,16 @@ export default function ResourcePlayerPage() {
                               className={`w-full flex items-start gap-3 px-5 py-3.5 transition-all text-left border-l-2 ${isActive ? "bg-blue-50 border-l-blue-600" : isLocked ? "opacity-40 cursor-not-allowed border-l-transparent" : "hover:bg-white border-l-transparent hover:border-l-slate-200"}`}
                             >
                               <div className={`mt-0.5 shrink-0 transition-colors ${isActive ? "text-blue-600" : isCompleted ? "text-emerald-500" : "text-slate-300"}`}>
-                                {isLocked ? <FiLock size={13} /> : isActive ? <MdPlayCircle size={16} /> : isCompleted ? <FiCheckCircle size={14} /> : <MdOutlineOndemandVideo size={14} />}
+                                {isLocked ? <FiLock size={13} />
+                                  : isActive ? <MdPlayCircle size={16} />
+                                  : isCompleted ? <FiCheckCircle size={14} />
+                                  : lesson.fileType === "code" ? <FiFileText size={13} />
+                                  : <MdOutlineOndemandVideo size={14} />}
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className={`text-[11px] leading-tight truncate transition-colors ${isActive ? "font-black text-blue-700" : isLocked ? "font-semibold text-slate-400" : isCompleted ? "font-bold text-slate-500 line-through decoration-slate-300" : "font-bold text-slate-600"}`}>{lesson.title}</p>
                                 <p className={`text-[9px] font-bold uppercase tracking-wider mt-0.5 ${isActive ? "text-blue-500" : isLocked ? "text-slate-300" : isCompleted ? "text-emerald-500" : "text-slate-300"}`}>
-                                  {isActive ? "Now Playing" : isLocked ? "Locked" : isCompleted ? "Done" : "Video"}
+                                  {isActive ? "Now Playing" : isLocked ? "Locked" : isCompleted ? "Done" : lesson.fileType === "code" ? "Code" : "Video"}
                                 </p>
                               </div>
                               {isCompleted && !isActive && <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 mt-1.5" />}

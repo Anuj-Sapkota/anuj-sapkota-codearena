@@ -183,6 +183,7 @@ export const getResourceById = async (req: Request, res: Response) => {
           },
         },
         badge: { select: { id: true, name: true, iconUrl: true, description: true } },
+        creator: { select: { full_name: true } },
       },
     });
 
@@ -342,8 +343,21 @@ export const updateResource = async (req: Request, res: Response) => {
   }
 };
 
-// backend/controllers/resource.controller.ts
-// backend/controllers/resource.controller.ts
+// PATCH badge on a resource (creator only)
+export const updateResourceBadge = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { badgeId } = req.body;
+  const userId = parseInt((req as any).user?.sub);
+  try {
+    const resource = await prisma.resource.findUnique({ where: { id } });
+    if (!resource || resource.creatorId !== userId)
+      return res.status(403).json({ message: "Unauthorized" });
+    await prisma.resource.update({ where: { id }, data: { badgeId: badgeId || null } });
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ message: "Failed to update badge" });
+  }
+}; 
 
 export const getPublicResources = async (req: Request, res: Response) => {
   try {

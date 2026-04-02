@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
 import { useUploadMutation } from "@/hooks/useUpload";
+import { useBadges } from "@/hooks/useBadges";
 import { toast } from "sonner";
 import {
   FiArrowLeft, FiArrowRight, FiPlus, FiLoader, FiSave,
   FiTrash2, FiImage, FiEdit3, FiMenu, FiChevronDown,
   FiChevronRight, FiCheck, FiVideo, FiBook, FiFileText, FiX,
+  FiAward, FiHelpCircle,
 } from "react-icons/fi";
 import { MdOutlineOndemandVideo } from "react-icons/md";
 import {
@@ -36,6 +38,13 @@ interface Lesson {
   codeContent?: string; // fetched text content for preview
 }
 interface Section { id: string; title: string; lessons: Lesson[]; }
+
+interface MCQQuestion {
+  id: string;
+  question: string;
+  options: [string, string, string, string];
+  correctIndex: number;
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const CODE_EXTENSIONS = ["js","jsx","ts","tsx","py","java","cpp","c","cs","go","rs","rb","php","html","css","scss","json","yaml","yml","md","sh","sql","kt","swift"];
@@ -220,11 +229,53 @@ function SectionBlock({ section, index, onRename, onRemove, onAddLesson, onRemov
   );
 }
 
-// ─── Step Indicator ────────────────────────────────────────────────────────────
-function StepIndicator({ step }: { step: 1 | 2 }) {
+// ─── MCQ Question Card ────────────────────────────────────────────────────────
+function QuestionCard({ q, index, onChange, onRemove }: {
+  q: MCQQuestion; index: number;
+  onChange: (id: string, updated: Partial<MCQQuestion>) => void;
+  onRemove: (id: string) => void;
+}) {
+  const [localQuestion, setLocalQuestion] = useState(q.question);
+  const [localOptions, setLocalOptions] = useState<[string, string, string, string]>([
+    q.options[0], q.options[1], q.options[2], q.options[3],
+  ]);
+  const handleOptionChange = (oi: number, value: string) => {
+    const next: [string, string, string, string] = [localOptions[0], localOptions[1], localOptions[2], localOptions[3]];
+    next[oi] = value; setLocalOptions(next); onChange(q.id, { options: next });
+  };
+  const handleQuestionChange = (value: string) => { setLocalQuestion(value); onChange(q.id, { question: value }); };
   return (
-    <div className="flex items-center gap-3 mb-10">
-      {[{ n: 1, label: "Course Info" }, { n: 2, label: "Curriculum" }].map(({ n, label }, i) => (
+    <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="w-7 h-7 bg-slate-900 text-white rounded-lg flex items-center justify-center text-[10px] font-black shrink-0">{index + 1}</div>
+        <textarea value={localQuestion} onChange={(e) => handleQuestionChange(e.target.value)} placeholder="Enter your question..." rows={2}
+          className="flex-1 text-sm font-semibold text-slate-800 focus:outline-none bg-slate-50 border border-slate-100 rounded-lg p-3 resize-none focus:border-slate-300 transition-colors" />
+        <button type="button" onClick={() => onRemove(q.id)} className="text-slate-300 hover:text-rose-500 transition-colors shrink-0 mt-1"><FiX size={15} /></button>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-9">
+        {localOptions.map((opt, oi) => (
+          <div key={oi} className={`flex items-center gap-2 border rounded-lg px-3 py-2 transition-all ${q.correctIndex === oi ? "border-emerald-300 bg-emerald-50" : "border-slate-200 bg-white"}`}>
+            <button type="button" onClick={() => onChange(q.id, { correctIndex: oi })}
+              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${q.correctIndex === oi ? "border-emerald-500 bg-emerald-500" : "border-slate-300 hover:border-emerald-400"}`}>
+              {q.correctIndex === oi && <div className="w-2 h-2 rounded-full bg-white" />}
+            </button>
+            <input type="text" value={opt} onChange={(e) => handleOptionChange(oi, e.target.value)}
+              placeholder={`Option ${String.fromCharCode(65 + oi)}`}
+              className={`flex-1 text-xs font-medium focus:outline-none bg-transparent ${q.correctIndex === oi ? "text-emerald-700" : "text-slate-600"}`} />
+            {q.correctIndex === oi && <span className="text-[8px] font-black text-emerald-600 uppercase tracking-wider shrink-0">Correct</span>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Step Indicator ────────────────────────────────────────────────────────────
+function StepIndicator({ step }: { step: 1 | 2 | 3 }) {
+  const steps = [{ n: 1, label: "Course Info" }, { n: 2, label: "Curriculum" }, { n: 3, label: "Assignment" }];
+  return (
+    <div className="flex items-center gap-3 mb-10 flex-wrap">
+      {steps.map(({ n, label }, i) => (
         <div key={n} className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-all ${step === n ? "bg-slate-900 text-white" : step > n ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-400"}`}>
@@ -232,7 +283,7 @@ function StepIndicator({ step }: { step: 1 | 2 }) {
             </div>
             <span className={`text-[11px] font-black uppercase tracking-wider ${step === n ? "text-slate-900" : "text-slate-400"}`}>{label}</span>
           </div>
-          {i < 1 && <FiChevronRight size={14} className="text-slate-300" />}
+          {i < steps.length - 1 && <FiChevronRight size={14} className="text-slate-300" />}
         </div>
       ))}
     </div>
@@ -243,7 +294,7 @@ function StepIndicator({ step }: { step: 1 | 2 }) {
 export default function EditCoursePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [initialLoading, setInitialLoading] = useState(true);
 
   const [courseInfo, setCourseInfo] = useState({ title: "", description: "", price: 0, thumbnail: "" });
@@ -251,6 +302,14 @@ export default function EditCoursePage({ params }: { params: Promise<{ id: strin
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Assignment + badge state
+  const [passScore, setPassScore] = useState(70);
+  const [selectedBadgeId, setSelectedBadgeId] = useState<string>("");
+  const [existingAssignmentId, setExistingAssignmentId] = useState<string | null>(null);
+  const [questions, setQuestions] = useState<MCQQuestion[]>([]);
+  const [isSavingAssignment, setIsSavingAssignment] = useState(false);
+
+  const { badges } = useBadges();
   const { mutate: upload, isPending: isUploading, variables } = useUploadMutation();
 
   // Load existing data
@@ -259,6 +318,7 @@ export default function EditCoursePage({ params }: { params: Promise<{ id: strin
       .then((res) => {
         const r = res.data;
         setCourseInfo({ title: r.title, description: r.description, price: r.price, thumbnail: r.previewUrl || "" });
+        if (r.badgeId) setSelectedBadgeId(r.badgeId);
 
         // Rebuild sections from flat modules
         const sectionMap = new Map<string, Lesson[]>();
@@ -281,6 +341,23 @@ export default function EditCoursePage({ params }: { params: Promise<{ id: strin
           lessons,
         }));
         setSections(rebuilt.length > 0 ? rebuilt : [{ id: crypto.randomUUID(), title: "Getting Started", lessons: [] }]);
+
+        // Load assignment if exists
+        if (r.assignment?.id) {
+          setExistingAssignmentId(r.assignment.id);
+          setPassScore(r.assignment.passScore || 70);
+          api.get(`/resources/${id}/assignment`)
+            .then((aRes) => {
+              const qs: MCQQuestion[] = (aRes.data.questions || []).map((q: any) => ({
+                id: q.id,
+                question: q.question,
+                options: q.options as [string, string, string, string],
+                correctIndex: q.correctIndex ?? 0,
+              }));
+              setQuestions(qs);
+            })
+            .catch(() => {});
+        }
       })
       .catch(() => toast.error("Failed to load course"))
       .finally(() => setInitialLoading(false));
@@ -356,6 +433,12 @@ export default function EditCoursePage({ params }: { params: Promise<{ id: strin
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Validate: no lesson with empty title
+    for (const s of sections) {
+      for (const l of s.lessons) {
+        if (!l.title.trim()) return toast.error(`A lesson in "${s.title}" has no title. Please add a title or remove it.`);
+      }
+    }
     setIsSaving(true);
     try {
       const modules = sections.flatMap((s) =>
@@ -369,12 +452,48 @@ export default function EditCoursePage({ params }: { params: Promise<{ id: strin
         }))
       );
       await api.put(`/resources/${id}`, { title: courseInfo.title, description: courseInfo.description, price: courseInfo.price, thumbnail: courseInfo.thumbnail, modules });
-      toast.success("Course updated!");
-      router.push(`/creator/dashboard/${id}`);
+      toast.success("Curriculum saved!");
+      setStep(3);
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Save failed");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Assignment handlers
+  const addQuestion = () => {
+    if (questions.length >= 50) return toast.error("Maximum 50 questions allowed.");
+    setQuestions((p) => [...p, { id: crypto.randomUUID(), question: "", options: ["", "", "", ""] as [string, string, string, string], correctIndex: 0 }]);
+  };
+  const updateQuestion = (qid: string, updated: Partial<MCQQuestion>) =>
+    setQuestions((p) => p.map((q) => q.id === qid ? { ...q, ...updated } : q));
+  const removeQuestion = (qid: string) => setQuestions((p) => p.filter((q) => q.id !== qid));
+
+  const handleSaveAssignment = async () => {
+    if (questions.length === 0) { router.push(`/creator/dashboard/${id}`); return; }
+    for (const q of questions) {
+      if (!q.question.trim()) return toast.error("All questions must have text.");
+      const opts = Array.isArray(q.options) ? q.options.map(String) : [0,1,2,3].map((i) => String((q.options as any)[i] ?? ""));
+      if (opts.some((o) => !o.trim())) return toast.error(`Question ${questions.indexOf(q) + 1}: all 4 options must be filled in.`);
+    }
+    setIsSavingAssignment(true);
+    try {
+      if (selectedBadgeId) await api.patch(`/resources/${id}/badge`, { badgeId: selectedBadgeId });
+      await api.put(`/resources/${id}/assignment`, {
+        passScore,
+        questions: questions.map((q) => ({
+          question: q.question,
+          options: Array.isArray(q.options) ? q.options.map(String) : [0,1,2,3].map((i) => String((q.options as any)[i] ?? "")),
+          correctIndex: q.correctIndex,
+        })),
+      });
+      toast.success("Assignment saved!");
+      router.push(`/creator/dashboard/${id}`);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to save assignment");
+    } finally {
+      setIsSavingAssignment(false);
     }
   };
 
@@ -504,11 +623,112 @@ export default function EditCoursePage({ params }: { params: Promise<{ id: strin
               <button type="submit" disabled={isSaving || isUploading || !!uploadingId}
                 className="flex items-center gap-3 bg-slate-900 text-white px-10 py-4 text-[11px] font-black uppercase tracking-[0.2em] rounded-lg shadow-lg hover:bg-slate-800 disabled:opacity-30 transition-all"
               >
-                {isSaving ? <FiLoader className="animate-spin" size={14} /> : <FiSave size={14} />}
-                Save Changes
+                {isSaving ? <FiLoader className="animate-spin" size={14} /> : <FiArrowRight size={14} />}
+                Save & Continue
               </button>
             </div>
           </form>
+        )}
+
+        {/* ── STEP 3: Assignment & Badge ── */}
+        {step === 3 && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            {/* Header */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center shrink-0">
+                  <FiAward size={18} className="text-amber-500" />
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-sm font-black uppercase italic tracking-tight text-slate-900">Final Assignment</h2>
+                  <p className="text-xs text-slate-500 mt-1">Students must pass this MCQ to earn the course badge. Skip if no assignment is needed.</p>
+                </div>
+              </div>
+              <div className="mt-6 pt-5 border-t border-slate-100">
+                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-3">Pass Score (%)</label>
+                <div className="flex items-center gap-4">
+                  <input type="range" min={10} max={100} step={5} value={passScore} onChange={(e) => setPassScore(Number(e.target.value))} className="flex-1 accent-slate-900" />
+                  <div className="w-16 h-10 bg-slate-900 text-white rounded-lg flex items-center justify-center text-sm font-black shrink-0">{passScore}%</div>
+                </div>
+                <p className="text-[9px] text-slate-400 mt-2 font-bold uppercase tracking-wider">Students need {passScore}% or above to pass and earn the badge</p>
+              </div>
+            </div>
+
+            {/* Questions */}
+            <div className="space-y-4">
+              {questions.map((q, i) => (
+                <QuestionCard key={q.id} q={q} index={i} onChange={updateQuestion} onRemove={removeQuestion} />
+              ))}
+            </div>
+
+            {questions.length < 50 && (
+              <button type="button" onClick={addQuestion} className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-slate-200 rounded-xl py-4 text-[11px] font-black uppercase tracking-wider text-slate-400 hover:border-slate-400 hover:text-slate-700 hover:bg-white transition-all">
+                <FiHelpCircle size={14} /> Add Question
+                <span className="text-[9px] text-slate-300 ml-1">({questions.length}/50)</span>
+              </button>
+            )}
+
+            {/* Badge picker */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+              <div className="flex items-start gap-4 mb-5">
+                <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center shrink-0">
+                  <FiAward size={18} className="text-amber-500" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black uppercase italic tracking-tight text-slate-900">Completion Badge</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Choose the badge students earn after passing the assignment.</p>
+                </div>
+              </div>
+              {badges.length === 0 ? (
+                <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center">
+                  <FiAward size={24} className="text-slate-300 mx-auto mb-2" />
+                  <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">No badges available</p>
+                  <p className="text-[10px] text-slate-300 mt-1">Ask an admin to create badges first.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button type="button" onClick={() => setSelectedBadgeId("")}
+                    className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${!selectedBadgeId ? "border-slate-900 bg-slate-50" : "border-slate-200 hover:border-slate-300"}`}
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
+                      <FiX size={15} className="text-slate-400" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-black uppercase text-slate-600">No Badge</p>
+                      <p className="text-[9px] text-slate-400 mt-0.5">Skip badge reward</p>
+                    </div>
+                    {!selectedBadgeId && <FiCheck size={14} className="text-slate-700 shrink-0 ml-auto" />}
+                  </button>
+                  {badges.map((b: any) => (
+                    <button key={b.id} type="button" onClick={() => setSelectedBadgeId(b.id)}
+                      className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${selectedBadgeId === b.id ? "border-amber-400 bg-amber-50" : "border-slate-200 hover:border-amber-200 hover:bg-amber-50/30"}`}
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-amber-50 overflow-hidden shrink-0 border border-amber-100 flex items-center justify-center">
+                        {b.iconUrl ? <img src={b.iconUrl} alt={b.name} className="w-full h-full object-cover" /> : <FiAward size={16} className="text-amber-400" />}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-black uppercase text-slate-700 truncate">{b.name}</p>
+                        <p className="text-[9px] text-slate-400 truncate mt-0.5">{b.description}</p>
+                      </div>
+                      {selectedBadgeId === b.id && <FiCheck size={14} className="text-amber-500 shrink-0 ml-auto" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between pt-2">
+              <button type="button" onClick={() => router.push(`/creator/dashboard/${id}`)} className="text-[10px] font-black uppercase text-slate-400 hover:text-slate-900 transition-colors tracking-wider">
+                Skip & Finish
+              </button>
+              <button type="button" onClick={handleSaveAssignment} disabled={isSavingAssignment}
+                className="flex items-center gap-3 bg-slate-900 text-white px-10 py-4 text-[11px] font-black uppercase tracking-[0.2em] rounded-lg shadow-lg hover:bg-slate-800 disabled:opacity-30 transition-all"
+              >
+                {isSavingAssignment ? <FiLoader className="animate-spin" size={14} /> : <FiSave size={14} />}
+                Save Assignment
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>

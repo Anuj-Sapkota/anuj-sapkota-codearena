@@ -6,6 +6,7 @@ import {
   getResourceById,
   getResourceDashboard,
   updateResource,
+  updateResourceBadge,
   getPublicResources,
   getCreatorStats,
   incrementViewCount,
@@ -43,6 +44,7 @@ router.get("/my-resources", getMyResources);
 // 3. Generic ID Routes (Put these LAST)
 router.get("/:id", getResourceById);
 router.put("/:id", updateResource);
+router.patch("/:id/badge", updateResourceBadge);
 router.delete("/:id", deleteResource);
 
 export default router;
