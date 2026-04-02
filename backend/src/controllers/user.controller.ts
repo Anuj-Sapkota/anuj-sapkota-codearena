@@ -127,7 +127,7 @@ export const getUserProfile = async (
         where: { userId: targetId, status: "ACCEPTED" },
         take: 5,
         orderBy: { createdAt: "desc" },
-        include: { problem: { select: { title: true } } },
+        include: { problem: { select: { title: true, problemId: true } } },
       }),
 
       // D. Heatmap Data
@@ -151,12 +151,18 @@ export const getUserProfile = async (
         },
       }),
 
-      // F. Bought Resources
+      // F. Bought Resources with completion info
       prisma.purchase.findMany({
         where: { userId: targetId },
         include: {
           resource: {
-            select: { title: true, type: true, id: true },
+            select: {
+              id: true,
+              title: true,
+              type: true,
+              previewUrl: true,
+              _count: { select: { modules: true } },
+            },
           },
         },
       }),
@@ -175,7 +181,7 @@ export const getUserProfile = async (
     );
     const challengeDetails = await prisma.challenge.findMany({
       where: { challengeId: { in: challengeIds } },
-      select: { title: true, challengeId: true, difficulty: true },
+      select: { title: true, challengeId: true, difficulty: true, slug: true },
     });
 
     // H. Earned badges
@@ -184,6 +190,29 @@ export const getUserProfile = async (
       include: { badge: { select: { id: true, name: true, description: true, iconUrl: true } } },
       orderBy: { earnedAt: "desc" },
     });
+
+    // I. Completed modules per resource (for progress)
+    const resourceIds = boughtResources.map((p) => p.resource.id);
+    const completedModuleCounts = await prisma.userProgress.groupBy({
+      by: ["moduleId"],
+      where: {
+        userId: targetId,
+        module: { resourceId: { in: resourceIds } },
+      },
+      _count: { moduleId: true },
+    });
+    // Map resourceId -> completed count
+    const completedByResource: Record<string, number> = {};
+    if (resourceIds.length > 0) {
+      const progressRows = await prisma.userProgress.findMany({
+        where: { userId: targetId, module: { resourceId: { in: resourceIds } } },
+        select: { module: { select: { resourceId: true } } },
+      });
+      for (const row of progressRows) {
+        const rid = row.module.resourceId;
+        completedByResource[rid] = (completedByResource[rid] || 0) + 1;
+      }
+    }
 
     if (!user) {
       return res
@@ -262,17 +291,22 @@ export const getUserProfile = async (
       recentSubmissions: recentSubmissions.map((s) => ({
         id: s.id,
         title: s.problem.title,
+        problemId: s.problem.problemId,
         createdAt: s.createdAt,
       })),
       challenges: challengeDetails.map((c) => ({
         id: c.challengeId,
         title: c.title,
         difficulty: c.difficulty,
+        slug: c.slug,
       })),
       resources: boughtResources.map((p) => ({
         id: p.resource.id,
         title: p.resource.title,
         type: p.resource.type,
+        thumbnail: p.resource.previewUrl,
+        totalModules: p.resource._count.modules,
+        completedModules: completedByResource[p.resource.id] || 0,
       })),
       badges: earnedBadges.map((ub) => ({
         id: ub.badge.id,

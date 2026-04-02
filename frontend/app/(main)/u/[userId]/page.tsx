@@ -4,8 +4,9 @@ import React, { useEffect, useState, use } from "react";
 import { Tooltip } from "react-tooltip";
 import {
   Trophy, CheckCircle, Code, Loader2, History,
-  BookOpen, ChevronRight, Flame, Award, X, Download,
+  BookOpen, ChevronRight, Flame, Award, X,
 } from "lucide-react";
+import Link from "next/link";
 import "react-calendar-heatmap/dist/styles.css";
 import "react-tooltip/dist/react-tooltip.css";
 
@@ -243,11 +244,22 @@ export default function PublicProfile({ params }: PageProps) {
                 <div className="divide-y divide-slate-100">
                   {recentSubmissions?.length > 0 ? (
                     recentSubmissions.map((s: any) => (
-                      <ActivityRow
-                        key={s.id}
-                        title={s.title}
-                        subtitle={new Date(s.createdAt).toLocaleDateString()}
-                      />
+                      <Link key={s.id} href={`/problems/${s.problemId}`}
+                        className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors group"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-7 h-7 bg-emerald-50 rounded-lg flex items-center justify-center shrink-0">
+                            <CheckCircle size={13} className="text-emerald-500" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-slate-700 font-semibold group-hover:text-blue-600 transition-colors truncate">{s.title}</p>
+                            <p className="text-[11px] text-slate-400 uppercase tracking-wider font-bold mt-0.5">
+                              {new Date(s.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                            </p>
+                          </div>
+                        </div>
+                        <ChevronRight size={15} className="text-slate-300 group-hover:text-slate-500 group-hover:translate-x-1 transition-all shrink-0" />
+                      </Link>
                     ))
                   ) : (
                     <EmptyState msg="No recent solutions found." />
@@ -259,11 +271,22 @@ export default function PublicProfile({ params }: PageProps) {
                 <div className="divide-y divide-slate-100">
                   {challenges?.length > 0 ? (
                     challenges.map((c: any) => (
-                      <ActivityRow
-                        key={c.id}
-                        title={c.title}
-                        subtitle={`${c.difficulty} Difficulty`}
-                      />
+                      <Link key={c.id} href={`/challenges/${c.slug}`}
+                        className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors group"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-7 h-7 bg-amber-50 rounded-lg flex items-center justify-center shrink-0">
+                            <Trophy size={13} className="text-amber-500" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-slate-700 font-semibold group-hover:text-blue-600 transition-colors truncate">{c.title}</p>
+                            <p className="text-[11px] text-slate-400 uppercase tracking-wider font-bold mt-0.5">
+                              {c.difficulty} Difficulty
+                            </p>
+                          </div>
+                        </div>
+                        <ChevronRight size={15} className="text-slate-300 group-hover:text-slate-500 group-hover:translate-x-1 transition-all shrink-0" />
+                      </Link>
                     ))
                   ) : (
                     <EmptyState msg="You haven't participated in any challenges yet." />
@@ -274,13 +297,43 @@ export default function PublicProfile({ params }: PageProps) {
               {activeTab === "resources" && (
                 <div className="divide-y divide-slate-100">
                   {resources?.length > 0 ? (
-                    resources.map((r: any) => (
-                      <ActivityRow
-                        key={r.id}
-                        title={r.title}
-                        subtitle={r.type}
-                      />
-                    ))
+                    resources.map((r: any) => {
+                      const pct = r.totalModules > 0 ? Math.round((r.completedModules / r.totalModules) * 100) : 0;
+                      const isComplete = pct === 100;
+                      return (
+                        <Link key={r.id} href={`/resource/${r.id}`}
+                          className="flex items-center gap-4 p-4 hover:bg-slate-50 transition-colors group"
+                        >
+                          {/* Thumbnail */}
+                          <div className="w-16 h-11 rounded-lg bg-slate-100 overflow-hidden shrink-0 border border-slate-200">
+                            {r.thumbnail
+                              ? <img src={r.thumbnail} alt={r.title} className="w-full h-full object-cover" />
+                              : <div className="w-full h-full flex items-center justify-center">
+                                  <BookOpen size={16} className="text-slate-400" />
+                                </div>}
+                          </div>
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-slate-700 font-semibold group-hover:text-blue-600 transition-colors truncate">{r.title}</p>
+                            <div className="flex items-center gap-3 mt-1.5">
+                              {/* Progress bar */}
+                              <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden max-w-[120px]">
+                                <div
+                                  className={`h-full rounded-full transition-all ${isComplete ? "bg-emerald-500" : "bg-blue-400"}`}
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                              <span className={`text-[10px] font-black uppercase tracking-wider ${isComplete ? "text-emerald-600" : "text-slate-400"}`}>
+                                {isComplete ? "Completed" : `${r.completedModules}/${r.totalModules} lessons`}
+                              </span>
+                            </div>
+                          </div>
+                          {isComplete
+                            ? <CheckCircle size={15} className="text-emerald-500 shrink-0" />
+                            : <ChevronRight size={15} className="text-slate-300 group-hover:text-slate-500 group-hover:translate-x-1 transition-all shrink-0" />}
+                        </Link>
+                      );
+                    })
                   ) : (
                     <EmptyState msg="No purchased resources found." />
                   )}
@@ -298,27 +351,6 @@ export default function PublicProfile({ params }: PageProps) {
       <Tooltip
         id="badge-tooltip"
         style={{ backgroundColor: "#1e293b", color: "#f8fafc", fontSize: "11px", fontWeight: "bold" }}
-      />
-    </div>
-  );
-}
-
-// --- Sub-components adapted for Light Mode ---
-
-function ActivityRow({ title, subtitle }: { title: string; subtitle: string }) {
-  return (
-    <div className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors group cursor-pointer">
-      <div className="flex flex-col">
-        <span className="text-slate-700 font-semibold group-hover:text-blue-600 transition-colors">
-          {title}
-        </span>
-        <span className="text-[11px] text-slate-400 uppercase tracking-wider font-bold">
-          {subtitle}
-        </span>
-      </div>
-      <ChevronRight
-        size={16}
-        className="text-slate-300 group-hover:text-slate-500 group-hover:translate-x-1 transition-all"
       />
     </div>
   );
