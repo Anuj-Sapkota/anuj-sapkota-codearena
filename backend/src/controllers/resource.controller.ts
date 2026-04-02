@@ -43,8 +43,9 @@ export const createSeries = async (req: Request, res: Response) => {
         await tx.module.createMany({
           data: modules.map((m: any, index: number) => ({
             title: m.title || `Module ${index + 1}`,
-            contentUrl: m.url || "", // Ensuring no module crashes the DB
+            contentUrl: m.url || "",
             order: index + 1,
+            sectionTitle: m.sectionTitle || null,
             resourceId: resource.id,
           })),
         });
@@ -116,42 +117,52 @@ export const getResourceById = async (req: Request, res: Response) => {
       : null;
 
     const resource = await prisma.resource.findUnique({
-      where: { id: id },
+      where: { id },
       include: {
         modules: {
           orderBy: { order: "asc" },
           include: {
-            // This will now be recognized!
-            completedBy: userId ? { where: { userId: userId } } : false,
+            completedBy: userId ? { where: { userId } } : false,
           },
         },
-        purchases: userId ? { where: { userId: userId } } : false,
+        purchases: userId ? { where: { userId } } : false,
       },
     });
-    const isOwned = userId
-      ? resource.purchases.length > 0 || resource.creatorId === userId
-      : false;
-    // Map the modules to include a simple boolean 'isCompleted'
-    const modulesWithProgress = resource.modules.map((m) => ({
-      ...m,
-      isCompleted: m.completedBy && m.completedBy.length > 0,
-      contentUrl: isOwned ? m.contentUrl : null, // Keep your security logic
-    }));
 
-    if (!resource)
-      return res.status(404).json({ message: "Resource not found" });
+    if (!resource) return res.status(404).json({ message: "Resource not found" });
+
+    const isCreator = userId ? resource.creatorId === userId : false;
+    const isOwned = isCreator || (userId ? (resource.purchases as any[]).length > 0 : false);
+
+    // Build modules with isCompleted + sequential unlock logic
+    // Rule: lesson[0] always unlocked; lesson[i] unlocked if lesson[i-1] isCompleted OR user is creator
+    const modulesWithProgress = resource.modules.map((m, index) => {
+      const isCompleted = Array.isArray(m.completedBy) && m.completedBy.length > 0;
+      const prevCompleted =
+        index === 0 ||
+        isCreator ||
+        (Array.isArray(resource.modules[index - 1].completedBy) &&
+          (resource.modules[index - 1].completedBy as any[]).length > 0);
+
+      const isUnlocked = isCreator || prevCompleted;
+
+      return {
+        id: m.id,
+        title: m.title,
+        order: m.order,
+        sectionTitle: m.sectionTitle,
+        isCompleted,
+        isUnlocked,
+        // Only expose contentUrl if owned AND unlocked
+        contentUrl: isOwned && isUnlocked ? m.contentUrl : null,
+      };
+    });
 
     res.json({
       ...resource,
       isOwned,
-      modules: isOwned
-        ? resource.modules
-        : resource.modules.map((m: any) => ({
-            id: m.id,
-            title: m.title,
-            contentUrl: null,
-            order: m.order,
-          })),
+      isCreator,
+      modules: modulesWithProgress,
     });
   } catch (error) {
     console.error(error);
@@ -246,6 +257,7 @@ export const updateResource = async (req: Request, res: Response) => {
           title: m.title,
           contentUrl: m.url,
           order: index,
+          sectionTitle: m.sectionTitle || null,
           resourceId: id,
         })),
       });

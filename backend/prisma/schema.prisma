@@ -223,10 +223,11 @@ model Resource {
 }
 
 model Module {
-  id         String @id @default(cuid())
-  title      String
-  contentUrl String // This stores the Cloudinary URL
-  order      Int // This ensures Video 1 stays before Video 2
+  id           String  @id @default(cuid())
+  title        String
+  contentUrl   String // This stores the Cloudinary URL
+  order        Int // This ensures Video 1 stays before Video 2
+  sectionTitle String? // Groups lessons into sections (e.g. "Getting Started")
 
   resourceId String
   resource   Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
