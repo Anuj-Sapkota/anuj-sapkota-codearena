@@ -10,9 +10,10 @@ export const createProblemService = async (data: any) => {
     functionName,
     starterCode,
     memoryLimit,
-    categoryIds, // Array of Ints
-    testCases, // Array of {input, expectedOutput, isSample}
-    inputType
+    categoryIds,
+    testCases,
+    inputType,
+    points,
   } = data;
 
   // 1. Validation
@@ -28,6 +29,7 @@ export const createProblemService = async (data: any) => {
         difficulty,
         functionName: functionName || "solution",
         inputType,
+        points: parseInt(points) || 50,
         starterCode: starterCode || {
           javascript: "",
           python: "",
@@ -198,19 +200,18 @@ export const updateProblemService = async (id: string, data: any) => {
     categoryIds,
     inputType,
     testCases,
+    points,
   } = data;
 
   const numericId = parseInt(id);
   const updateData: any = {};
 
-  // --- BASIC FIELD UPDATES ---
   if (title) updateData.title = title;
   if (content) updateData.content = content;
   if (difficulty) updateData.difficulty = difficulty;
   if (functionName) updateData.functionName = functionName;
-  
-  // NEW: Update inputType (the "INT", "ARRAY", etc. logic)
   if (inputType) updateData.inputType = inputType;
+  if (points !== undefined && points !== null) updateData.points = parseInt(points) || 50;
 
   if (starterCode !== undefined) updateData.starterCode = starterCode || {};
   

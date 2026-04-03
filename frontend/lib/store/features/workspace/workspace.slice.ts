@@ -1,13 +1,9 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { runCodeThunk, fetchSubmissionHistoryThunk } from "./workspace.actions";
 import { WorkspaceState, SubmissionRecord } from "@/types/workspace.types";
+import { SUPPORTED_LANGUAGES } from "@/constants/languages";
 
-const LANGUAGES = [
-  { id: "javascript", label: "JavaScript", judge0Id: 63 },
-  { id: "python", label: "Python", judge0Id: 71 },
-  { id: "java", label: "Java", judge0Id: 62 },
-  { id: "cpp", label: "C++", judge0Id: 54 },
-];
+const LANGUAGES = SUPPORTED_LANGUAGES;
 
 const initialState: WorkspaceState = {
   codes: { javascript: "", python: "", java: "", cpp: "" },

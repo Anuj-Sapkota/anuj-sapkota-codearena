@@ -8,13 +8,14 @@ import {
 import { CreateProblemDTO, Problem } from "@/types/problem.types";
 import { toast } from "sonner";
 import { Category } from "@/types/category.types";
+import { SUPPORTED_LANGUAGES } from "@/constants/languages";
 
-// Define default templates outside the hook to keep them clean
+// Starter code templates keyed by language id — matches SUPPORTED_LANGUAGES
 const DEFAULT_TEMPLATES: Record<string, string> = {
-  javascript: "function solution() {\n  // your code here\n}",
-  python: "def solution():\n    # your code here\n    pass",
-  java: "class Solution {\n    public void solution() {\n        \n    }\n}",
-  cpp: "class Solution {\npublic:\n    void solution() {\n        \n    }\n};",
+  javascript: "/**\n * @param {*} input\n * @return {*}\n */\nfunction solution(input) {\n  // your code here\n}",
+  python: "def solution(input):\n    # your code here\n    pass",
+  java: "class Solution {\n    public Object solution(Object input) {\n        // your code here\n        return null;\n    }\n}",
+  cpp: "class Solution {\npublic:\n    auto solution(auto input) {\n        // your code here\n    }\n};",
 };
 
 export const useProblemForm = (
@@ -32,6 +33,7 @@ export const useProblemForm = (
     functionName: "solution",
     timeLimit: 1.0,
     memoryLimit: 128,
+    points: 50,
     categoryIds: [],
     testCases: [{ input: "", expectedOutput: "", isSample: true }],
     starterCode: DEFAULT_TEMPLATES,
@@ -59,6 +61,7 @@ export const useProblemForm = (
         starterCode: mappedStarterCode,
         timeLimit: initialData.timeLimit,
         memoryLimit: initialData.memoryLimit,
+        points: initialData.points ?? 50,
         categoryIds:
           initialData.categories?.map((c: Category) =>
             Number(c.categoryId || c),
@@ -79,6 +82,7 @@ export const useProblemForm = (
         starterCode: DEFAULT_TEMPLATES,
         timeLimit: 1.0,
         memoryLimit: 128,
+        points: 50,
         categoryIds: [],
         testCases: [{ input: "", expectedOutput: "", isSample: true }],
       });

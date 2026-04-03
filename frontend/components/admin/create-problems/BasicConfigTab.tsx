@@ -82,6 +82,24 @@ export default function BasicConfigTab({ formData, setFormData, categories = []}
         </div>
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-gray-100">
+        <div className="space-y-2">
+          <FormLabel>Points Awarded on Solve</FormLabel>
+          <input
+            type="number"
+            min={1}
+            max={1000}
+            className="w-full border-2 border-gray-500 rounded-md p-4 bg-white text-gray-900 focus:outline-none focus:ring-4 focus:ring-primary-1/5 focus:border-primary-1 transition-all font-bold"
+            value={formData.points ?? 50}
+            onChange={(e) => setFormData({ ...formData, points: parseInt(e.target.value) || 50 })}
+            placeholder="50"
+          />
+          <p className="text-[10px] text-gray-400 italic mt-1">
+            * XP awarded to the user on first solve. Easy: 50, Medium: 100, Hard: 200 recommended.
+          </p>
+        </div>
+      </div>
+
       <div className="space-y-4 pt-4 border-t border-gray-100">
         <FormLabel>Taxonomy_Selection (Categories)</FormLabel>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
