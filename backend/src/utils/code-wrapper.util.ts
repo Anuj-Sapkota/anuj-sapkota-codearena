@@ -21,16 +21,23 @@ ${userCode}
 
 (function() {
   try {
-    const inputData = ${formattedInput}; 
+    const inputData = ${formattedInput};
+    if (typeof ${functionName} !== "function") {
+      process.stderr.write("Error: function '${functionName}' is not defined.\\nMake sure your function is named exactly '${functionName}' and has no syntax errors.");
+      process.exit(1);
+    }
     const result = ${functionName}(inputData);
-    
     if (result === undefined) {
       process.stdout.write("null");
     } else {
       process.stdout.write(JSON.stringify(result));
     }
   } catch (err) {
-    process.stderr.write(err.stack || err.message);
+    if (err instanceof ReferenceError && err.message.includes("${functionName}")) {
+      process.stderr.write("Error: function '${functionName}' is not defined.\\nMake sure your function is named exactly '${functionName}' and has no syntax errors.");
+    } else {
+      process.stderr.write(err.stack || err.message);
+    }
     process.exit(1);
   }
 })();

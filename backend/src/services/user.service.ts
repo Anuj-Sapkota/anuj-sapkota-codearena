@@ -95,3 +95,4 @@ export const findUserRaw = async (userId: number) => {
   if (!user) throw new ServiceError("User does not exist!", 404);
   return user;
 };
+

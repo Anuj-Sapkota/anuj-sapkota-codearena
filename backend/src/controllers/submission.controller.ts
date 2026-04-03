@@ -47,7 +47,7 @@ export const handleSubmission = async (
           language_id,
           tc.input,
           problem.functionName || "solution",
-          problem.inputType
+          problem.inputType,
         );
 
         const execution = await Judge0Service.submitCode(
@@ -117,8 +117,9 @@ export const handleSubmission = async (
 
     if (isFinal && userId) {
       newSubmission = await prisma.$transaction(async (tx) => {
+        // 1. Create the submission record
         const submission = await tx.submission.create({
-          data: {       
+          data: {
             userId: Number(userId),
             problemId: Number(problemId),
             challengeId: challenge?.challengeId
@@ -135,7 +136,9 @@ export const handleSubmission = async (
           },
         });
 
+        // 2. If everything passed, handle Status AND Gamification
         if (allPassed) {
+          // Update/Create Problem Status
           await tx.userProblemStatus.upsert({
             where: {
               userId_problemId: {
@@ -150,6 +153,62 @@ export const handleSubmission = async (
               status: "SOLVED",
             },
           });
+
+          // --- 🏆 GAMIFICATION LOGIC START ---
+          // Check if this is the FIRST time they solved it to prevent XP farming
+          const previousSolved = await tx.submission.count({
+            where: {
+              userId: Number(userId),
+              problemId: Number(problemId),
+              status: "ACCEPTED",
+              id: { not: submission.id }, // Don't count the one we just made
+            },
+          });
+
+          if (previousSolved === 0) {
+            const xpGained = problem.points || 50; // Use points from your problem model
+            const now = new Date();
+
+            // Fetch user for streak calculation
+            const user = await tx.user.findUnique({
+              where: { userId: Number(userId) },
+            });
+
+            if (user) {
+              let newStreak = user.streak;
+              if (user.lastActivityDate) {
+                const hoursSince =
+                  (now.getTime() - user.lastActivityDate.getTime()) /
+                  (1000 * 60 * 60);
+                if (hoursSince >= 24 && hoursSince <= 48) newStreak++;
+                else if (hoursSince > 48) newStreak = 1;
+              } else {
+                newStreak = 1;
+              }
+
+              // Update User XP and Activity
+              await tx.user.update({
+                where: { userId: Number(userId) },
+                data: {
+                  xp: { increment: xpGained },
+                  total_points: { increment: xpGained },
+                  streak: newStreak,
+                  lastActivityDate: now,
+                  level: Math.floor((user.xp + xpGained) / 500) + 1,
+                },
+              });
+
+              await tx.activity.create({
+                data: {
+                  userId: Number(userId),
+                  type: `${problem.difficulty.toUpperCase()}_SOLVED`,
+                  xpGained: xpGained,
+                  createdAt: now,
+                },
+              });
+            }
+          }
+          // --- 🏆 GAMIFICATION LOGIC END ---
         }
         return submission;
       });
@@ -165,7 +224,7 @@ export const handleSubmission = async (
       newSubmission,
     });
   } catch (error: any) {
-    console.log(error)
+    console.log(error);
     next(error);
   }
 };

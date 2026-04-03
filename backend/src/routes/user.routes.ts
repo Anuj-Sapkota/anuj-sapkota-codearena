@@ -1,6 +1,10 @@
 import express from "express";
 import multer from "multer";
-import { updateUser, getUserById } from "../controllers/user.controller.js";
+import {
+  updateUser,
+  getUserById,
+  getUserProfile,
+} from "../controllers/user.controller.js";
 import { authenticateRequest } from "../middleware/auth.middleware.js"; // Your middleware
 
 const router = express.Router();
@@ -16,4 +20,7 @@ const upload = multer({
 router.patch("/update/:id", authenticateRequest, updateUser);
 
 router.get("/:id", authenticateRequest, getUserById);
+
+router.get("/profile/:userId", getUserProfile);
+
 export default router;

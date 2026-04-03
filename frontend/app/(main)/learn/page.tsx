@@ -8,12 +8,12 @@ import {
   FiLoader,
   FiBookOpen,
   FiPlay,
-  FiArrowRight,
   FiAlertCircle,
   FiInbox,
   FiLayers,
   FiLock,
   FiUnlock,
+  FiCheckCircle,
 } from "react-icons/fi";
 import Link from "next/link";
 import { resourceService } from "@/lib/services/resource.service";
@@ -122,7 +122,10 @@ export default function LearnPage() {
             {resources && resources.length > 0 ? (
               resources.map((res: any) => (
                 <Link
-                  href={`/learn/${res.id}`}
+                  /* 🚀 DYNAMIC ROUTING: Now works for both Creators and Buyers via backend isOwned flag */
+                  href={
+                    res.isOwned ? `/resource/${res.id}` : `/learn/${res.id}`
+                  }
                   key={res.id}
                   className="group relative flex flex-col"
                 >
@@ -134,9 +137,13 @@ export default function LearnPage() {
                       className="w-full h-full object-cover transition-all duration-1000 group-hover:scale-110"
                     />
 
-                    {/* STATUS BADGE (PAID/FREE) */}
+                    {/* STATUS BADGE */}
                     <div className="absolute top-5 right-5 z-20">
-                      {res.price === 0 ? (
+                      {res.isOwned ? (
+                        <span className="px-3 py-1.5 bg-emerald-600 text-white text-[9px] font-black uppercase tracking-widest rounded-full flex items-center gap-2 shadow-lg">
+                          <FiCheckCircle size={10} /> Enrolled
+                        </span>
+                      ) : res.price === 0 ? (
                         <span className="px-3 py-1.5 bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest rounded-full flex items-center gap-2 shadow-lg">
                           <FiUnlock size={10} /> Open Access
                         </span>
@@ -187,14 +194,21 @@ export default function LearnPage() {
                             `https://ui-avatars.com/api/?name=${res.creator?.name}`
                           }
                           className="w-8 h-8 rounded-full border border-slate-200 shadow-sm"
+                          alt="Creator"
                         />
                         <span className="text-[10px] font-black uppercase text-black">
                           {res.creator?.name || "Architect"}
                         </span>
                       </div>
                       <div className="text-right">
-                        <span className="text-2xl font-black italic tracking-tighter">
-                          {res.price === 0 ? "FREE" : `$${res.price}`}
+                        <span
+                          className={`text-2xl font-black italic tracking-tighter ${res.isOwned ? "text-emerald-600" : ""}`}
+                        >
+                          {res.isOwned
+                            ? "OWNED"
+                            : res.price === 0
+                              ? "FREE"
+                              : `$${res.price}`}
                         </span>
                       </div>
                     </div>

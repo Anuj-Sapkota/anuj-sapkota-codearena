@@ -19,6 +19,60 @@
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
   --font-code: "JetBrains Mono", "Fira Code", monospace;
 }
+/* Ensure the heatmap is using the full width of its container */
+.react-calendar-heatmap {
+  width: 100%;
+}
+
+.react-calendar-heatmap .color-empty {
+  fill: #161b22;
+}
+.react-calendar-heatmap .color-scale-1 {
+  fill: #0e4429;
+}
+.react-calendar-heatmap .color-scale-2 {
+  fill: #006d32;
+}
+.react-calendar-heatmap .color-scale-3 {
+  fill: #26a641;
+}
+.react-calendar-heatmap .color-scale-4 {
+  fill: #39d353;
+}
+
+.react-calendar-heatmap rect {
+  rx: 2; /* Rounded corners */
+  ry: 2;
+}
+
+/* Hover effect on squares */
+.react-calendar-heatmap rect:hover {
+  stroke: #555;
+  stroke-width: 1px;
+}
+
+/* Light Mode Heatmap Colors */
+.react-calendar-heatmap .color-empty-light {
+  fill: #f1f5f9;
+} /* slate-100 */
+.react-calendar-heatmap .color-blue-1 {
+  fill: #dbeafe;
+} /* blue-100 */
+.react-calendar-heatmap .color-blue-2 {
+  fill: #93c5fd;
+} /* blue-300 */
+.react-calendar-heatmap .color-blue-3 {
+  fill: #3b82f6;
+} /* blue-500 */
+.react-calendar-heatmap .color-blue-4 {
+  fill: #1d4ed8;
+} /* blue-700 */
+
+/* Global Heatmap Overrides */
+.react-calendar-heatmap text {
+  font-size: 10px;
+  fill: #64748b; /* slate-500 */
+}
 
 body {
   font-family: var(--font-sans);
@@ -44,7 +98,6 @@ body {
     scrollbar-width: none; /* Firefox */
   }
 }
-
 
 /* Add this to your globals.css */
 

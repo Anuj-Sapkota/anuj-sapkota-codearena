@@ -1,6 +1,6 @@
 import { v2 as cloudinary } from "cloudinary";
 
-export type UploadType = "profile" | "thumbnail" | "video";
+export type UploadType = "profile" | "thumbnail" | "video" | "badgeIcon";
 
 /**
  * Centrally managed upload utility
@@ -36,6 +36,10 @@ export const uploadToCloudinary = async (
 
     case "thumbnail":
       options.transformation = [{ width: 1280, height: 720, crop: "fill" }];
+      break;
+
+    case "badgeIcon":
+      options.transformation = [{ width: 512, height: 512, crop: "fill" }];
       break;
   }
 

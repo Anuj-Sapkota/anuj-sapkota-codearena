@@ -15,11 +15,11 @@ export const ROUTES = {
   // Protected Main Routes
   MAIN: {
     EXPLORE: "/explore",
-    PROFILE: "/profile",
     SETTINGS: "/settings",
     ACCOUNTS_SECURITY: "/settings/accounts-security",
     PROBLEMS: "/problems",
     LEARN: "/learn",
+    LEADERBOARD: "/leaderboard",
     NOTIFICATIONS: "/settings/notifications",
   },
   ADMIN: {
@@ -44,6 +44,7 @@ export const NAV_ITEMS = [
   { name: "Explore", path: ROUTES.MAIN.EXPLORE },
   { name: "Problems", path: ROUTES.MAIN.PROBLEMS },
   { name: "Learn", path: ROUTES.MAIN.LEARN },
+  { name: "Leaderboard", path: ROUTES.MAIN.LEADERBOARD },
 ] as const;
 
 export const SETTINGS_MENU_ITEMS = [

@@ -81,28 +81,86 @@ model User {
   bio                 String?
   role                Role      @default(USER)
 
+  // --- Gamification Fields ---
+  xp               Int       @default(0)
+  level            Int       @default(1)
+  streak           Int       @default(0)
+  lastActivityDate DateTime?
+
   // This is your main "Gatekeeper" field for the frontend
-  creatorStatus CreatorStatus @default(NOT_APPLIED)
-
-  total_points Int @default(0)
-
+  creatorStatus     CreatorStatus       @default(NOT_APPLIED)
+  total_points      Int                 @default(0)
+  totalEarnings     Float               @default(0.0)
   // Relations
-  submissions       Submission[]
   problemStatuses   UserProblemStatus[]
   discussions       Discussion[]
   discussionVotes   DiscussionUpvote[]
   discussionReports DiscussionReport[]
+  activities        Activity[]
+  submissions       Submission[] // Track all code submissions
 
   // Learning & Marketplace Relations
+  progress       UserProgress[]
   creatorProfile CreatorProfile?
   ownedResources Resource[]
   purchases      Purchase[]
   reviews        Review[]
+  assignmentAttempts AssignmentAttempt[]
 
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  created_at DateTime    @default(now())
+  updated_at DateTime    @updatedAt
+  userBadges UserBadge[]
 
   @@map("users")
+}
+
+// NEW: Activity Model for the Contribution Heatmap
+model Activity {
+  id     String @id @default(cuid())
+  userId Int // FIXED: Must be Int to match User.userId
+  user   User   @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  type     String // e.g., "EASY_SOLVED", "COURSE_COMPLETED", "DAILY_LOGIN"
+  xpGained Int    @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model UserProgress {
+  id          String   @id @default(cuid())
+  userId      Int
+  moduleId    String
+  isCompleted Boolean  @default(true)
+  completedAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, moduleId]) // A user can only complete a module once
+}
+
+model Badge {
+  id          String      @id @default(cuid())
+  name        String
+  description String
+  iconUrl     String // Cloudinary URL for the icon
+  resources   Resource[] 
+  userBadges  UserBadge[]
+  createdAt   DateTime   @default(now())
+}
+
+model UserBadge {
+  id       String   @id @default(cuid())
+  userId   Int
+  badgeId  String
+  earnedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId]) // Student only gets the badge once
 }
 
 model CreatorProfile {
@@ -118,6 +176,7 @@ model CreatorProfile {
   rejectionReason String? @db.Text
 
   githubUrl       String?
+  views           Int       @default(0)
   isEmailVerified Boolean   @default(false)
   otpCode         String?
   otpExpiresAt    DateTime?
@@ -142,6 +201,7 @@ model Resource {
 
   avgRating    Float   @default(0.0)
   totalReviews Int     @default(0)
+  views        Int     @default(0)
   isApproved   Boolean @default(false)
   isPublished  Boolean @default(false)
 
@@ -150,10 +210,13 @@ model Resource {
 
   problemId Int?
   problem   Problem? @relation(fields: [problemId], references: [problemId])
+  badgeId   String?
+  badge     Badge?   @relation(fields: [badgeId], references: [id])
 
-  reviews   Review[]
-  modules   Module[]
-  purchases Purchase[]
+  reviews    Review[]
+  modules    Module[]
+  purchases  Purchase[]
+  assignment Assignment?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -162,16 +225,22 @@ model Resource {
 }
 
 model Module {
-  id         String @id @default(cuid())
-  title      String
-  contentUrl String // This stores the Cloudinary URL
-  order      Int // This ensures Video 1 stays before Video 2
+  id           String  @id @default(cuid())
+  title        String
+  description  String? @db.Text
+  contentUrl   String
+  fileType     String  @default("video") // "video" | "code" | "file"
+  fileName     String? // original filename for code/file uploads
+  order        Int
+  sectionTitle String?
 
   resourceId String
   resource   Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  completedBy UserProgress[]
 
   @@map("modules")
 }
@@ -325,7 +394,7 @@ model Submission {
   challengeId Int?
   code        String   @db.Text
   languageId  Int
-  status      String
+  status      String // Values like "Accepted", "Wrong Answer"
   totalPassed Int      @default(0)
   totalCases  Int      @default(0)
   memory      Int?
@@ -333,19 +402,21 @@ model Submission {
   token       String?  @unique
   failMessage String?
   createdAt   DateTime @default(now())
-  problem     Problem  @relation(fields: [problemId], references: [problemId])
-  user        User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  problem Problem @relation(fields: [problemId], references: [problemId])
+  user    User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
   @@map("submissions")
 }
 
 model UserProblemStatus {
-  id        Int     @id @default(autoincrement())
+  id        Int    @id @default(autoincrement())
   userId    Int
   problemId Int
-  status    String
-  user      User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  problem   Problem @relation(fields: [problemId], references: [problemId])
+  status    String // e.g. "SOLVED", "ATTEMPTED"
+
+  user    User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  problem Problem @relation(fields: [problemId], references: [problemId])
 
   @@unique([userId, problemId])
   @@map("user_problem_status")
@@ -379,4 +450,53 @@ model ChallengeProblem {
 
   @@id([challengeId, problemId])
   @@map("challenge_problems")
+}
+
+// --- COURSE ASSIGNMENTS (MCQ) ---
+
+model Assignment {
+  id         String @id @default(cuid())
+  resourceId String @unique
+  resource   Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  passScore  Int // e.g. 70 means 70% needed to pass
+  questions  AssignmentQuestion[]
+  attempts   AssignmentAttempt[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("assignments")
+}
+
+model AssignmentQuestion {
+  id           String @id @default(cuid())
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  question      String   @db.Text
+  options       Json     // String[] — the 4 choices
+  correctIndex  Int      // 0-3, index of the correct option
+
+  order Int @default(0)
+
+  @@map("assignment_questions")
+}
+
+model AssignmentAttempt {
+  id           String @id @default(cuid())
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  userId   Int
+  user     User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  score    Int     // number of correct answers
+  total    Int     // total questions
+  passed   Boolean
+  answers  Json    // Int[] — user's chosen indices
+
+  createdAt DateTime @default(now())
+
+  @@map("assignment_attempts")
 }

@@ -12,7 +12,8 @@ import {
   FaChartBar,
   FaTimes,
   FaShieldAlt,
-  FaMailBulk, // Added for Moderation
+  FaMailBulk,
+  FaStar, // Added for Moderation
 } from "react-icons/fa";
 import { FiLogOut } from "react-icons/fi";
 import { LuSwords } from "react-icons/lu";
@@ -28,7 +29,8 @@ const navItems = [
   { name: "Problems", href: "/admin/problems", icon: FaCode },
   { name: "Challenges", href: "/admin/challenges", icon: LuSwords },
   { name: "Moderation", href: "/admin/moderation", icon: FaShieldAlt }, // Completed this
-  { name: "Applications", href: "/admin/application", icon: FaMailBulk},
+  { name: "Badge", href: "/admin/badges", icon: FaStar },
+  { name: "Applications", href: "/admin/application", icon: FaMailBulk },
   { name: "Users", href: "/admin/users", icon: FaUsers },
 ];
 

@@ -2,6 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { resourceService } from "@/lib/services/resource.service";
 import { toast } from "sonner";
+import api from "@/lib/api";
 
 // 🚀 Hook to FETCH resources for the dashboard
 export const useMyResources = () => {
@@ -76,5 +77,19 @@ export const usePublicResourceDetail = (id: string) => {
     queryKey: ["resource", "public", id],
     queryFn: () => resourceService.getResourceById(id),
     enabled: !!id, // Only run if ID exists
+  });
+};
+
+export const useCreatorStats = () => {
+  return useQuery({
+    queryKey: ["creator-stats"],
+    queryFn: async () => {
+      // 🚀 Use 'api' instead of 'axios' or 'fetch'
+      const { data } = await api.get("/resources/creator/stats");
+      console.log("DATA FROM THE CREATPOR STATUS BACKEND: ", data)
+      return data;
+    },
+    // Only fetch if the user is actually logged in
+    retry: false, 
   });
 };

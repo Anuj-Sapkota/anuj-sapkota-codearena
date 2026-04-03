@@ -7,7 +7,7 @@ import { verifyTurnstile } from "../middleware/turnstile.middleware.js";
 const router = express.Router();
 
 // --- Standard Routes ---
-router.post("/register", verifyTurnstile, authController.registerUser);
+router.post("/register",  authController.registerUser);
 router.post("/login", authController.loginUser);
 router.post("/logout", authenticateRequest, authController.logoutUser);
 router.post("/refresh", authController.refreshToken);
