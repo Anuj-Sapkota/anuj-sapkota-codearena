@@ -31,7 +31,7 @@ export interface FormButtonProps
 }
 
 export interface SettingsSidebarProps {
-  activeTab: string;
+  activeId: string;
 }
 
 //interface for the basic user settings form
