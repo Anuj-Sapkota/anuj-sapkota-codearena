@@ -21,7 +21,7 @@ import { authenticateRequest } from "../middleware/auth.middleware.js";
 const router = Router();
 
 // 🔓 PUBLIC ROUTES
-router.get("/explore", authenticateRequest, getPublicResources);
+router.get("/explore", getPublicResources);
 
 // 🚀 PROTECTED ROUTES
 router.use(authenticateRequest);

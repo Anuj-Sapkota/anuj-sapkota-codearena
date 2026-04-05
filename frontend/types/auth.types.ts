@@ -13,8 +13,11 @@ export interface UserProfile {
   profile_pic_url?: string | null;
   google_id?: string | null;
   github_id?: string | null;
+  xp?: number;
+  level?: number;
+  streak?: number;
   creatorProfile?: {
-    rejectionReason?: string | null;
+    rejectionReason?: string | null;  
     portfolioUrl?: string | null;
     githubUrl?: string | null;
   } | null;
