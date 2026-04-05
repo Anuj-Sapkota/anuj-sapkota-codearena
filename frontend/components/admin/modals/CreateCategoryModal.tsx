@@ -1,14 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
 import { useForm } from "react-hook-form";
-import { AppDispatch, RootState } from "@/lib/store/store";
-import { createCategoryThunk, updateCategoryThunk } from "@/lib/store/features/category/category.actions";
+import { useCreateCategory, useUpdateCategory } from "@/hooks/useCategories";
 import { Category, CreateCategoryDTO } from "@/types/category.types";
-
 import Modal from "@/components/ui/Modal";
-import { FormLabel, FormInput, FormTextarea, FormButton } from "@/components/ui/Form"; 
+import { FormLabel, FormInput, FormTextarea, FormButton } from "@/components/ui/Form";
 
 interface Props {
   isOpen: boolean;
@@ -17,8 +14,9 @@ interface Props {
 }
 
 export default function CreateCategoryModal({ isOpen, onClose, editData }: Props) {
-  const dispatch = useDispatch<AppDispatch>();
-  const { isLoading } = useSelector((state: RootState) => state.category);
+  const createCategory = useCreateCategory();
+  const updateCategory = useUpdateCategory();
+  const isLoading = createCategory.isPending || updateCategory.isPending;
 
   const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<CreateCategoryDTO>({
     defaultValues: {
@@ -28,7 +26,6 @@ export default function CreateCategoryModal({ isOpen, onClose, editData }: Props
     }
   });
 
-  // Auto-slugging logic: Only runs when creating a NEW category
   const categoryName = watch("name");
   useEffect(() => {
     if (!editData && categoryName) {
@@ -37,17 +34,17 @@ export default function CreateCategoryModal({ isOpen, onClose, editData }: Props
     }
   }, [categoryName, setValue, editData]);
 
-  const onSubmit = async (data: CreateCategoryDTO) => {
-    let result;
+  const onSubmit = (data: CreateCategoryDTO) => {
     if (editData) {
-      result = await dispatch(updateCategoryThunk({ id: editData.categoryId, data }));
+      updateCategory.mutate({ id: editData.categoryId, data }, {
+        onSuccess: () => { onClose(); reset(); },
+      });
     } else {
-      result = await dispatch(createCategoryThunk(data));
+      createCategory.mutate(data, {
+        onSuccess: () => { onClose(); reset(); },
+      });
     }
-
-    if (updateCategoryThunk.fulfilled.match(result) || createCategoryThunk.fulfilled.match(result)) {
-      onClose();
-      reset();
+  };
     }
   };
 

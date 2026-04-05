@@ -1,60 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { AppDispatch, RootState } from "@/lib/store/store";
-import {
-  fetchPendingApplicationsThunk,
-  reviewApplicationThunk,
-} from "@/lib/store/features/creator/creator.actions";
-import {
-  FiCheck,
-  FiX,
-  FiGithub,
-  FiGlobe,
-  FiMessageSquare,
-} from "react-icons/fi";
-import { toast } from "sonner";
+import { useState } from "react";
+import { usePendingApplications, useReviewApplication } from "@/hooks/useCreator";
+import { FiCheck, FiX, FiGithub, FiGlobe, FiMessageSquare } from "react-icons/fi";
 
 export default function PendingCreatorsPage() {
-  const dispatch = useDispatch<AppDispatch>();
-  const { pendingApplications, isSubmitting } = useSelector(
-    (state: RootState) => state.creator,
-  );
+  const { data: pendingApplications = [], isLoading } = usePendingApplications();
+  const reviewApplication = useReviewApplication();
+  const isSubmitting = reviewApplication.isPending;
 
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
 
-  useEffect(() => {
-    dispatch(fetchPendingApplicationsThunk());
-  }, [dispatch]);
-
-  // 🚀 FIXED: Added 'async' so we can await the dispatch and use .unwrap()
-  const handleReview = async (userId: number, status: "APPROVED" | "REJECTED") => {
+  const handleReview = (userId: number, status: "APPROVED" | "REJECTED") => {
     if (status === "REJECTED" && !rejectionReason) {
-      toast.error("Please provide a reason for rejection.");
       return;
     }
-
-    try {
-      // Use .unwrap() to trigger the catch block if the backend returns an error
-      await dispatch(
-        reviewApplicationThunk({
-          targetUserId: userId,
-          status,
-          reason: status === "REJECTED" ? rejectionReason : undefined,
-        })
-      ).unwrap();
-
-      toast.success(
-        `Application ${status === "APPROVED" ? "approved" : "rejected"} successfully`
-      );
-
-      setSelectedUser(null);
-      setRejectionReason("");
-    } catch (err: any) {
-      toast.error(err || "Failed to update application status");
-    }
+    reviewApplication.mutate({
+      targetUserId: userId,
+      status,
+      reason: status === "REJECTED" ? rejectionReason : undefined,
+    }, {
+      onSuccess: () => { setSelectedUser(null); setRejectionReason(""); },
+    });
   };
 
   return (

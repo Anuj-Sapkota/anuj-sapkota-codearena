@@ -1,46 +1,24 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
-import { AppDispatch, RootState } from "@/lib/store/store";
+import { RootState } from "@/lib/store/store";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { FaBars, FaExternalLinkAlt } from "react-icons/fa";
-import { fetchCategoriesThunk } from "@/lib/store/features/category/category.actions";
-import { fetchProblemsThunk } from "@/lib/store/features/problems/problem.actions";
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useSelector((state: RootState) => state.auth);
   const router = useRouter();
-  const dispatch = useDispatch<AppDispatch>();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  /**
-   * SECURITY GUARD
-   * Redirects anyone who isn't an ADMIN back to the landing page.
-   */
   useEffect(() => {
     if (!isLoading && (!user || user.role !== "ADMIN")) {
       router.replace("/");
     }
   }, [user, isLoading, router]);
-
-  /**
-   * GLOBAL ADMIN DATA FETCHING
-   * Pre-fetches necessary data for admin modules (Categories & Problems).
-   */
-  useEffect(() => {
-    if (user?.role === "ADMIN") {
-      dispatch(fetchCategoriesThunk());
-      dispatch(fetchProblemsThunk({ page: 1, limit: 100 }));
-    }
-  }, [dispatch, user]);
 
   // Show a full-screen spinner while checking auth session
   if (isLoading) {

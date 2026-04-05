@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { AppDispatch, RootState } from "@/lib/store/store";
-import { fetchCategoriesThunk } from "@/lib/store/features/category/category.actions";
-import { fetchPublicChallengesThunk } from "@/lib/store/features/challenge/challenge.actions";
+import { useSelector } from "react-redux";
+import { RootState } from "@/lib/store/store";
+import { useCategories } from "@/hooks/useCategories";
+import { usePublicChallenges } from "@/hooks/useChallenges";
 import Link from "next/link";
 import api from "@/lib/api";
 import {
@@ -20,18 +20,15 @@ const CAT_ICONS = [
 ];
 
 export default function ExplorePage() {
-  const dispatch = useDispatch<AppDispatch>();
   const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
-  const { items: categories } = useSelector((state: RootState) => state.category);
-  const { items: challenges } = useSelector((state: RootState) => state.challenge);
+
+  const { data: categories = [] } = useCategories();
+  const { data: challenges = [] } = usePublicChallenges();
 
   const [topResources, setTopResources] = useState<any[]>([]);
   const [userRank, setUserRank] = useState<number | null>(null);
 
   useEffect(() => {
-    dispatch(fetchCategoriesThunk());
-    dispatch(fetchPublicChallengesThunk());
-
     // Fetch top resources — public, no auth needed
     fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/resources/explore?sortBy=popular&limit=3`)
       .then((r) => r.json())
@@ -42,7 +39,7 @@ export default function ExplorePage() {
         setTopResources(sorted.slice(0, 3));
       })
       .catch(() => {});
-  }, [dispatch]);
+  }, []);
 
   // Fetch rank — public endpoint now
   useEffect(() => {

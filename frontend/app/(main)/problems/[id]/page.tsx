@@ -6,13 +6,11 @@ import { Panel, Group, Separator } from "react-resizable-panels";
 import { toast } from "sonner";
 import { useRouter, useSearchParams } from "next/navigation";
 
-// Components
 import { CodeEditor } from "@/components/problems/CodeEditor";
 import { TerminalOutput } from "@/components/problems/TerminalOutput";
 import { ProblemDescription } from "@/components/problems/ProblemDescription";
 import { ProblemHeader } from "@/components/problems/ProblemHeader";
 
-// Types & Redux
 import { RootState, AppDispatch } from "@/lib/store/store";
 import { Problem } from "@/types/problem.types";
 import {
@@ -23,12 +21,11 @@ import {
   setDescriptionTab,
   setSelectedSubmission,
 } from "@/lib/store/features/workspace/workspace.slice";
-
 import {
   runCodeThunk,
   fetchSubmissionHistoryThunk,
 } from "@/lib/store/features/workspace/workspace.actions";
-import { fetchProblemByIdThunk } from "@/lib/store/features/problems/problem.actions";
+import { useProblemById } from "@/hooks/useProblems";
 import { DisplayTestCase, TestCaseResult } from "@/types/workspace.types";
 import { cleanError } from "@/utils/error-cleaner.util";
 
@@ -51,9 +48,8 @@ export default function WorkspacePage({
   const searchParams = useSearchParams();
   const [isSubmittingMode, setIsSubmittingMode] = useState(false);
 
-  const { currentProblem, isLoading: problemLoading } = useSelector(
-    (state: RootState) => state.problem,
-  );
+  const { data: problemData, isLoading: problemLoading, isError: problemError } = useProblemById(resolvedParams.id);
+  const problem = (problemData?.data ?? null) as Problem | null;
 
   const {
     codes,
@@ -67,37 +63,25 @@ export default function WorkspacePage({
     isFetchingHistory,
   } = useSelector((state: RootState) => state.workspace);
 
-  const problem = currentProblem as Problem | null;
+  // Init codes when problem loads
+  useEffect(() => {
+    if (problem) {
+      let starter = problem.starterCode;
+      if (typeof starter === "string") {
+        try { starter = JSON.parse(starter); } catch { starter = {}; }
+      }
+      dispatch(initCodes({
+        javascript: (starter as any)?.javascript || "",
+        python: (starter as any)?.python || "",
+        java: (starter as any)?.java || "",
+        cpp: (starter as any)?.cpp || "",
+      }));
+    }
+  }, [problem?.problemId, dispatch]);
 
   useEffect(() => {
-    const loadWorkspace = async () => {
-      const action = await dispatch(fetchProblemByIdThunk(resolvedParams.id));
-      if (fetchProblemByIdThunk.fulfilled.match(action)) {
-        const problemData = action.payload.data;
-        let starter = problemData.starterCode;
-        if (typeof starter === "string") {
-          try {
-            starter = JSON.parse(starter);
-          } catch (e) {
-            console.log(e)
-            starter = {};
-          }
-        }
-        dispatch(
-          initCodes({
-            javascript: starter?.javascript || "",
-            python: starter?.python || "",
-            java: starter?.java || "",
-            cpp: starter?.cpp || "",
-          }),
-        );
-      } else if (fetchProblemByIdThunk.rejected.match(action)) {
-        toast.error("Failed to load environment.");
-        router.push("/problems");
-      }
-    };
-    loadWorkspace();
-  }, [resolvedParams.id, dispatch, router]);
+    if (problemError) { toast.error("Failed to load environment."); router.push("/problems"); }
+  }, [problemError, router]);
 
   useEffect(() => {
     if (activeTab === "submissions" && problem?.problemId) {

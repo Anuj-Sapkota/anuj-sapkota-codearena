@@ -1,31 +1,17 @@
 "use client";
 
 import { useEffect, useState, ChangeEvent } from "react";
-import { useDispatch, useSelector } from "react-redux";
 import { useForm, useWatch } from "react-hook-form";
-import { AppDispatch, RootState } from "@/lib/store/store";
 import {
-  createChallengeThunk,
-  updateChallengeThunk,
-} from "@/lib/store/features/challenge/challenge.actions";
-import { Challenge, CreateChallengeDTO } from "@/types/challenge.types";
-import { Problem } from "@/types/problem.types";
-import {
-  FaSearch,
-  FaTimes,
-  FaGlobe,
-  FaCheck,
-  FaSpinner,
-  FaTrophy,
-  FaChartBar,
+  FaSearch, FaTimes, FaGlobe, FaCheck, FaSpinner, FaTrophy, FaChartBar,
 } from "react-icons/fa";
 import {
-  FormLabel,
-  FormInput,
-  FormTextarea,
-  FormButton,
+  FormLabel, FormInput, FormTextarea, FormButton,
 } from "@/components/ui/Form";
 import { toast } from "sonner";
+import { Challenge, CreateChallengeDTO } from "@/types/challenge.types";
+import { useCreateChallenge, useUpdateChallenge } from "@/hooks/useChallenges";
+import { useProblems } from "@/hooks/useProblems";
 
 // Convert a UTC ISO string to the local datetime-local input format (YYYY-MM-DDTHH:mm)
 function toLocalDatetimeInput(isoString: string): string {
@@ -40,16 +26,14 @@ interface Props {
   editData?: Challenge | null;
 }
 
-export default function CreateChallengeModal({
-  isOpen,
-  onClose,
-  editData,
-}: Props) {
-  const dispatch = useDispatch<AppDispatch>();
-  const { isLoading } = useSelector((state: RootState) => state.challenge);
-  const { problems: allProblems, isLoading: isLoadingProblems } = useSelector(
-    (state: RootState) => state.problem,
-  );
+export default function CreateChallengeModal({ isOpen, onClose, editData }: Props) {
+  const createChallenge = useCreateChallenge();
+  const updateChallenge = useUpdateChallenge();
+  const isLoading = createChallenge.isPending || updateChallenge.isPending;
+
+  const { data: problemsData } = useProblems({ page: 1, limit: 100 });
+  const allProblems = problemsData?.data ?? [];
+  const isLoadingProblems = false;
 
   const [problemSearch, setProblemSearch] = useState<string>("");
 
@@ -145,38 +129,22 @@ export default function CreateChallengeModal({
   };
 
   const onSubmit = async (data: CreateChallengeDTO) => {
-    try {
-      // Fix: send datetime strings directly — backend converts once.
-      // Do NOT do new Date() here — that applies local timezone offset twice.
-      const payload = {
-        ...data,
-        points: Number(data.points),
-        isPublic: String(data.isPublic) === "true",
-        startTime: data.startTime || undefined,
-        endTime: data.endTime || undefined,
-      };
+    const payload = {
+      ...data,
+      points: Number(data.points),
+      isPublic: String(data.isPublic) === "true",
+      startTime: data.startTime || undefined,
+      endTime: data.endTime || undefined,
+    };
 
-      let result;
-      if (editData) {
-        result = await dispatch(
-          updateChallengeThunk({
-            id: Number(editData.challengeId),
-            data: payload,
-          }),
-        );
-      } else {
-        result = await dispatch(createChallengeThunk(payload));
-      }
-
-      if (
-        updateChallengeThunk.fulfilled.match(result) ||
-        createChallengeThunk.fulfilled.match(result)
-      ) {
-        toast.success(editData ? "CHALLENGE_UPDATED" : "CHALLENGE_CREATED");
-        onClose();
-      }
-    } catch (error) {
-      toast.error("CRITICAL_SYSTEM_ERROR");
+    if (editData) {
+      updateChallenge.mutate({ id: Number(editData.challengeId), data: payload }, {
+        onSuccess: () => { toast.success("CHALLENGE_UPDATED"); onClose(); },
+      });
+    } else {
+      createChallenge.mutate(payload as any, {
+        onSuccess: () => { toast.success("CHALLENGE_CREATED"); onClose(); },
+      });
     }
   };
 

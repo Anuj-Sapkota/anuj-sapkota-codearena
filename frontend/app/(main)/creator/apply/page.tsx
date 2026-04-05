@@ -1,34 +1,30 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { AppDispatch, RootState } from "@/lib/store/store";
 import { setStep } from "@/lib/store/features/creator/creator.slice";
 import { FiPlus, FiFileText, FiAlertCircle, FiClock, FiCheckCircle } from "react-icons/fi";
-
-// Components
 import CreatorApplicationForm from "@/components/creator/applications/CreatorApplicationForm";
-import { applyCreatorThunk, verifyCreatorOTPThunk } from "@/lib/store/features/creator/creator.actions";
+import { useApplyCreator, useVerifyCreatorOTP } from "@/hooks/useCreator";
+import { verifyCreatorOTPThunk } from "@/lib/store/features/creator/creator.actions";
 
 export default function CreatorApplyPage() {
   const dispatch = useDispatch<AppDispatch>();
   const { user, isLoading: authLoading } = useSelector((state: RootState) => state.auth);
-  const { step, isSubmitting, error } = useSelector((state: RootState) => state.creator);
+  // step is pure UI state — keep in Redux
+  const { step } = useSelector((state: RootState) => state.creator);
 
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({ bio: "", portfolioUrl: "", githubUrl: "" });
   const [otp, setOtp] = useState("");
 
-  // Auto-sync Redux step with DB status
-  useEffect(() => {
-    if (user?.creatorStatus === "PENDING") {
-      dispatch(setStep("PENDING_ADMIN"));
-    }
-  }, [user?.creatorStatus, dispatch]);
+  const applyCreator = useApplyCreator();
+  const verifyOTP = useVerifyCreatorOTP();
 
   if (authLoading) return <div className="p-20 text-center uppercase font-black text-xs tracking-widest">Loading Profile...</div>;
 
-  // --- SUB-VIEW: DASHBOARD (Status & Rejection Feedback) ---
+  // --- VIEW 1: DASHBOARD ---
   if (!showForm && step === "FORM") {
     return (
       <div className="max-w-5xl mx-auto py-20 px-6">
@@ -40,10 +36,8 @@ export default function CreatorApplyPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* 1. STATUS CARD */}
           <div className="border border-slate-200 p-8 rounded-sm bg-white shadow-sm">
             <h3 className="text-[10px] font-black uppercase text-slate-400 mb-6 tracking-widest">Current Status</h3>
-            
             {user?.creatorStatus === "REJECTED" ? (
               <div className="space-y-4">
                 <div className="flex items-center gap-3 text-rose-600">
@@ -67,22 +61,18 @@ export default function CreatorApplyPage() {
             )}
           </div>
 
-          {/* 2. ACTION CARD */}
           <div className="border border-slate-200 p-8 rounded-sm bg-slate-900 text-white shadow-sm flex flex-col justify-between">
             <div>
               <h3 className="text-[10px] font-black uppercase text-slate-500 mb-6 tracking-widest">Actions</h3>
               <p className="text-sm text-slate-300 mb-8 leading-relaxed">
-                {user?.creatorStatus === "REJECTED" 
+                {user?.creatorStatus === "REJECTED"
                   ? "Address the feedback above and submit a revised application for review."
                   : "Submit your technical details to join our marketplace as a verified creator."}
               </p>
             </div>
-            
             {user?.creatorStatus !== "APPROVED" && (
-              <button 
-                onClick={() => setShowForm(true)}
-                className="w-full py-4 bg-white text-slate-900 font-black text-xs uppercase tracking-widest hover:bg-slate-100 transition-all flex items-center justify-center gap-2"
-              >
+              <button onClick={() => setShowForm(true)}
+                className="w-full py-4 bg-white text-slate-900 font-black text-xs uppercase tracking-widest hover:bg-slate-100 transition-all flex items-center justify-center gap-2">
                 <FiPlus /> {user?.creatorStatus === "REJECTED" ? "Re-Apply Now" : "Apply to be a Creator"}
               </button>
             )}
@@ -92,7 +82,7 @@ export default function CreatorApplyPage() {
     );
   }
 
-  // --- VIEW 2: UNDER REVIEW (Locked State) ---
+  // --- VIEW 2: UNDER REVIEW ---
   if (user?.creatorStatus === "PENDING" || step === "PENDING_ADMIN") {
     return (
       <div className="max-w-4xl mx-auto mt-20 p-6">
@@ -111,27 +101,33 @@ export default function CreatorApplyPage() {
     );
   }
 
-  // --- VIEW 3: THE FORM (Visible when showForm is true) ---
+  // --- VIEW 3: FORM ---
   return (
     <div className="relative">
-        <button 
-          onClick={() => setShowForm(false)}
-          className="absolute top-10 left-10 text-[10px] font-black uppercase underline tracking-widest"
-        >
-          ← Back to Hub
-        </button>
-        <CreatorApplicationForm
-            step={step}
-            formData={formData}
-            setFormData={setFormData}
-            otp={otp}
-            setOtp={setOtp}
-            isSubmitting={isSubmitting}
-            error={error}
-            handleApply={(e) => { e.preventDefault(); dispatch(applyCreatorThunk(formData)); }}
-            handleVerify={() => dispatch(verifyCreatorOTPThunk({ otp }))}
-            isReapplying={user?.creatorStatus === "REJECTED"}
-        />
+      <button onClick={() => setShowForm(false)}
+        className="absolute top-10 left-10 text-[10px] font-black uppercase underline tracking-widest">
+        ← Back to Hub
+      </button>
+      <CreatorApplicationForm
+        step={step}
+        formData={formData}
+        setFormData={setFormData}
+        otp={otp}
+        setOtp={setOtp}
+        isSubmitting={applyCreator.isPending || verifyOTP.isPending}
+        error={applyCreator.error?.message || verifyOTP.error?.message || null}
+        handleApply={(e: any) => {
+          e.preventDefault();
+          applyCreator.mutate(formData, {
+            onSuccess: () => dispatch(setStep("OTP")),
+          });
+        }}
+        handleVerify={() => {
+          // verifyCreatorOTPThunk updates auth slice (creatorStatus) — keep using it
+          dispatch(verifyCreatorOTPThunk({ otp }));
+        }}
+        isReapplying={user?.creatorStatus === "REJECTED"}
+      />
     </div>
   );
 }

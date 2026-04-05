@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { AppDispatch, RootState } from "@/lib/store/store";
-import { fetchProblemsThunk } from "@/lib/store/features/problems/problem.actions";
-import { fetchCategoriesThunk } from "@/lib/store/features/category/category.actions";
+import { useSelector } from "react-redux";
+import { RootState } from "@/lib/store/store";
+import { useProblems } from "@/hooks/useProblems";
+import { useCategories } from "@/hooks/useCategories";
 import { FaSearch } from "react-icons/fa";
 import SortDropdown from "@/components/problems/SortDropdown";
 import CategoryBar from "@/components/problems/CategoryBar";
 import FilterSidebar from "@/components/problems/FilterSidebar";
-import ProblemListItem from "@/components/problems/ProblemListItem"; // (Optional: Move the row JSX here)
+import ProblemListItem from "@/components/problems/ProblemListItem";
 import ProgressCard from "@/components/problems/ProgressCard";
 
 const SORT_OPTIONS = [
@@ -19,51 +19,37 @@ const SORT_OPTIONS = [
 ];
 
 export default function UserProblemsPage() {
-  const dispatch = useDispatch<AppDispatch>();
   const { user } = useSelector((state: RootState) => state.auth);
-  const { problems, meta } = useSelector((state: RootState) => state.problem);
-  const { items: categories } = useSelector(
-    (state: RootState) => state.category,
-  );
 
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
   const [selectedDifficulty, setSelectedDifficulty] = useState<string[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState("");
 
   useEffect(() => {
-    dispatch(fetchCategoriesThunk());
-  }, [dispatch]);
+    const t = setTimeout(() => setDebouncedSearch(search), 400);
+    return () => clearTimeout(t);
+  }, [search]);
 
-  useEffect(() => {
-    dispatch(
-      fetchProblemsThunk({
-        page: 1,
-        search,
-        difficulty: selectedDifficulty[0],
-        categoryIds: activeCategory ? [activeCategory] : [],
-        status: selectedStatus[0]?.toUpperCase(),
-        userId: user?.userId,
-        sortBy: sortBy || undefined,
-      }),
-    );
-  }, [
-    dispatch,
-    search,
-    activeCategory,
-    selectedDifficulty,
-    selectedStatus,
-    user?.userId,
-    sortBy,
-  ]);
+  const { data: categoriesData } = useCategories();
+  const categories = Array.isArray(categoriesData) ? categoriesData : [];
 
-  const problemMeta = meta;
-  const totalCount = problemMeta.total || 0;
-  const solvedCount =
-    problemMeta.totalSolved ||
-    problems.filter((p) => p.status === "SOLVED").length ||
-    0;
+  const { data: problemsData, isLoading } = useProblems({
+    page: 1,
+    search: debouncedSearch,
+    difficulty: selectedDifficulty[0],
+    categoryIds: activeCategory ? [activeCategory] : [],
+    status: selectedStatus[0]?.toUpperCase(),
+    userId: user?.userId,
+    sortBy: sortBy || undefined,
+  });
+
+  const problems = problemsData?.data ?? [];
+  const meta = problemsData?.meta ?? { total: 0, page: 1, pages: 1 };
+  const totalCount = meta.total || 0;
+  const solvedCount = problems.filter((p: any) => p.status === "SOLVED").length;
 
   return (
     <div className="w-full flex justify-center bg-white min-h-screen">
@@ -78,13 +64,9 @@ export default function UserProblemsPage() {
           onSelect={setActiveCategory}
         />
 
-        {/* Improved Responsive Controls */}
         <div className="flex flex-col lg:flex-row gap-6 items-stretch lg:items-center my-10 md:my-14">
           <div className="relative flex-23">
-            <FaSearch
-              className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400"
-              size={18}
-            />
+            <FaSearch className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input
               type="text"
               placeholder="Filter by Problem name..."
@@ -92,22 +74,16 @@ export default function UserProblemsPage() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-
           <div className="flex flex-wrap sm:flex-nowrap items-center gap-4">
-            <SortDropdown
-              sortBy={sortBy}
-              onSortChange={setSortBy}
-              options={SORT_OPTIONS}
-            />
+            <SortDropdown sortBy={sortBy} onSortChange={setSortBy} options={SORT_OPTIONS} />
             <ProgressCard solvedCount={solvedCount} totalCount={totalCount} />
           </div>
         </div>
 
-        {/* Main Grid: Content stays centered because of the 1400px wrapper */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-12">
           <div className="lg:col-span-3 space-y-5">
             {problems.length > 0 ? (
-              problems.map((prob, idx) => (
+              problems.map((prob: any, idx: number) => (
                 <ProblemListItem key={prob.problemId} prob={prob} idx={idx} />
               ))
             ) : (
@@ -118,22 +94,15 @@ export default function UserProblemsPage() {
               </div>
             )}
           </div>
-
-          {/* Sidebar logic */}
           <FilterSidebar
             selectedStatus={selectedStatus}
             selectedDifficulty={selectedDifficulty}
-            // Type the 's' as string
-            onStatusChange={(s: string) =>
-              setSelectedStatus((prev) => (prev.includes(s) ? [] : [s]))
-            }
-            // Type the 'd' as string
-            onDifficultyChange={(d: string) =>
-              setSelectedDifficulty((prev) => (prev.includes(d) ? [] : [d]))
-            }
+            onStatusChange={(s: string) => setSelectedStatus((prev) => (prev.includes(s) ? [] : [s]))}
+            onDifficultyChange={(d: string) => setSelectedDifficulty((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]))}
           />
         </div>
       </div>
     </div>
   );
 }
+
