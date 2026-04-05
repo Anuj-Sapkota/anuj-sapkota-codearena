@@ -362,49 +362,50 @@ export const updateResourceBadge = async (req: Request, res: Response) => {
 export const getPublicResources = async (req: Request, res: Response) => {
   try {
     const search = String(req.query.search || "");
+    const page = Math.max(1, parseInt(String(req.query.page || "1")));
+    const limit = Math.min(12, parseInt(String(req.query.limit || "9")));
+    const skip = (page - 1) * limit;
+    const sortBy = String(req.query.sortBy || "newest"); // newest | popular | price_asc | price_desc
 
-    // 🚀 1. Get current userId if available (depends on your auth middleware/setup)
-    // If this route is behind an optional auth guard, you'll have req.user.id
     const userId = (req as any).user?.sub;
-    console.log("User id: ", userId);
-    const rawResources = await prisma.resource.findMany({
-      where: {
-        ...(search
-          ? {
-              OR: [
-                { title: { contains: search, mode: "insensitive" } },
-                { description: { contains: search, mode: "insensitive" } },
-              ],
-            }
-          : {}),
-      },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        price: true,
-        previewUrl: true,
-        creatorId: true, // Need this to check if user is the owner/creator
-        creator: {
-          select: {
-            full_name: true,
-            username: true,
-            profile_pic_url: true,
+
+    const where: any = {
+      ...(search ? {
+        OR: [
+          { title: { contains: search, mode: "insensitive" } },
+          { description: { contains: search, mode: "insensitive" } },
+        ],
+      } : {}),
+    };
+
+    let orderBy: any = { createdAt: "desc" };
+    if (sortBy === "popular") orderBy = { views: "desc" };
+    if (sortBy === "price_asc") orderBy = { price: "asc" };
+    if (sortBy === "price_desc") orderBy = { price: "desc" };
+
+    const [rawResources, total] = await prisma.$transaction([
+      prisma.resource.findMany({
+        where,
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          price: true,
+          previewUrl: true,
+          views: true,
+          creatorId: true,
+          creator: {
+            select: { full_name: true, username: true, profile_pic_url: true },
           },
+          purchases: userId ? { where: { userId }, select: { id: true } } : false,
+          _count: { select: { modules: true } },
         },
-        // 🚀 2. Check for existing purchase for this specific user
-        purchases: userId
-          ? {
-              where: { userId: userId },
-              select: { id: true },
-            }
-          : false,
-        _count: {
-          select: { modules: true },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+        orderBy,
+      }),
+      prisma.resource.count({ where }),
+    ]);
 
     const resources = rawResources.map((resource) => ({
       id: resource.id,
@@ -413,10 +414,9 @@ export const getPublicResources = async (req: Request, res: Response) => {
       price: resource.price,
       thumbnail: resource.previewUrl,
       moduleCount: resource._count.modules,
-      // 🚀 3. Calculate isOwned
-      // It's true if: they bought it OR they are the one who created it
+      views: resource.views,
       isOwned: userId
-        ? resource.purchases.length > 0 || resource.creatorId === userId
+        ? (resource.purchases as any[]).length > 0 || resource.creatorId === userId
         : false,
       creator: {
         name: resource.creator.full_name,
@@ -424,7 +424,10 @@ export const getPublicResources = async (req: Request, res: Response) => {
       },
     }));
 
-    return res.status(200).json(resources);
+    return res.status(200).json({
+      items: resources,
+      meta: { total, page, pages: Math.ceil(total / limit), limit },
+    });
   } catch (error) {
     console.error("❌ DB ERROR:", error);
     return res.status(500).json({ message: "Internal Server Error" });
