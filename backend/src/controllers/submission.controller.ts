@@ -213,23 +213,14 @@ export const handleSubmission = async (
           }
 
           // --- 🏆 CHALLENGE COMPLETION BONUS ---
-          // If this submission is part of a challenge, check if user finished all problems
           if (challenge?.challengeId && challenge.points > 0) {
             const challengeProblems = await tx.challengeProblem.findMany({
               where: { challengeId: challenge.challengeId },
               select: { problemId: true },
             });
             const totalInChallenge = challengeProblems.length;
-            const solvedInChallenge = await tx.submission.count({
-              where: {
-                userId: Number(userId),
-                challengeId: challenge.challengeId,
-                status: "ACCEPTED",
-                problemId: { in: challengeProblems.map((cp) => cp.problemId) },
-              },
-              // distinct by problemId to avoid counting multiple solves of same problem
-            });
-            // Count distinct problems solved
+
+            // Single distinct query — no redundant count()
             const distinctSolved = await tx.submission.findMany({
               where: {
                 userId: Number(userId),

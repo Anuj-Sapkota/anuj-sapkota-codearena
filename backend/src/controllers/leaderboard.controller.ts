@@ -32,55 +32,48 @@ export const getLeaderboard = async (req: Request, res: Response) => {
 
     // ── POINTS leaderboard ────────────────────────────────────────────────────
     if (type === "points") {
-      // Sum XP gained from activities in the period
-      const activities = await prisma.activity.findMany({
+      // Aggregate XP per user directly in the DB — no full table scan into memory
+      const grouped = await prisma.activity.groupBy({
+        by: ["userId"],
         where: { createdAt: { gte: periodStart } },
-        select: {
-          userId: true,
-          xpGained: true,
-          user: {
-            select: {
-              userId: true,
-              full_name: true,
-              username: true,
-              profile_pic_url: true,
-              level: true,
-            },
-          },
-        },
+        _sum: { xpGained: true },
+        orderBy: { _sum: { xpGained: "desc" } },
+        take: 20,
       });
 
-      const userMap = new Map<number, { user: any; totalPoints: number }>();
-      for (const act of activities) {
-        if (!userMap.has(act.userId)) {
-          userMap.set(act.userId, { user: act.user, totalPoints: 0 });
-        }
-        userMap.get(act.userId)!.totalPoints += act.xpGained;
+      if (grouped.length === 0) {
+        return res.json({
+          type, period, languageId: null, languageName: "All Languages",
+          periodStart, updatedAt: new Date(), rankings: [],
+          availableLanguages: SUPPORTED_LANGUAGES.map((l) => ({ id: l.judge0Id, name: l.label })),
+        });
       }
 
-      const ranked = Array.from(userMap.values())
-        .sort((a, b) => b.totalPoints - a.totalPoints)
-        .slice(0, 20)
-        .map((entry, idx) => ({
+      const userIds = grouped.map((g) => g.userId);
+      const users = await prisma.user.findMany({
+        where: { userId: { in: userIds } },
+        select: { userId: true, full_name: true, username: true, profile_pic_url: true, level: true },
+      });
+      const userById = new Map(users.map((u) => [u.userId, u]));
+
+      const ranked = grouped.map((g, idx) => {
+        const u = userById.get(g.userId)!;
+        return {
           rank: idx + 1,
-          userId: entry.user.userId,
-          username: entry.user.username,
-          fullName: entry.user.full_name,
-          avatar: entry.user.profile_pic_url,
-          level: entry.user.level,
+          userId: u.userId,
+          username: u.username,
+          fullName: u.full_name,
+          avatar: u.profile_pic_url,
+          level: u.level,
           problemsSolved: 0,
-          totalValue: entry.totalPoints,
+          totalValue: g._sum.xpGained ?? 0,
           unit: "pts",
-        }));
+        };
+      });
 
       return res.json({
-        type,
-        period,
-        languageId: null,
-        languageName: "All Languages",
-        periodStart,
-        updatedAt: new Date(),
-        rankings: ranked,
+        type, period, languageId: null, languageName: "All Languages",
+        periodStart, updatedAt: new Date(), rankings: ranked,
         availableLanguages: SUPPORTED_LANGUAGES.map((l) => ({ id: l.judge0Id, name: l.label })),
       });
     }
