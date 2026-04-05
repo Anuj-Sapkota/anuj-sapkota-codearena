@@ -161,15 +161,14 @@ export const handleSubmission = async (
               userId: Number(userId),
               problemId: Number(problemId),
               status: "ACCEPTED",
-              id: { not: submission.id }, // Don't count the one we just made
+              id: { not: submission.id },
             },
           });
 
           if (previousSolved === 0) {
-            const xpGained = problem.points || 50; // Use points from your problem model
+            const xpGained = problem.points || 50;
             const now = new Date();
 
-            // Fetch user for streak calculation
             const user = await tx.user.findUnique({
               where: { userId: Number(userId) },
             });
@@ -186,7 +185,6 @@ export const handleSubmission = async (
                 newStreak = 1;
               }
 
-              // Update User XP and Activity
               await tx.user.update({
                 where: { userId: Number(userId) },
                 data: {
@@ -206,6 +204,62 @@ export const handleSubmission = async (
                   createdAt: now,
                 },
               });
+            }
+          }
+
+          // --- 🏆 CHALLENGE COMPLETION BONUS ---
+          // If this submission is part of a challenge, check if user finished all problems
+          if (challenge?.challengeId && challenge.points > 0) {
+            const challengeProblems = await tx.challengeProblem.findMany({
+              where: { challengeId: challenge.challengeId },
+              select: { problemId: true },
+            });
+            const totalInChallenge = challengeProblems.length;
+            const solvedInChallenge = await tx.submission.count({
+              where: {
+                userId: Number(userId),
+                challengeId: challenge.challengeId,
+                status: "ACCEPTED",
+                problemId: { in: challengeProblems.map((cp) => cp.problemId) },
+              },
+              // distinct by problemId to avoid counting multiple solves of same problem
+            });
+            // Count distinct problems solved
+            const distinctSolved = await tx.submission.findMany({
+              where: {
+                userId: Number(userId),
+                challengeId: challenge.challengeId,
+                status: "ACCEPTED",
+              },
+              distinct: ["problemId"],
+              select: { problemId: true },
+            });
+
+            if (distinctSolved.length === totalInChallenge) {
+              // Check they haven't already received the bonus
+              const alreadyBonused = await tx.activity.findFirst({
+                where: {
+                  userId: Number(userId),
+                  type: `CHALLENGE_COMPLETED_${challenge.challengeId}`,
+                },
+              });
+              if (!alreadyBonused) {
+                const bonusXp = challenge.points;
+                await tx.user.update({
+                  where: { userId: Number(userId) },
+                  data: {
+                    xp: { increment: bonusXp },
+                    total_points: { increment: bonusXp },
+                  },
+                });
+                await tx.activity.create({
+                  data: {
+                    userId: Number(userId),
+                    type: `CHALLENGE_COMPLETED_${challenge.challengeId}`,
+                    xpGained: bonusXp,
+                  },
+                });
+              }
             }
           }
           // --- 🏆 GAMIFICATION LOGIC END ---

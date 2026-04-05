@@ -27,6 +27,13 @@ import {
 } from "@/components/ui/Form";
 import { toast } from "sonner";
 
+// Convert a UTC ISO string to the local datetime-local input format (YYYY-MM-DDTHH:mm)
+function toLocalDatetimeInput(isoString: string): string {
+  const d = new Date(isoString);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 interface Props {
   isOpen: boolean;
   onClose: () => void;
@@ -81,13 +88,14 @@ export default function CreateChallengeModal({
           slug: editData.slug,
           description: editData.description || "",
           isPublic: editData.isPublic,
-          difficulty: editData.difficulty || "MEDIUM", // Sync Difficulty
-          points: editData.points || 100, // Sync Points
+          difficulty: editData.difficulty || "MEDIUM",
+          points: editData.points || 100,
+          // Convert UTC ISO string back to local datetime-local format
           startTime: editData.startTime
-            ? new Date(editData.startTime).toISOString().slice(0, 16)
+            ? toLocalDatetimeInput(editData.startTime)
             : "",
           endTime: editData.endTime
-            ? new Date(editData.endTime).toISOString().slice(0, 16)
+            ? toLocalDatetimeInput(editData.endTime)
             : "",
           problemIds: linkedIds,
         });
@@ -138,16 +146,14 @@ export default function CreateChallengeModal({
 
   const onSubmit = async (data: CreateChallengeDTO) => {
     try {
+      // Fix: send datetime strings directly — backend converts once.
+      // Do NOT do new Date() here — that applies local timezone offset twice.
       const payload = {
         ...data,
-        points: Number(data.points), // Ensure numeric
+        points: Number(data.points),
         isPublic: String(data.isPublic) === "true",
-        startTime: data.startTime
-          ? new Date(data.startTime).toISOString()
-          : undefined,
-        endTime: data.endTime
-          ? new Date(data.endTime).toISOString()
-          : undefined,
+        startTime: data.startTime || undefined,
+        endTime: data.endTime || undefined,
       };
 
       let result;
@@ -235,7 +241,7 @@ export default function CreateChallengeModal({
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-primary-1 mb-1">
                   <FaTrophy size={12} />
-                  <FormLabel>Total_Points</FormLabel>
+                  <FormLabel>Completion Bonus Points</FormLabel>
                 </div>
                 <FormInput
                   type="number"
@@ -246,6 +252,9 @@ export default function CreateChallengeModal({
                   })}
                   error={errors.points?.message}
                 />
+                <p className="text-[9px] text-gray-400 italic">
+                  Bonus XP awarded when a user solves ALL problems in this challenge. Individual problems also award their own points.
+                </p>
               </div>
             </div>
 

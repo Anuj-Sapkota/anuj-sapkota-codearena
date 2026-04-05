@@ -1,102 +1,121 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FaStar, FaChevronRight, FaUsers } from "react-icons/fa";
+import { FiAward, FiChevronRight, FiClock, FiCheckCircle, FiZap } from "react-icons/fi";
 import { Challenge } from "@/types/challenge.types";
 
 interface ChallengeCardProps {
   challenge: Challenge;
 }
 
+const DIFF = {
+  EASY:   { pill: "bg-emerald-50 text-emerald-700 border-emerald-200", bar: "bg-emerald-500", accent: "border-l-emerald-500" },
+  MEDIUM: { pill: "bg-amber-50 text-amber-700 border-amber-200",       bar: "bg-amber-500",   accent: "border-l-amber-500"   },
+  HARD:   { pill: "bg-rose-50 text-rose-700 border-rose-200",          bar: "bg-rose-500",    accent: "border-l-rose-500"    },
+};
+
+function useCountdown(endTime?: string | Date) {
+  const [remaining, setRemaining] = useState("");
+  useEffect(() => {
+    if (!endTime) return;
+    const tick = () => {
+      const diff = new Date(endTime).getTime() - Date.now();
+      if (diff <= 0) { setRemaining("Ended"); return; }
+      const h = Math.floor(diff / 3_600_000);
+      const m = Math.floor((diff % 3_600_000) / 60_000);
+      const s = Math.floor((diff % 60_000) / 1_000);
+      if (h > 24) setRemaining(`${Math.floor(h / 24)}d ${h % 24}h`);
+      else setRemaining(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [endTime]);
+  return remaining;
+}
+
 export const ChallengeCard = ({ challenge }: ChallengeCardProps) => {
   const router = useRouter();
-
-  // 1. Define the color mapping based on difficulty
-  const difficultyConfig = {
-    EASY: {
-      border: "hover:border-emerald-500",
-      accent: "bg-emerald-500",
-      button: "hover:bg-emerald-500",
-      text: "text-emerald-600",
-      bg: "bg-emerald-50",
-    },
-    MEDIUM: {
-      border: "hover:border-amber-500",
-      accent: "bg-amber-500",
-      button: "hover:bg-amber-500",
-      text: "text-amber-600",
-      bg: "bg-amber-50",
-    },
-    HARD: {
-      border: "hover:border-rose-500",
-      accent: "bg-rose-500",
-      button: "hover:bg-rose-500",
-      text: "text-rose-600",
-      bg: "bg-rose-50",
-    },
-  };
-
-  // Fallback to MEDIUM if difficulty is undefined or doesn't match
-  const difficultyKey = (challenge.difficulty?.toUpperCase() || "MEDIUM") as keyof typeof difficultyConfig;
-  const config = difficultyConfig[difficultyKey] || difficultyConfig.MEDIUM;
-
-  const handleSolveNavigation = () => {
-    // Navigating via slug as per your fetchChallengeBySlugThunk logic
-    if (challenge.slug) {
-      router.push(`/challenges/${challenge.slug}`);
-    } else {
-      console.error("Challenge slug is missing for navigation");
-    }
-  };
+  const countdown = useCountdown(challenge.endTime);
+  const diffKey = (challenge.difficulty?.toUpperCase() || "MEDIUM") as keyof typeof DIFF;
+  const cfg = DIFF[diffKey] || DIFF.MEDIUM;
+  const stats = (challenge as any).stats;
+  const isCompleted = stats?.isCompleted;
+  const pct = stats?.percentage ?? 0;
+  const totalProblems = challenge._count?.problems ?? stats?.totalCount ?? 0;
 
   return (
-    <div 
-      onClick={handleSolveNavigation}
-      className={`group bg-white border border-slate-200 p-6 transition-all cursor-pointer hover:shadow-2xl ${config.border} flex flex-col justify-between relative overflow-hidden rounded-sm`}
+    <div
+      onClick={() => router.push(`/challenges/${challenge.slug}`)}
+      className={`group bg-white border border-slate-200 rounded-xl p-6 cursor-pointer hover:shadow-lg hover:border-slate-300 transition-all duration-200 flex flex-col gap-4 relative overflow-hidden border-l-4 ${cfg.accent}`}
     >
-      
-      {/* Dynamic Visual Accent (Left Border Hover Effect) */}
-      <div className={`absolute top-0 left-0 w-1 h-0 ${config.accent} transition-all duration-300 group-hover:h-full`} />
-
-      <div>
-        <div className="flex justify-between items-start mb-4">
-          <span className={`text-[10px] font-bold ${config.bg} ${config.text} px-2 py-1 rounded uppercase tracking-wider border border-transparent group-hover:border-current transition-colors`}>
-            {challenge.difficulty || "Medium"}
-          </span>
-          <div className="flex items-center gap-1 text-amber-500 font-bold text-xs">
-            <FaStar size={10} />
-            <span>{challenge.points || 100}</span>
-          </div>
+      {/* Completed overlay badge */}
+      {isCompleted && (
+        <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-emerald-500 text-white text-[9px] font-black uppercase px-2.5 py-1 rounded-full tracking-wider shadow-sm">
+          <FiCheckCircle size={10} /> Completed
         </div>
+      )}
 
-        <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-slate-800 transition-colors">
+      {/* Top row */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`text-[9px] font-black uppercase px-2.5 py-1 rounded-full border tracking-wider ${cfg.pill}`}>
+            {challenge.difficulty}
+          </span>
+          <span className="flex items-center gap-1 text-[10px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">
+            <FiAward size={10} /> {challenge.points} pts
+          </span>
+        </div>
+        {countdown && countdown !== "Ended" && (
+          <div className="flex items-center gap-1 text-[10px] font-black text-slate-500 shrink-0">
+            <FiClock size={11} className="text-slate-400" />
+            <span className="font-mono">{countdown}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Title + description */}
+      <div>
+        <h3 className="text-base font-black uppercase italic tracking-tight text-slate-900 mb-1 group-hover:text-blue-600 transition-colors line-clamp-1">
           {challenge.title}
         </h3>
-        <p className="text-slate-500 text-sm line-clamp-2 font-medium mb-6">
-          {challenge.description ||
-            "Master complex algorithmic patterns in this curated challenge."}
+        <p className="text-slate-500 text-xs leading-relaxed line-clamp-2">
+          {challenge.description || "Master complex algorithmic patterns in this curated challenge."}
         </p>
       </div>
 
-      <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-50">
-        <div className="flex items-center gap-3 text-slate-400">
-          <div className="flex items-center gap-1 text-[11px] font-bold">
-            <FaUsers size={12} />
-            {/* Using a placeholder or dynamic count if available in your schema */}
-            <span>1.2k</span> 
+      {/* Progress bar (only if user has started) */}
+      {stats && pct > 0 && (
+        <div className="space-y-1">
+          <div className="flex justify-between items-center">
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Progress</span>
+            <span className={`text-[9px] font-black ${isCompleted ? "text-emerald-600" : "text-slate-500"}`}>
+              {stats.solvedCount}/{stats.totalCount}
+            </span>
+          </div>
+          <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div className={`h-full rounded-full transition-all duration-700 ${isCompleted ? "bg-emerald-500" : cfg.bar}`}
+              style={{ width: `${pct}%` }} />
           </div>
         </div>
-        
-        {/* Solve Button */}
-        <button 
-          onClick={(e) => {
-            e.stopPropagation(); // Prevents double-firing if parent div has onClick
-            handleSolveNavigation();
-          }}
-          className={`flex items-center gap-2 bg-slate-900 text-white px-5 py-2 text-[10px] cursor-pointer font-black uppercase tracking-widest ${config.button} transition-all group-hover:scale-105 active:scale-95 rounded-sm`}
+      )}
+
+      {/* Footer */}
+      <div className="flex items-center justify-between pt-3 border-t border-slate-100 mt-auto">
+        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
+          <FiZap size={11} />
+          <span>{totalProblems} problem{totalProblems !== 1 ? "s" : ""}</span>
+        </div>
+        <button
+          onClick={(e) => { e.stopPropagation(); router.push(`/challenges/${challenge.slug}`); }}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+            isCompleted
+              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+              : "bg-slate-900 text-white hover:bg-slate-700"
+          }`}
         >
-          Solve <FaChevronRight size={8} className="group-hover:translate-x-1 transition-transform" />
+          {isCompleted ? "Review" : "Solve"} <FiChevronRight size={10} />
         </button>
       </div>
     </div>
