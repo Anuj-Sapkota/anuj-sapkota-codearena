@@ -220,6 +220,7 @@ export default function WorkspacePage({
         isRunning={isRunning && !isSubmittingMode}
         isSubmitting={isRunning && isSubmittingMode}
         scrollContainerRef={descriptionRef}
+        problemTitle={problem?.title}
       />
 
       <div className="flex-1 overflow-hidden">

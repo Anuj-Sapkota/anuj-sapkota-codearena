@@ -1,33 +1,25 @@
-import api from "../api";
-import {
-  CreatorApplicationDTO,
-  VerifyOTPDTO,
-  AdminReviewDTO,
-} from "@/types/creator.types";
+import api from "@/lib/api";
+import { API } from "@/constants/api.constants";
+import { CreatorApplicationDTO, VerifyOTPDTO, AdminReviewDTO } from "@/types/creator.types";
 
 export const creatorService = {
-  // User: Submit initial application (triggers email OTP)
   apply: async (data: CreatorApplicationDTO) => {
-    const response = await api.post("/creator/apply", data);
+    const response = await api.post(API.CREATOR.APPLY, data);
     return response.data;
   },
 
-  // User: Verify the OTP sent to email
   verifyOTP: async (data: VerifyOTPDTO) => {
-    const response = await api.post("/creator/verify", data);
+    const response = await api.post(API.CREATOR.VERIFY_OTP, data);
     return response.data;
   },
 
-  // Admin: Fetch all pending applications
-  // Updated to use your 'api' instance and correct endpoint
   fetchPendingApplications: async () => {
-    const response = await api.get("/creator/pending-creators");
-    return response.data; // { success: true, data: [...] }
+    const response = await api.get(API.CREATOR.APPLICATIONS);
+    return response.data;
   },
 
-  // Admin: Review a pending application
-reviewApplication: async (data: AdminReviewDTO) => {
-  const response = await api.patch("/creator/admin/review", data);
-  return response.data;
-},
+  reviewApplication: async (data: AdminReviewDTO) => {
+    const response = await api.patch("/creator/admin/review", data);
+    return response.data;
+  },
 };

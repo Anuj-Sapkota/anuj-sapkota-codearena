@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
 import { RootState } from "@/lib/store/store";
+import { ROUTES } from "@/constants/routes";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
@@ -71,7 +72,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 This allows Admins to jump straight to the student-facing side.
             */}
             <button
-              onClick={() => router.push("/explore")}
+              onClick={() => router.push(ROUTES.MAIN.EXPLORE)}
               className="flex items-center gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-md border border-blue-200 transition-all shadow-sm group"
             >
               <FaExternalLinkAlt size={12} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />

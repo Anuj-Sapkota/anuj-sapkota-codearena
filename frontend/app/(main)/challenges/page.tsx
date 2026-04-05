@@ -5,12 +5,11 @@ import { usePublicChallenges } from "@/hooks/useChallenges";
 import { ChallengeCard } from "@/components/challenges/ChallengeCard";
 import { FiLoader, FiZap } from "react-icons/fi";
 import { MdOutlineLeaderboard } from "react-icons/md";
-
-const DIFF_FILTERS = ["ALL", "EASY", "MEDIUM", "HARD"] as const;
+import { DIFFICULTY_FILTERS, type DifficultyFilter } from "@/constants/constants";
 
 export default function ChallengesPage() {
   const { data: items = [], isLoading } = usePublicChallenges();
-  const [filter, setFilter] = useState<typeof DIFF_FILTERS[number]>("ALL");
+  const [filter, setFilter] = useState<DifficultyFilter>("ALL");
 
   const filtered = filter === "ALL" ? items : items.filter((c: any) => c.difficulty === filter);
   const completedCount = items.filter((c: any) => c.stats?.isCompleted).length;
@@ -35,7 +34,7 @@ export default function ChallengesPage() {
         </div>
 
         <div className="flex items-center gap-2 mb-6 flex-wrap">
-          {DIFF_FILTERS.map((d) => (
+          {DIFFICULTY_FILTERS.map((d) => (
             <button key={d} onClick={() => setFilter(d)}
               className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider border transition-all ${filter === d ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-500 border-slate-200 hover:border-slate-400"}`}>
               {d === "ALL" ? "All" : d}

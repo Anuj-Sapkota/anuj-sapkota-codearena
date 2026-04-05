@@ -11,12 +11,7 @@ import CategoryBar from "@/components/problems/CategoryBar";
 import FilterSidebar from "@/components/problems/FilterSidebar";
 import ProblemListItem from "@/components/problems/ProblemListItem";
 import ProgressCard from "@/components/problems/ProgressCard";
-
-const SORT_OPTIONS = [
-  { label: "Newest Added", value: "" },
-  { label: "Title (A - Z)", value: "title_asc" },
-  { label: "Title (Z - A)", value: "title_desc" },
-];
+import { PROBLEM_SORT_OPTIONS } from "@/constants/constants";
 
 export default function UserProblemsPage() {
   const { user } = useSelector((state: RootState) => state.auth);
@@ -75,7 +70,7 @@ export default function UserProblemsPage() {
             />
           </div>
           <div className="flex flex-wrap sm:flex-nowrap items-center gap-4">
-            <SortDropdown sortBy={sortBy} onSortChange={setSortBy} options={SORT_OPTIONS} />
+            <SortDropdown sortBy={sortBy} onSortChange={setSortBy} options={PROBLEM_SORT_OPTIONS} />
             <ProgressCard solvedCount={solvedCount} totalCount={totalCount} />
           </div>
         </div>

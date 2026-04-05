@@ -9,22 +9,13 @@ import {
 import { SubmissionRecord } from "@/types/workspace.types";
 import { FaCheckCircle, FaTimesCircle, FaChevronRight } from "react-icons/fa";
 import { MdHistory, MdAccessTime, MdMemory } from "react-icons/md";
-import { fetchSubmissionHistoryThunk } from "@/lib/store/features/workspace/workspace.actions";
-import { useEffect } from "react";
 
 export const SubmissionList = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { currentProblem } = useSelector((state: RootState) => state.problem);
   const { user } = useSelector((state: RootState) => state.auth);
   const { submissions, isFetchingHistory } = useSelector(
     (state: RootState) => state.workspace,
   );
-
-  useEffect(() => {
-    if (currentProblem?.problemId && user) {
-      dispatch(fetchSubmissionHistoryThunk(currentProblem.problemId.toString()));
-    }
-  }, [dispatch, currentProblem?.problemId, user]);
 
   const handleSelectSubmission = (submission: SubmissionRecord) => {
     dispatch(setSelectedSubmission(submission));

@@ -18,16 +18,17 @@ import { GithubContent, GithubRepo } from "@/types/github.types";
 export const GithubRepoModal = ({
   isOpen,
   onClose,
+  problemTitle,
 }: {
   isOpen: boolean;
   onClose: () => void;
+  problemTitle?: string;
 }) => {
   const dispatch = useDispatch<AppDispatch>();
 
   const { selectedSubmission } = useSelector(
     (state: RootState) => state.workspace,
   );
-  const { currentProblem } = useSelector((state: RootState) => state.problem);
 
   // --- STEP & SELECTION STATE ---
   const [step, setStep] = useState<1 | 2>(1);
@@ -65,18 +66,18 @@ export const GithubRepoModal = ({
 
   // Defaults for File/Commit
   useEffect(() => {
-    if (currentProblem && selectedSubmission) {
+    if (problemTitle && selectedSubmission) {
       const langMap: Record<number, string> = {
         63: "js",
         71: "py",
         54: "cpp",
         62: "java",
-      };  
+      };
       const ext = langMap[selectedSubmission.languageId] || "txt";
       setFileName(`solution.${ext}`);
-      setCommitMsg(`Solved ${currentProblem.title} on CodeArena`);
+      setCommitMsg(`Solved ${problemTitle} on CodeArena`);
     }
-  }, [currentProblem, selectedSubmission]);
+  }, [problemTitle, selectedSubmission]);
 
   // --- HANDLERS ---
   const loadDirectory = async (path: string) => {
