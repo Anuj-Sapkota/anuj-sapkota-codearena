@@ -7,6 +7,7 @@ export const API = {
     LOGIN: "/auth/login",
     REGISTER: "/auth/register",
     LOGOUT: "/auth/logout",
+    REFRESH: "/auth/refresh",
     ME: "/auth/me",
     GOOGLE: "/auth/google",
     GITHUB: "/auth/github",

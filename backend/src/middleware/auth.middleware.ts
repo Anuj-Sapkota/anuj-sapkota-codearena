@@ -8,24 +8,26 @@ export const authenticateRequest = (
   next: NextFunction
 ) => {
   try {
-    // look for cookie
-    const cookies = req.cookies ?? {};
-    const token = cookies.accessToken;
+    // 1. Prefer Authorization: Bearer header (standard, sent by frontend axios)
+    const authHeader = req.headers.authorization;
+    let token: string | undefined;
 
-    // 2. If no cookie? -> unauthorized
-    if (!token) {
-      throw new ServiceError("Unauthorized: No session cookie found", 401);
+    if (authHeader?.startsWith("Bearer ")) {
+      token = authHeader.slice(7);
+    } else {
+      // 2. Fallback: legacy cookie (OAuth redirect flows)
+      token = req.cookies?.accessToken;
     }
 
-    // 3. Verify the token
-    const decoded = verifyAccessToken(String(token));
+    if (!token) {
+      throw new ServiceError("Unauthorized: No token provided", 401);
+    }
 
-    // 4. Attach user to request
+    const decoded = verifyAccessToken(String(token));
     (req as any).user = decoded;
 
     next();
   } catch (err) {
-    // If token is expired or invalid, verifyAccessToken will throw,
     next(err);
   }
 };

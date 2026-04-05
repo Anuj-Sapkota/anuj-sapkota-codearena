@@ -26,6 +26,7 @@ export interface UserProfile {
 export interface AuthUser {
   user: UserProfile;
   token: string;
+  accessToken?: string;
 }
 export interface LoginCredentials {
   emailOrUsername: string;

@@ -4,6 +4,7 @@ import {
   loginThunk,
   logoutThunk,
   registerThunk,
+  refreshSessionThunk,
   setInitialPasswordThunk,
   updateThunk,
 } from "@/lib/store/features/auth/auth.actions";
@@ -110,6 +111,18 @@ export const authSlice = createSlice({
         state.isLoading = false;
         state.isAuthenticated = true;
         state.user = action.payload.user;
+      })
+
+      /* --- REFRESH SESSION (app boot) --- */
+      .addCase(refreshSessionThunk.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.isAuthenticated = true;
+        state.user = action.payload.user;
+      })
+      .addCase(refreshSessionThunk.rejected, (state) => {
+        state.isLoading = false;
+        state.user = null;
+        state.isAuthenticated = false;
       })
       
       /* --- LOGOUT --- */

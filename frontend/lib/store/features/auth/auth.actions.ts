@@ -1,8 +1,12 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 
 import { authService } from "@/lib/services/auth.service";
-import  {userService}  from "@/lib/services/user.service";
+import { userService } from "@/lib/services/user.service";
 import { handleAxiosError } from "@/utils/axios-error.util";
+import { tokenStore } from "@/lib/token";
+import axios from "axios";
+import config from "@/config";
+import { API } from "@/constants/api.constants";
 
 import type {
   ChangePasswordCredentials,
@@ -18,7 +22,9 @@ export const registerThunk = createAsyncThunk(
   "auth/register",
   async (data: RegisterCredentials, { rejectWithValue }) => {
     try {
-      return await authService.signup(data);
+      const result = await authService.signup(data);
+      if (result.accessToken) tokenStore.set(result.accessToken);
+      return result;
     } catch (error: unknown) {
       return rejectWithValue(handleAxiosError(error, "Registration failed"));
     }
@@ -29,9 +35,32 @@ export const loginThunk = createAsyncThunk(
   "auth/login",
   async (data: LoginCredentials, { rejectWithValue }) => {
     try {
-      return await authService.login(data);
+      const result = await authService.login(data);
+      if (result.accessToken) tokenStore.set(result.accessToken);
+      return result;
     } catch (error: unknown) {
       return rejectWithValue(handleAxiosError(error, "Login failed"));
+    }
+  },
+);
+
+/**
+ * Called on app boot — uses the httpOnly refreshToken cookie to get a new access token.
+ * This replaces getMeThunk as the primary session hydration mechanism.
+ */
+export const refreshSessionThunk = createAsyncThunk(
+  "auth/refreshSession",
+  async (_, { rejectWithValue }) => {
+    try {
+      const { data } = await axios.post(
+        `${config.apiUrl}${API.AUTH.REFRESH}`,
+        {},
+        { withCredentials: true },
+      );
+      if (data.accessToken) tokenStore.set(data.accessToken);
+      return data; // { accessToken, user }
+    } catch (error: unknown) {
+      return rejectWithValue(handleAxiosError(error, "Session expired"));
     }
   },
 );

@@ -13,15 +13,15 @@ import { updateSocialLinks } from "@/lib/store/features/auth/auth.slice";
 import { authService } from "@/lib/services/auth.service";
 
 import type { AuthProvider, UserProfile } from "@/types/auth.types";
-import { API_ROUTES } from "@/constants/routes";
 
 export const SocialConnections = ({ user }: { user: UserProfile | null }) => {
   const dispatch = useDispatch<AppDispatch>();
   const [busyProvider, setBusyProvider] = useState<AuthProvider | null>(null);
 
   const handleConnect = (provider: AuthProvider) => {
-    // Redirects to backend Passport route
-    window.location.href = API_ROUTES.AUTH.SOCIAL(provider);
+    window.location.href = provider === "google"
+      ? authService.getGoogleUrl()
+      : authService.getGithubUrl();
   };
 
   const handleUnlink = async (provider: AuthProvider) => {
