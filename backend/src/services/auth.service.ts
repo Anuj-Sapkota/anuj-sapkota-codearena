@@ -13,6 +13,17 @@ import {
  * Helper to format the standard user response object for consistency
  */
 const formatAuthResponse = (user: any): { user: AuthUser["user"] } => {
+  // Reset streak if last activity was more than 1 calendar day ago
+  let currentStreak = user.streak ?? 0;
+  if (user.lastActivityDate && currentStreak > 0) {
+    const now = new Date();
+    const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const lastDate = new Date(user.lastActivityDate);
+    const lastMidnight = new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate());
+    const daysDiff = Math.round((todayMidnight.getTime() - lastMidnight.getTime()) / 86_400_000);
+    if (daysDiff > 1) currentStreak = 0; // gap — streak is broken
+  }
+
   return {
     user: {
       userId: user.userId,
@@ -26,8 +37,11 @@ const formatAuthResponse = (user: any): { user: AuthUser["user"] } => {
       total_points: user.total_points,
       google_id: user.google_id,
       github_id: user.github_id,
-      creatorStatus: user.creatorStatus, // 🚀 Ensure this is passed
-      creatorProfile: user.creatorProfile, // 🚀 Ensure this is passed
+      xp: user.xp ?? 0,
+      level: user.level ?? 1,
+      streak: currentStreak,
+      creatorStatus: user.creatorStatus,
+      creatorProfile: user.creatorProfile,
     },
   };
 };

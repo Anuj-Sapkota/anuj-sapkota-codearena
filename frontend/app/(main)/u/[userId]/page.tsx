@@ -62,17 +62,26 @@ export default function PublicProfile({ params }: PageProps) {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>("submissions");
   const [selectedBadge, setSelectedBadge] = useState<any>(null);
+  const [userRank, setUserRank] = useState<number | null>(null);
 
   useEffect(() => {
     if (!userId || userId === "undefined") return;
     const fetchProfile = async () => {
       try {
         setLoading(true);
-        const apiUrl =
-          process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
         const response = await fetch(`${apiUrl}/user/profile/${userId}`);
         if (!response.ok) throw new Error("User profile not found");
-        setData(await response.json());
+        const profileData = await response.json();
+        setData(profileData);
+
+        // Fetch rank from leaderboard (public endpoint)
+        try {
+          const lbRes = await fetch(`${apiUrl}/leaderboard?period=weekly&type=points`);
+          const lbData = await lbRes.json();
+          const found = (lbData.rankings || []).find((r: any) => r.userId === Number(userId));
+          setUserRank(found ? found.rank : null);
+        } catch { /* rank is optional */ }
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -118,7 +127,7 @@ export default function PublicProfile({ params }: PageProps) {
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Sidebar Column */}
         <div className="lg:col-span-3 space-y-6">
-          <UserProfileSidebar user={user} />
+          <UserProfileSidebar user={{ ...user, rank: userRank }} />
           <LanguageStats languages={data.languageStats} />
         </div>
 

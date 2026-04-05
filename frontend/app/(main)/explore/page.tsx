@@ -33,10 +33,12 @@ export default function ExplorePage() {
     dispatch(fetchPublicChallengesThunk());
 
     // Fetch top resources — public, no auth needed
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/resources/explore`)
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/resources/explore?sortBy=popular&limit=3`)
       .then((r) => r.json())
       .then((data) => {
-        const sorted = [...(Array.isArray(data) ? data : [])].sort((a, b) => (b.views || 0) - (a.views || 0));
+        // Response is now { items: [], meta: {} }
+        const items = Array.isArray(data) ? data : (data.items || []);
+        const sorted = [...items].sort((a, b) => (b.views || 0) - (a.views || 0));
         setTopResources(sorted.slice(0, 3));
       })
       .catch(() => {});

@@ -155,7 +155,7 @@ export const handleSubmission = async (
           });
 
           // --- 🏆 GAMIFICATION LOGIC START ---
-          // Check if this is the FIRST time they solved it to prevent XP farming
+          // XP only on first solve — streak updates on every accepted submission
           const previousSolved = await tx.submission.count({
             where: {
               userId: Number(userId),
@@ -165,26 +165,26 @@ export const handleSubmission = async (
             },
           });
 
-          if (previousSolved === 0) {
-            const xpGained = problem.points || 50;
-            const now = new Date();
+          const now = new Date();
+          const user = await tx.user.findUnique({ where: { userId: Number(userId) } });
 
-            const user = await tx.user.findUnique({
-              where: { userId: Number(userId) },
-            });
+          if (user) {
+            // ── Streak: calendar-day based, updates on every accepted submission ──
+            let newStreak = user.streak;
+            if (user.lastActivityDate) {
+              const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+              const lastMidnight = new Date(user.lastActivityDate.getFullYear(), user.lastActivityDate.getMonth(), user.lastActivityDate.getDate());
+              const daysDiff = Math.round((todayMidnight.getTime() - lastMidnight.getTime()) / 86_400_000);
+              if (daysDiff === 0) newStreak = user.streak;       // same day, no change
+              else if (daysDiff === 1) newStreak = user.streak + 1; // consecutive day
+              else newStreak = 1;                                  // gap — reset
+            } else {
+              newStreak = 1;
+            }
 
-            if (user) {
-              let newStreak = user.streak;
-              if (user.lastActivityDate) {
-                const hoursSince =
-                  (now.getTime() - user.lastActivityDate.getTime()) /
-                  (1000 * 60 * 60);
-                if (hoursSince >= 24 && hoursSince <= 48) newStreak++;
-                else if (hoursSince > 48) newStreak = 1;
-              } else {
-                newStreak = 1;
-              }
-
+            if (previousSolved === 0) {
+              // First solve: award XP + update streak
+              const xpGained = problem.points || 50;
               await tx.user.update({
                 where: { userId: Number(userId) },
                 data: {
@@ -195,7 +195,6 @@ export const handleSubmission = async (
                   level: Math.floor((user.xp + xpGained) / 500) + 1,
                 },
               });
-
               await tx.activity.create({
                 data: {
                   userId: Number(userId),
@@ -203,6 +202,12 @@ export const handleSubmission = async (
                   xpGained: xpGained,
                   createdAt: now,
                 },
+              });
+            } else {
+              // Re-solve: only update streak + lastActivityDate, no XP
+              await tx.user.update({
+                where: { userId: Number(userId) },
+                data: { streak: newStreak, lastActivityDate: now },
               });
             }
           }
