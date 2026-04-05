@@ -157,12 +157,11 @@ export const getPublicChallenge = async (
   next: NextFunction,
 ) => {
   try {
-    // Note: Calling the correctly spelled service
-    const results = await getPublicChallengesService();
-
+    const userId = (req as any).user?.sub ? parseInt((req as any).user.sub) : undefined;
+    const results = await getPublicChallengesService(userId);
     return res.status(200).json({
       success: true,
-      data: results.items, // Consistent with your Admin service structure
+      data: results.items,
     });
   } catch (err) {
     next(err);

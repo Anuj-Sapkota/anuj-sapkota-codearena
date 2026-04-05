@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { MetricTileProps, SubmissionRecord } from "@/types/workspace.types";
 import { Editor } from "@monaco-editor/react";
 import { cleanError } from "@/utils/error-cleaner.util";
@@ -8,6 +8,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/lib/store/store";
 import { FaArrowLeft, FaCode } from "react-icons/fa";
 import { MdAccessTime, MdMemory, MdLanguage } from "react-icons/md";
+import { FiCopy, FiCheck } from "react-icons/fi";
 
 export const SubmissionDetail = ({
   submission,
@@ -18,6 +19,14 @@ export const SubmissionDetail = ({
 }) => {
   const isAccepted = submission.status === "ACCEPTED";
   const { output } = useSelector((state: RootState) => state.workspace);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(submission.code).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
 
   const stats = useMemo(() => {
     if (!isAccepted) return { runtimePercent: 0, memoryPercent: 0 };
@@ -138,6 +147,13 @@ export const SubmissionDetail = ({
               Source_Snapshot
             </span>
           </div>
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-gray-400 hover:text-white transition-colors px-3 py-1.5 rounded-md hover:bg-white/10"
+          >
+            {copied ? <FiCheck size={12} className="text-emerald-400" /> : <FiCopy size={12} />}
+            {copied ? "Copied!" : "Copy"}
+          </button>
         </div>
         <div className="h-[400px]">
           <Editor

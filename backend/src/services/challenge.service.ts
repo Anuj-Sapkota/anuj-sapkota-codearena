@@ -221,30 +221,60 @@ export const deleteChallengeService = async (challengeId: number) => {
 };
 
 /**
- * Gets challenges that are public
+ * Gets challenges that are public, with per-user completion status
  */
-export const getPublicChallengesService = async () => {
+export const getPublicChallengesService = async (userId?: number) => {
   const now = new Date();
 
   try {
     const challenges = await prisma.challenge.findMany({
       where: {
         isPublic: true,
-        startTime: { lte: now }, // Challenge has started
-        endTime: { gte: now }, // Challenge hasn't ended
+        startTime: { lte: now },
+        endTime: { gte: now },
       },
       include: {
-        // Include problems so the user can see how many tasks are inside
         _count: { select: { problems: true } },
+        problems: { select: { problemId: true } },
       },
       orderBy: { startTime: "desc" },
     });
-    console.log("Challenges: ", challenges);
-    // We return it as 'items' to match the pattern used in getAllChallenges
-    return {
-      items: challenges,
-      total: challenges.length,
-    };
+
+    // For each challenge, compute how many problems this user has solved
+    const enriched = await Promise.all(
+      challenges.map(async (c) => {
+        let solvedCount = 0;
+        const totalCount = c.problems.length;
+
+        if (userId && totalCount > 0) {
+          const solved = await prisma.submission.findMany({
+            where: {
+              userId,
+              challengeId: c.challengeId,
+              status: "ACCEPTED",
+            },
+            distinct: ["problemId"],
+            select: { problemId: true },
+          });
+          solvedCount = solved.length;
+        }
+
+        const isCompleted = totalCount > 0 && solvedCount === totalCount;
+
+        return {
+          ...c,
+          problems: undefined, // strip raw problems array
+          stats: {
+            solvedCount,
+            totalCount,
+            percentage: totalCount > 0 ? (solvedCount / totalCount) * 100 : 0,
+            isCompleted,
+          },
+        };
+      })
+    );
+
+    return { items: enriched, total: enriched.length };
   } catch (error) {
     throw new ServiceError("FAILED_TO_FETCH_PUBLIC_CHALLENGES", 500);
   }
