@@ -159,6 +159,7 @@ export const ProblemDescription = ({ problem }: { problem: Problem }) => {
             <SubmissionDetail
               submission={selectedSubmission}
               onBack={handleBackToList}
+              problemId={problem.problemId}
             />
           </div>
         ) : descriptionTab === "detail" ? (

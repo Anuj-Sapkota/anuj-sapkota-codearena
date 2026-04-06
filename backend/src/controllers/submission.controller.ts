@@ -298,8 +298,9 @@ export const getSubmissionHistory = async (req: Request, res: Response) => {
         createdAt: true,
         languageId: true,
         code: true,
-        totalPassed: true, // Useful for the UI
-        totalCases: true, // Useful for the UI
+        totalPassed: true,
+        totalCases: true,
+        failMessage: true,
       },
     });
 
@@ -309,5 +310,36 @@ export const getSubmissionHistory = async (req: Request, res: Response) => {
     res
       .status(500)
       .json({ success: false, message: "Database error fetching history" });
+  }
+};
+
+/**
+ * GET /api/submissions/stats/:problemId
+ * Returns runtime + memory of all accepted submissions for a problem.
+ * Used to compute accurate "beats X%" percentile on the frontend.
+ */
+export const getSubmissionStats = async (req: Request, res: Response) => {
+  const { problemId } = req.params;
+  const { languageId } = req.query;
+
+  try {
+    const where: any = {
+      problemId: Number(problemId),
+      status: "ACCEPTED",
+      time: { not: null },
+      memory: { not: null },
+    };
+    if (languageId) where.languageId = Number(languageId);
+
+    const accepted = await prisma.submission.findMany({
+      where,
+      select: { time: true, memory: true },
+      orderBy: { createdAt: "desc" },
+      take: 1000,
+    });
+
+    res.status(200).json({ success: true, stats: accepted });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: "Failed to fetch stats" });
   }
 };

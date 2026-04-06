@@ -49,6 +49,7 @@ export const API = {
     BASE: "/submissions",
     BY_ID: (id: string | number) => `/submissions/${id}`,
     HISTORY: (problemId: string | number) => `/submissions/history/${problemId}`,
+    STATS: (problemId: string | number) => `/submissions/stats/${problemId}`,
   },
   USERS: {
     BASE: "/users",

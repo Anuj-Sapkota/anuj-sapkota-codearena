@@ -47,7 +47,7 @@ const workspaceSlice = createSlice({
     },
     setDescriptionTab: (
       state,
-      action: PayloadAction<"description" | "submissions" | "detail">,
+      action: PayloadAction<"description" | "submissions" | "detail" | "discuss">,
     ) => {
       state.descriptionTab = action.payload;
     },

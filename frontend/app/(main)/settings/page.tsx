@@ -26,7 +26,10 @@ export default function BasicInfoPage() {
   const onSubmit = (data: BasicSettingsFormValue) => {
     if (!user?.userId) return;
     const promise = dispatch(
-      updateThunk({ userId: user.userId, profileData: { username: user.username, bio: data.bio } })
+      updateThunk({
+        userId: user.userId,
+        profileData: { full_name: data.full_name, bio: data.bio },
+      })
     ).unwrap();
     toast.promise(promise, {
       loading: "Saving...",

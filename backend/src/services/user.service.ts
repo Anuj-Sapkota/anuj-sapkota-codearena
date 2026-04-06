@@ -35,29 +35,24 @@ export const updateUserService = async (
   let profilePicUrl = user.profile_pic_url;
 
   if (file && file.size > 0) {
-    // A. Delete old file from Cloudinary if it exists
+    // Multer file upload path (legacy / direct upload)
     if (user.profile_pic_url) {
       try {
         const urlParts = user.profile_pic_url.split("/");
-        const fileNameWithExtension = urlParts.pop(); // Safely get last element
-
+        const fileNameWithExtension = urlParts.pop();
         if (fileNameWithExtension) {
           const publicId = fileNameWithExtension.split(".")[0];
-          
-          // Cloudinary destroy requires the folder path if the file is in one
-          // We target the 'profiles' folder specifically
           await cloudinary.uploader.destroy(`profiles/${publicId}`);
         }
       } catch (err) {
-        // We log but don't throw, so a missing old file doesn't block a new upload
         console.error("Cloudinary Delete Error (Non-fatal):", err);
       }
     }
-
-    // B. Upload new file using our central service
-    // "profile" type triggers the 400x400 face-detection crop defined in lib/cloudinary
     const uploadResult = await uploadFile(file, "profile");
     profilePicUrl = uploadResult.secure_url;
+  } else if (data.profile_pic_url && typeof data.profile_pic_url === "string") {
+    // JSON URL path — frontend already uploaded to Cloudinary, just store the URL
+    profilePicUrl = data.profile_pic_url;
   }
 
   // 5. Prisma Update

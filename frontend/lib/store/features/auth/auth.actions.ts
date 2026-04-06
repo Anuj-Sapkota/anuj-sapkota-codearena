@@ -77,27 +77,24 @@ export const updateThunk = createAsyncThunk(
       file,
     }: {
       userId: number;
-      profileData: { username?: string; bio?: string };
+      profileData: { full_name?: string; bio?: string };
       file?: File;
     },
     { rejectWithValue },
   ) => {
     try {
-      let profile_pic_url = "";
+      let profile_pic_url: string | undefined;
 
-      // 1. If a new file is provided, upload it to the dedicated upload route first
       if (file) {
         const uploadResult = await uploadService.uploadFile(file, "profile");
         profile_pic_url = uploadResult.url;
       }
 
-      // 2. Prepare the final JSON payload
       const finalData = {
         ...profileData,
-        ...(profile_pic_url && { profile_pic: profile_pic_url }),
+        ...(profile_pic_url && { profile_pic_url }),
       };
 
-      // 3. Update the user profile in the database with JSON
       return await userService.updateProfile(userId, finalData);
     } catch (error: unknown) {
       return rejectWithValue(

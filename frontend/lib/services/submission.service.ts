@@ -23,4 +23,11 @@ export const submissionService = {
     const response = await api.get(API.SUBMISSIONS.HISTORY(problemId));
     return response.data;
   },
+
+  getStats: async (problemId: string, languageId?: number) => {
+    const response = await api.get(API.SUBMISSIONS.STATS(problemId), {
+      params: languageId ? { languageId } : undefined,
+    });
+    return response.data; // { success, stats: [{ time, memory }] }
+  },
 };
