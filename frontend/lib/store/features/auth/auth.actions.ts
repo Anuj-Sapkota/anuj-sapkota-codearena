@@ -1,7 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 
 import { authService } from "@/lib/services/auth.service";
-import { userService } from "@/lib/services/user.service";
 import { handleAxiosError } from "@/utils/axios-error.util";
 import { tokenStore } from "@/lib/token";
 import axios from "axios";
@@ -13,7 +12,6 @@ import type {
   LoginCredentials,
   RegisterCredentials,
 } from "@/types/auth.types";
-import { uploadService } from "@/lib/services/upload.service";
 
 /**
  * AUTHENTICATION--------------------------------------------------
@@ -68,42 +66,6 @@ export const refreshSessionThunk = createAsyncThunk(
 /**
  * USER MANAGEMENT -----------------------------------------------------------
  */
-export const updateThunk = createAsyncThunk(
-  "auth/updateUser",
-  async (
-    {
-      userId,
-      profileData,
-      file,
-    }: {
-      userId: number;
-      profileData: { full_name?: string; bio?: string };
-      file?: File;
-    },
-    { rejectWithValue },
-  ) => {
-    try {
-      let profile_pic_url: string | undefined;
-
-      if (file) {
-        const uploadResult = await uploadService.uploadFile(file, "profile");
-        profile_pic_url = uploadResult.url;
-      }
-
-      const finalData = {
-        ...profileData,
-        ...(profile_pic_url && { profile_pic_url }),
-      };
-
-      return await userService.updateProfile(userId, finalData);
-    } catch (error: unknown) {
-      return rejectWithValue(
-        handleAxiosError(error, "Failed to update profile"),
-      );
-    }
-  },
-);
-
 export const getMeThunk = createAsyncThunk(
   "auth/getMe",
   async (_, { rejectWithValue }) => {

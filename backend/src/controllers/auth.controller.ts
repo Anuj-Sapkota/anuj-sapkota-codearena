@@ -126,9 +126,25 @@ const oauthSignIn = async (req: Request, res: Response, next: NextFunction) => {
     _setRefreshCookie(res, userData.user.userId);
     const accessToken = signAccessToken({ sub: userData.user.userId, role: userData.user.role });
 
-    // For OAuth, we redirect — embed the token in the redirect URL as a query param
-    // The frontend will pick it up, store it in memory, then clean the URL
-    const redirectUrl = `${config.frontendUrl}/settings/accounts-security?status=success&token=${accessToken}`;
+    // Decode the state param to determine if this was an account-linking flow
+    // (initiated from settings by an already-logged-in user) or a fresh login.
+    const rawState = (req.query.state as string) || "";
+    let isLinking = false;
+    if (rawState) {
+      try {
+        const decoded = JSON.parse(Buffer.from(rawState, "base64").toString("utf-8"));
+        isLinking = !!decoded.userId;
+      } catch {
+        // malformed state — treat as fresh login
+      }
+    }
+
+    const redirectUrl = isLinking
+      ? `${config.frontendUrl}/settings/accounts-security?status=success&token=${accessToken}`
+      : userData.user.role === "ADMIN"
+        ? `${config.frontendUrl}/admin?token=${accessToken}`
+        : `${config.frontendUrl}/explore?token=${accessToken}`;
+
     res.redirect(redirectUrl);
   } catch (err) {
     next(err);

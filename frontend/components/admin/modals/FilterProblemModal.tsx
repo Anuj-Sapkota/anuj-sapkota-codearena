@@ -3,9 +3,8 @@
 import Modal from "@/components/ui/Modal";
 import { FormLabel } from "@/components/ui/Form";
 import { FaFilter, FaUndo, FaCheckCircle } from "react-icons/fa";
-import { useSelector } from "react-redux";
-import { RootState } from "@/lib/store/store";
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useCategories } from "@/hooks/useCategories";
 
 export type ProblemSortOption = "newest" | "oldest" | "title_asc" | "title_desc";
 export type DifficultyFilter = "ALL" | "EASY" | "MEDIUM" | "HARD";
@@ -24,7 +23,7 @@ interface Props {
 }
 
 export default function ProblemFilterModal({ isOpen, onClose, filters, setFilters }: Props) {
-  const { items: categories } = useSelector((state: RootState) => state.category);
+  const { data: categories = [] } = useCategories();
   
   // Local state to keep changes until "Apply" is clicked
   const [localFilters, setLocalFilters] = useState<ProblemFilterState>(filters);

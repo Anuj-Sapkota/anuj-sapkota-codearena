@@ -21,26 +21,25 @@ export default function AuthHydrator({ children }: { children: React.ReactNode }
     const init = async () => {
       try {
         const params = new URLSearchParams(window.location.search);
-
-        // OAuth redirect: token comes back in the URL query param
         const oauthToken = params.get("token");
+        const status = params.get("status");
+
+        // If a token came back in the URL (OAuth redirect), store it immediately
         if (oauthToken) {
           tokenStore.set(oauthToken);
-          // Clean the token from the URL immediately
-          const cleanUrl = window.location.pathname +
-            (params.get("status") ? `?status=${params.get("status")}` : "");
-          window.history.replaceState({}, document.title, cleanUrl);
+          // Strip token from URL right away so it's not visible or bookmarkable
+          const cleanSearch = status ? `?status=${status}` : "";
+          window.history.replaceState({}, document.title, window.location.pathname + cleanSearch);
         }
 
-        // Use the httpOnly refreshToken cookie to get a fresh access token + user
         await dispatch(refreshSessionThunk()).unwrap();
 
-        if (params.get("status") === "success") {
+        // Show toast only for the account-linking flow (settings page redirect)
+        if (status === "success") {
           toast.success("Account linked successfully!");
           window.history.replaceState({}, document.title, window.location.pathname);
         }
       } catch {
-        // No valid refresh token — guest user, that's fine
         dispatch(setLogout());
       } finally {
         setIsLoading(false);

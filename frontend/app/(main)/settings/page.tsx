@@ -1,18 +1,18 @@
 "use client";
 
 import { useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { FiUser, FiFileText, FiSave } from "react-icons/fi";
 
-import { AppDispatch, RootState } from "@/lib/store/store";
-import { updateThunk } from "@/lib/store/features/auth/auth.actions";
+import { RootState } from "@/lib/store/store";
+import { useUpdateProfile } from "@/hooks/useUpdateProfile";
 import { BasicSettingsFormValue } from "@/types/settings.types";
 
 export default function BasicInfoPage() {
-  const { user, isLoading } = useSelector((state: RootState) => state.auth);
-  const dispatch = useDispatch<AppDispatch>();
+  const { user } = useSelector((state: RootState) => state.auth);
+  const updateProfile = useUpdateProfile();
 
   const { register, handleSubmit, reset, formState: { errors, isDirty } } =
     useForm<BasicSettingsFormValue>({
@@ -25,29 +25,24 @@ export default function BasicInfoPage() {
 
   const onSubmit = (data: BasicSettingsFormValue) => {
     if (!user?.userId) return;
-    const promise = dispatch(
-      updateThunk({
-        userId: user.userId,
-        profileData: { full_name: data.full_name, bio: data.bio },
-      })
-    ).unwrap();
-    toast.promise(promise, {
-      loading: "Saving...",
-      success: "Profile updated!",
-      error: (err) => err || "Failed to update profile",
-    });
+    toast.promise(
+      updateProfile.mutateAsync({ userId: user.userId, full_name: data.full_name, bio: data.bio }),
+      {
+        loading: "Saving...",
+        success: () => { reset(data); return "Profile updated!"; },
+        error: (err) => err?.message || "Failed to update profile",
+      },
+    );
   };
 
   return (
     <div className="space-y-6">
-      {/* Section header */}
       <div className="border-b border-slate-200 pb-5">
         <h2 className="text-xs font-black text-slate-900 uppercase tracking-[0.2em]">Basic Info</h2>
         <p className="text-[11px] text-slate-400 mt-1">Update your display name and bio.</p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-        {/* Full name */}
         <div className="space-y-1.5">
           <label className="flex items-center gap-1.5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">
             <FiUser size={10} /> Full Name
@@ -64,7 +59,6 @@ export default function BasicInfoPage() {
           )}
         </div>
 
-        {/* Username — read only */}
         <div className="space-y-1.5">
           <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">
             Username
@@ -75,7 +69,6 @@ export default function BasicInfoPage() {
           <p className="text-[10px] text-slate-400">Username cannot be changed.</p>
         </div>
 
-        {/* Bio */}
         <div className="space-y-1.5">
           <label className="flex items-center gap-1.5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">
             <FiFileText size={10} /> Bio
@@ -91,11 +84,11 @@ export default function BasicInfoPage() {
         <div className="pt-2">
           <button
             type="submit"
-            disabled={isLoading || !isDirty}
+            disabled={updateProfile.isPending || !isDirty}
             className="flex items-center gap-2 bg-slate-900 text-white px-6 py-2.5 rounded-sm text-[10px] font-black uppercase tracking-widest hover:bg-primary-1 transition-colors disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
           >
             <FiSave size={12} />
-            {isLoading ? "Saving..." : "Save Changes"}
+            {updateProfile.isPending ? "Saving..." : "Save Changes"}
           </button>
         </div>
       </form>

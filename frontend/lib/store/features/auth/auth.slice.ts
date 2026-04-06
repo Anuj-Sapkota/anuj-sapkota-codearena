@@ -1,4 +1,4 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import {
   getMeThunk,
   loginThunk,
@@ -6,13 +6,11 @@ import {
   registerThunk,
   refreshSessionThunk,
   setInitialPasswordThunk,
-  updateThunk,
 } from "@/lib/store/features/auth/auth.actions";
 
-// 🚀 1. Import your Creator Thunk so the Auth slice can listen to it
 import { verifyCreatorOTPThunk } from "@/lib/store/features/creator/creator.actions";
 
-import type { AuthState } from "@/types/auth.types";
+import type { AuthState, UserProfile } from "@/types/auth.types";
 
 /**
  * INITIAL REDUX STATE
@@ -52,6 +50,12 @@ export const authSlice = createSlice({
         }
       }
     },
+    // Patch specific fields on the user — used by React Query mutations
+    patchUser: (state, action: PayloadAction<Partial<UserProfile>>) => {
+      if (state.user) {
+        state.user = { ...state.user, ...action.payload };
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -81,27 +85,6 @@ export const authSlice = createSlice({
         state.isAuthenticated = true;
       })
       .addCase(registerThunk.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload as string;
-      })
-
-      /* --- UPDATE USER --- */
-      .addCase(updateThunk.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
-      })
-      .addCase(updateThunk.fulfilled, (state, action) => {
-        state.isLoading = false;
-        const updatedUserData = action.payload.data?.user;
-
-        if (state.user && updatedUserData) {
-          state.user = {
-            ...state.user,
-            ...updatedUserData,
-          };
-        }
-      })
-      .addCase(updateThunk.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       })
@@ -161,5 +144,5 @@ export const authSlice = createSlice({
   },
 });
 
-export const { clearError, setLogout, updateSocialLinks } = authSlice.actions;
+export const { clearError, setLogout, updateSocialLinks, patchUser } = authSlice.actions;
 export default authSlice.reducer;

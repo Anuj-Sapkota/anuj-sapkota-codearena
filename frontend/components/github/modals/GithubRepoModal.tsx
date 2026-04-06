@@ -1,12 +1,6 @@
 import { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { AppDispatch, RootState } from "@/lib/store/store";
-import {
-  fetchGithubReposThunk,
-  pushToGithubThunk,
-  fetchRepoContentsThunk,
-  createGithubFolderThunk,
-} from "@/lib/store/features/github/github.actions";
+import { useSelector } from "react-redux";
+import { RootState } from "@/lib/store/store";
 import { FaSpinner, FaChevronLeft } from "react-icons/fa";
 import { toast } from "sonner";
 import { FileExplorerStep } from "../FileExplorerStep";
@@ -14,6 +8,9 @@ import { RepoListStep } from "../RepoListStep";
 import { ModalHeader } from "../ModalHeader";
 import { PushSuccessView } from "../PushSuccessView";
 import { GithubContent, GithubRepo } from "@/types/github.types";
+import { githubService } from "@/lib/services/github.service";
+
+const LANG_EXT: Record<number, string> = { 63: "js", 71: "py", 54: "cpp", 62: "java" };
 
 export const GithubRepoModal = ({
   isOpen,
@@ -24,77 +21,51 @@ export const GithubRepoModal = ({
   onClose: () => void;
   problemTitle?: string;
 }) => {
-  const dispatch = useDispatch<AppDispatch>();
+  const { selectedSubmission } = useSelector((state: RootState) => state.workspace);
 
-  const { selectedSubmission } = useSelector(
-    (state: RootState) => state.workspace,
-  );
-
-  // --- STEP & SELECTION STATE ---
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedRepo, setSelectedRepo] = useState<string | null>(null);
-  const [currentPath, setCurrentPath] = useState<string>("");
+  const [currentPath, setCurrentPath] = useState("");
   const [contents, setContents] = useState<GithubContent[]>([]);
   const [isFetchingContents, setIsFetchingContents] = useState(false);
-
-  // --- REPO LIST STATE ---
   const [repos, setRepos] = useState<GithubRepo[]>([]);
   const [loadingRepos, setLoadingRepos] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-
-  // --- FOLDER CREATION STATE ---
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [isFolderLoading, setIsFolderLoading] = useState(false);
-
-  // --- FINAL PUSH STATE ---
   const [fileName, setFileName] = useState("");
   const [commitMsg, setCommitMsg] = useState("");
   const [isPushing, setIsPushing] = useState(false);
   const [pushSuccessUrl, setPushSuccessUrl] = useState<string | null>(null);
 
-  // Initial Fetch
   useEffect(() => {
-    if (isOpen) {
-      setLoadingRepos(true);
-      dispatch(fetchGithubReposThunk())
-        .unwrap()
-        .then((data) => setRepos(data as GithubRepo[]))
-        .finally(() => setLoadingRepos(false));
-    }
-  }, [isOpen, dispatch]);
+    if (!isOpen) return;
+    setLoadingRepos(true);
+    githubService.fetchRepos()
+      .then(setRepos)
+      .catch(() => toast.error("Failed to load repositories"))
+      .finally(() => setLoadingRepos(false));
+  }, [isOpen]);
 
-  // Defaults for File/Commit
   useEffect(() => {
     if (problemTitle && selectedSubmission) {
-      const langMap: Record<number, string> = {
-        63: "js",
-        71: "py",
-        54: "cpp",
-        62: "java",
-      };
-      const ext = langMap[selectedSubmission.languageId] || "txt";
+      const ext = LANG_EXT[selectedSubmission.languageId] || "txt";
       setFileName(`solution.${ext}`);
       setCommitMsg(`Solved ${problemTitle} on CodeArena`);
     }
   }, [problemTitle, selectedSubmission]);
 
-  // --- HANDLERS ---
   const loadDirectory = async (path: string) => {
     if (!selectedRepo) return;
     const [owner, repo] = selectedRepo.split("/");
-
     setIsFetchingContents(true);
     try {
-      const data = await dispatch(
-        fetchRepoContentsThunk({ owner, repo, path }),
-      ).unwrap();
-      setContents(data as GithubContent[]);
+      const data = await githubService.fetchRepoContents(owner, repo, path);
+      setContents(data);
       setCurrentPath(path);
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Failed to load directory";
-      toast.error(message);
+    } catch {
+      toast.error("Failed to load directory");
     } finally {
       setIsFetchingContents(false);
     }
@@ -103,26 +74,15 @@ export const GithubRepoModal = ({
   const handleCreateFolder = async () => {
     if (!newFolderName.trim() || !selectedRepo) return;
     const [owner, repo] = selectedRepo.split("/");
-
     setIsFolderLoading(true);
     try {
-      await dispatch(
-        createGithubFolderThunk({
-          owner,
-          repo,
-          path: currentPath,
-          folderName: newFolderName.trim(),
-        }),
-      ).unwrap();
-
-      toast.success("Folder created successfully");
+      await githubService.createFolder(owner, repo, currentPath, newFolderName.trim());
+      toast.success("Folder created");
       setNewFolderName("");
       setIsCreatingFolder(false);
       loadDirectory(currentPath);
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Failed to create folder";
-      toast.error(message);
+    } catch {
+      toast.error("Failed to create folder");
     } finally {
       setIsFolderLoading(false);
     }
@@ -130,28 +90,23 @@ export const GithubRepoModal = ({
 
   const handlePush = async () => {
     if (!selectedRepo || !fileName || !selectedSubmission) return;
-
     setIsPushing(true);
     try {
       const fullPath = currentPath ? `${currentPath}/${fileName}` : fileName;
-      const result = await dispatch(
-        pushToGithubThunk({
-          repoFullName: selectedRepo,
-          code: selectedSubmission.code,
-          path: fullPath,
-          commitMessage: commitMsg,
-        }),
-      ).unwrap();
+      const result = await githubService.pushCode(
+        selectedRepo,
+        selectedSubmission.code,
+        fullPath,
+        commitMsg,
+      );
       setPushSuccessUrl(result.url);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Push failed";
-      toast.error(message);
+    } catch {
+      toast.error("Push failed");
     } finally {
       setIsPushing(false);
     }
   };
 
-  // Helper to reset modal state when closing
   const handleClose = () => {
     setStep(1);
     setPushSuccessUrl(null);
@@ -161,10 +116,7 @@ export const GithubRepoModal = ({
   };
 
   if (!isOpen) return null;
-
-  if (pushSuccessUrl) {
-    return <PushSuccessView url={pushSuccessUrl} onClose={handleClose} />;
-  }
+  if (pushSuccessUrl) return <PushSuccessView url={pushSuccessUrl} onClose={handleClose} />;
 
   return (
     <div className="fixed inset-0 z-100 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 font-sans">
@@ -179,9 +131,7 @@ export const GithubRepoModal = ({
               searchTerm={searchTerm}
               setSearchTerm={setSearchTerm}
               selectedRepo={selectedRepo}
-              onSelect={(val) =>
-                setSelectedRepo(selectedRepo === val ? null : val)
-              }
+              onSelect={(val) => setSelectedRepo(selectedRepo === val ? null : val)}
             />
           ) : (
             <FileExplorerStep
@@ -213,23 +163,10 @@ export const GithubRepoModal = ({
           </button>
           <button
             disabled={!selectedRepo || isPushing || !selectedSubmission}
-            onClick={
-              step === 1
-                ? () => {
-                    setStep(2);
-                    loadDirectory("");
-                  }
-                : handlePush
-            }
+            onClick={step === 1 ? () => { setStep(2); loadDirectory(""); } : handlePush}
             className="bg-slate-900 text-white px-10 py-4 rounded-2xl font-black text-[10px] tracking-widest uppercase hover:bg-emerald-600 disabled:bg-slate-200 transition-all flex items-center gap-2 shadow-xl"
           >
-            {isPushing ? (
-              <FaSpinner className="animate-spin" />
-            ) : step === 1 ? (
-              "Next_Phase"
-            ) : (
-              "Execute_Push"
-            )}
+            {isPushing ? <FaSpinner className="animate-spin" /> : step === 1 ? "Next_Phase" : "Execute_Push"}
           </button>
         </div>
       </div>

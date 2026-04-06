@@ -5,33 +5,34 @@ import { FiCamera, FiLoader } from "react-icons/fi";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { toast } from "sonner";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 
 import SettingsSidebar from "@/components/settings/SettingsSidebar";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
-import { AppDispatch, RootState } from "@/lib/store/store";
-import { updateThunk } from "@/lib/store/features/auth/auth.actions";
+import { RootState } from "@/lib/store/store";
+import { useUpdateProfile } from "@/hooks/useUpdateProfile";
 import { SETTINGS_MENU_ITEMS } from "@/constants/routes";
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const dispatch = useDispatch<AppDispatch>();
-  const { user, isLoading } = useSelector((state: RootState) => state.auth);
+  const { user } = useSelector((state: RootState) => state.auth);
+  const updateProfile = useUpdateProfile();
 
   const profilePic = user?.profile_pic_url || `https://api.dicebear.com/7.x/initials/svg?seed=${user?.full_name || "U"}`;
-
   const activeId = SETTINGS_MENU_ITEMS.find((item) => item.path === pathname)?.id ?? "basic";
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user?.userId) return;
-    const promise = dispatch(updateThunk({ userId: user.userId, file, profileData: {} })).unwrap();
-    toast.promise(promise, {
-      loading: "Uploading...",
-      success: "Profile picture updated!",
-      error: (err) => err || "Upload failed",
-    });
+    toast.promise(
+      updateProfile.mutateAsync({ userId: user.userId, file }),
+      {
+        loading: "Uploading...",
+        success: "Profile picture updated!",
+        error: (err) => err?.message || "Upload failed",
+      },
+    );
   };
 
   return (
@@ -45,14 +46,14 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
             <div className="relative group shrink-0">
               <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
               <div className="w-20 h-20 rounded-sm border-2 border-slate-700 bg-slate-800 overflow-hidden relative">
-                <Image src={profilePic} alt="Profile" fill className={`object-cover transition-all ${isLoading ? "blur-sm" : ""}`} priority />
-                {isLoading && (
+                <Image src={profilePic} alt="Profile" fill className={`object-cover transition-all ${updateProfile.isPending ? "blur-sm" : ""}`} priority />
+                {updateProfile.isPending && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/40">
                     <FiLoader className="text-white animate-spin" size={20} />
                   </div>
                 )}
               </div>
-              {!isLoading && (
+              {!updateProfile.isPending && (
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-sm"

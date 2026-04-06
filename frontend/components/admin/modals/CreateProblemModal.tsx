@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useSelector } from "react-redux";
 import { FaTimes, FaCog, FaFileAlt, FaCode, FaFlask } from "react-icons/fa";
-import { RootState } from "@/lib/store/store";
 import { Problem } from "@/types/problem.types";
 import { FormButton } from "@/components/ui/Form";
+import { useCategories } from "@/hooks/useCategories";
 
 import { useProblemForm } from "../hooks/useProblemForm";
 import BasicConfigTab from "../create-problems/BasicConfigTab";
@@ -23,7 +22,7 @@ type Tab = "basic" | "description" | "code" | "testcases";
 
 export default function CreateProblemModal({ isOpen, onClose, initialData }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("basic");
-  const { items: categories } = useSelector((state: RootState) => state.category);
+  const { data: categories = [] } = useCategories();
   const { formData, setFormData, handleSubmit, isLoading } = useProblemForm(isOpen, initialData, onClose);
 
   if (!isOpen) return null;
