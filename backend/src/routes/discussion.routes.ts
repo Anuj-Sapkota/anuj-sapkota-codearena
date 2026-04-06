@@ -9,15 +9,12 @@ import {
   moderateDiscussion,  
   getFlaggedDiscussions
 } from "../controllers/discussion.controller.js";
-import { authenticateRequest } from "../middleware/auth.middleware.js";
+import { authenticateRequest, optionalAuth } from "../middleware/auth.middleware.js";
 
 const router = Router();
 
-/**
- * @route   GET /api/discussions/problem/:problemId
- * @desc    Get all top-level discussions for a specific problem
- */
-router.get("/problem/:problemId", getDiscussions);
+// Public — guests can read discussions; optionalAuth attaches user for hasUpvoted
+router.get("/problem/:problemId", optionalAuth, getDiscussions);
 
 /**
  * @route   POST /api/discussions

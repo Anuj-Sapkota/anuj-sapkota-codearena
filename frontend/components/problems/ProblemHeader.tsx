@@ -12,6 +12,7 @@ import {
 import { useSelector } from "react-redux";
 import { RootState } from "@/lib/store/store";
 import { ROUTES } from "@/constants/routes";
+import { authService } from "@/lib/services/auth.service";
 import { GithubRepoModal } from "@/components/github/modals/GithubRepoModal";
 
 interface ProblemHeaderProps {
@@ -63,7 +64,7 @@ export const ProblemHeader = ({
 
   const handleGithubClick = () => {
     if (!isGithubConnected) {
-      window.location.href = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/auth/github`;
+      window.location.href = authService.getGithubUrl();
     } else {
       setIsRepoModalOpen(true);
     }

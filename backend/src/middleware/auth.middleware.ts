@@ -8,14 +8,13 @@ export const authenticateRequest = (
   next: NextFunction
 ) => {
   try {
-    // 1. Prefer Authorization: Bearer header (standard, sent by frontend axios)
     const authHeader = req.headers.authorization;
     let token: string | undefined;
 
     if (authHeader?.startsWith("Bearer ")) {
       token = authHeader.slice(7);
     } else {
-      // 2. Fallback: legacy cookie (OAuth redirect flows)
+      // Fallback: legacy cookie (OAuth redirect flows)
       token = req.cookies?.accessToken;
     }
 
@@ -30,4 +29,38 @@ export const authenticateRequest = (
   } catch (err) {
     next(err);
   }
+};
+
+/**
+ * Optional auth — attaches user to req if a valid token is present,
+ * but does NOT block the request if there is no token.
+ * Use for public pages that show extra info when logged in (e.g. isOwned).
+ */
+export const optionalAuth = (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+) => {
+  try {
+    const authHeader = req.headers.authorization;
+    let token: string | undefined;
+
+    if (authHeader?.startsWith("Bearer ")) {
+      token = authHeader.slice(7);
+    } else {
+      token = req.cookies?.accessToken;
+    }
+
+    if (token) {
+      try {
+        const decoded = verifyAccessToken(String(token));
+        (req as any).user = decoded;
+      } catch {
+        // Invalid token — treat as guest, don't block
+      }
+    }
+  } catch {
+    // Ignore all errors — guest access is fine
+  }
+  next();
 };

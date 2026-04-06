@@ -2,216 +2,194 @@
 
 import { useSelector } from "react-redux";
 import { RootState } from "@/lib/store/store";
-import {
-  useMyResources,
-  useDeleteResourceMutation,
-  useCreatorStats,
-} from "@/hooks/useResource";
-import {
-  FiPlus,
-  FiLayout,
-  FiActivity,
-  FiLoader,
-  FiVideo,
-  FiEdit3,
-  FiTrash2,
-  FiEye,
-  FiTrendingUp,
-} from "react-icons/fi";
+import { useMyResources, useDeleteResourceMutation, useCreatorStats } from "@/hooks/useResource";
+import { FiPlus, FiLoader, FiVideo, FiEdit3, FiTrash2, FiEye, FiTrendingUp, FiDollarSign, FiBarChart2 } from "react-icons/fi";
 import Link from "next/link";
 import { toast } from "sonner";
+import { ROUTES } from "@/constants/routes";
+
+const npr = (val?: number | null) =>
+  val ? `NPR ${val.toLocaleString()}` : "NPR 0";
 
 export default function CreatorDashboard() {
   const { user } = useSelector((state: RootState) => state.auth);
-
   const { data: resources, isLoading: resourcesLoading } = useMyResources();
   const { data: stats, isLoading: statsLoading } = useCreatorStats();
   const deleteResource = useDeleteResourceMutation();
 
-  // Logic to find the ID of the resource with the most views
   const topResourceId = resources?.length
-    ? [...resources].sort((a, b) => (b.views || 0) - (a.views || 0))[0]?.id
+    ? [...resources].sort((a: any, b: any) => (b.views || 0) - (a.views || 0))[0]?.id
     : null;
 
-  const handleDelete = async (
-    e: React.MouseEvent,
-    id: string,
-    title: string,
-  ) => {
+  const handleDelete = (e: React.MouseEvent, id: string, title: string) => {
     e.preventDefault();
     e.stopPropagation();
-    if (window.confirm(`Are you sure you want to delete "${title}"?`)) {
-      deleteResource.mutate(id, {
-        onSuccess: () => toast.success("Resource deleted."),
-        onError: (err: any) => toast.error(err.message || "Delete failed"),
-      });
-    }
+    if (!window.confirm(`Delete "${title}"?`)) return;
+    deleteResource.mutate(id, {
+      onSuccess: () => toast.success("Resource deleted."),
+      onError: (err: any) => toast.error(err.message || "Delete failed"),
+    });
   };
 
   if (user?.creatorStatus !== "APPROVED") {
     return (
-      <div className="p-20 text-center">
-        <h2 className="text-xl font-black uppercase italic tracking-tighter text-slate-900">
-          Access Denied
-        </h2>
-        <p className="text-slate-500 text-sm mt-2">Verified creators only.</p>
+      <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-black uppercase italic tracking-tighter text-slate-900">Access Denied</h2>
+          <p className="text-slate-500 text-sm mt-2">Verified creators only.</p>
+        </div>
       </div>
     );
   }
 
+  const statCards = [
+    {
+      label: "Active Resources",
+      value: statsLoading ? null : (stats?.resourceCount ?? resources?.length ?? 0),
+      icon: <FiBarChart2 size={16} className="text-primary-1" />,
+    },
+    {
+      label: "Total Earnings",
+      value: statsLoading ? null : npr(stats?.totalEarnings ?? user?.totalEarnings),
+      icon: <FiDollarSign size={16} className="text-emerald-500" />,
+    },
+    {
+      label: "Total Views",
+      value: statsLoading ? null : (stats?.totalResourceViews ?? 0),
+      icon: <FiEye size={16} className="text-blue-500" />,
+    },
+  ];
+
   return (
-    <div className="max-w-7xl mx-auto py-12 px-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
-        <div>
-          <h1 className="text-4xl font-black uppercase tracking-tighter text-slate-900">
-            Creator <span className="text-primary-1">Studio</span>
-          </h1>
-          <p className="text-slate-500 text-sm mt-1 font-medium">
-            Welcome back, {user?.full_name.split(" ")[0]}.
-          </p>
-        </div>
-
-        <Link
-          href="/creator/dashboard/create"
-          className="flex items-center gap-2 bg-slate-900 text-white px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] rounded-sm shadow-lg hover:bg-slate-800 transition-all"
-        >
-          <FiPlus size={16} /> Create New Resource
-        </Link>
-      </div>
-
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-        {[
-          {
-            label: "Active Resources",
-            value: stats?.resourceCount ?? (resources?.length || 0),
-            icon: <FiLayout />,
-          },
-          {
-            label: "Total Earnings (NPR)",
-            value: user?.totalEarnings
-              ? `NPR ${user.totalEarnings.toLocaleString()}`
-              : stats?.totalEarnings
-                ? `NPR ${stats.totalEarnings.toLocaleString()}`
-                : "NPR 0",
-            icon: <FiActivity />,
-          },
-          {
-            label: "Total Resource Views",
-            value: stats?.totalResourceViews || 0,
-            icon: <FiEye />,
-          },
-        ].map((stat, i) => (
-          <div
-            key={i}
-            className="border border-slate-200 p-8 bg-white rounded-sm shadow-sm"
-          >
-            <div className="text-slate-400 mb-4">{stat.icon}</div>
-            <div className="text-3xl font-black text-slate-900 tracking-tighter">
-              {statsLoading ? (
-                <FiLoader className="animate-spin text-slate-200" size={24} />
-              ) : (
-                stat.value
-              )}
-            </div>
-            <div className="text-[10px] font-black uppercase text-slate-500 tracking-widest mt-1">
-              {stat.label}
-            </div>
+    <div className="min-h-screen bg-[#f8fafc]">
+      {/* ── Banner ── */}
+      <div className="bg-slate-900 border-b border-slate-800">
+        <div className="max-w-6xl mx-auto px-6 py-10 flex items-end justify-between gap-6">
+          <div>
+            <h1 className="text-xl font-black text-white uppercase tracking-tight">
+              Creator Studio
+            </h1>
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+              Welcome back, {user?.full_name?.split(" ")[0]}
+            </p>
           </div>
-        ))}
-      </div>
-
-      {/* Resources Grid */}
-      <div className="mb-6">
-        <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
-          Managed Content
-        </h2>
-      </div>
-
-      {resourcesLoading ? (
-        <div className="flex justify-center py-20">
-          <FiLoader className="animate-spin text-slate-300" size={32} />
+          <Link
+            href={ROUTES.CREATOR.CREATE}
+            className="flex items-center gap-2 bg-primary-1 text-white px-5 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-sm hover:bg-primary-2 transition-all active:scale-95 shrink-0"
+          >
+            <FiPlus size={13} /> New Resource
+          </Link>
         </div>
-      ) : resources?.length ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {resources.map((res: any) => (
-            <div key={res.id} className="relative group">
-              {/* Top Performer Badge */}
-              {res.id === topResourceId && (res.views || 0) > 0 && (
-                <div className="absolute -top-3 left-4 z-30 bg-primary-1 text-white text-[9px] font-black uppercase px-3 py-1 rounded-full shadow-xl flex items-center gap-1">
-                  <FiTrendingUp size={10} /> Top Performer
-                </div>
-              )}
+      </div>
 
-              {/* Actions */}
-              <div className="absolute top-4 right-4 z-20 flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                <Link
-                  href={`/creator/dashboard/edit/${res.id}`}
-                  className="p-2 bg-white text-slate-900 rounded-sm border shadow-sm hover:bg-slate-900 hover:text-white"
-                >
-                  <FiEdit3 size={14} />
-                </Link>
-                <button
-                  onClick={(e) => handleDelete(e, res.id, res.title)}
-                  className="p-2 bg-white text-rose-500 rounded-sm border shadow-sm hover:bg-rose-500 hover:text-white"
-                >
-                  <FiTrash2 size={14} />
-                </button>
+      <div className="max-w-6xl mx-auto px-6 py-10 space-y-10">
+        {/* ── Stats ── */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {statCards.map((s, i) => (
+            <div key={i} className="bg-white border-2 border-slate-100 rounded-sm p-5 flex items-center gap-4">
+              <div className="w-9 h-9 rounded-sm bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0">
+                {s.icon}
               </div>
-
-              <Link
-                href={`/creator/dashboard/${res.id}`}
-                className="border border-slate-200 bg-white rounded-sm overflow-hidden block hover:border-slate-900 transition-all duration-500"
-              >
-                <div className="relative aspect-video overflow-hidden bg-slate-100">
-                  <img
-                    src={res.previewUrl}
-                    alt={res.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                  />
-                  <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm text-slate-900 text-[9px] font-black uppercase px-2 py-1 rounded-sm flex items-center gap-1 shadow-sm">
-                    <FiEye size={10} /> {res.views || 0}
-                  </div>
-                </div>
-
-                <div className="p-5">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-black uppercase text-sm tracking-tight truncate flex-1 pr-2">
-                      {res.title}
-                    </h3>
-                    <span className="font-bold text-sm text-emerald-600 shrink-0">
-                      NPR {res.price?.toLocaleString()}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-4 mt-4 pt-4 border-t border-slate-50">
-                    <div className="flex items-center gap-1.5 text-slate-400">
-                      <FiVideo size={12} />
-                      <span className="text-[10px] font-bold">
-                        {res._count?.modules || 0} Lessons
-                      </span>
-                    </div>
-                    <div className="ml-auto">
-                      <span
-                        className={`text-[9px] font-black uppercase tracking-tighter px-2 py-0.5 rounded-full ${res.isApproved ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"}`}
-                      >
-                        {res.isApproved ? "Live" : "Review"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </Link>
+              <div>
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">{s.label}</p>
+                <p className="text-xl font-black text-slate-900 mt-0.5">
+                  {s.value === null
+                    ? <FiLoader className="animate-spin text-slate-200" size={18} />
+                    : s.value}
+                </p>
+              </div>
             </div>
           ))}
         </div>
-      ) : (
-        <div className="border-2 border-dashed border-slate-200 p-20 text-center rounded-sm">
-          <p className="text-slate-400 font-bold uppercase text-xs tracking-widest">
-            No resources found.
+
+        {/* ── Resources ── */}
+        <div>
+          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 mb-5">
+            Managed Content
           </p>
+
+          {resourcesLoading ? (
+            <div className="flex justify-center py-20">
+              <FiLoader className="animate-spin text-slate-300" size={28} />
+            </div>
+          ) : resources?.length ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {resources.map((res: any) => (
+                <div key={res.id} className="relative group">
+                  {res.id === topResourceId && (res.views || 0) > 0 && (
+                    <div className="absolute -top-2.5 left-4 z-30 bg-primary-1 text-white text-[9px] font-black uppercase px-2.5 py-0.5 rounded-full shadow flex items-center gap-1">
+                      <FiTrendingUp size={9} /> Top
+                    </div>
+                  )}
+
+                  {/* Action buttons */}
+                  <div className="absolute top-3 right-3 z-20 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-all">
+                    <Link
+                      href={`/creator/dashboard/edit/${res.id}`}
+                      className="p-2 bg-white text-slate-700 rounded-sm border border-slate-200 shadow-sm hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all"
+                    >
+                      <FiEdit3 size={12} />
+                    </Link>
+                    <button
+                      onClick={(e) => handleDelete(e, res.id, res.title)}
+                      className="p-2 bg-white text-rose-500 rounded-sm border border-slate-200 shadow-sm hover:bg-rose-500 hover:text-white hover:border-rose-500 transition-all"
+                    >
+                      <FiTrash2 size={12} />
+                    </button>
+                  </div>
+
+                  <Link
+                    href={`/creator/dashboard/${res.id}`}
+                    className="bg-white border-2 border-slate-100 rounded-sm overflow-hidden block hover:border-slate-900 transition-all duration-300"
+                  >
+                    {/* Thumbnail */}
+                    <div className="relative aspect-video overflow-hidden bg-slate-100">
+                      {res.previewUrl
+                        ? <img src={res.previewUrl} alt={res.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                        : <div className="w-full h-full flex items-center justify-center"><FiVideo size={24} className="text-slate-300" /></div>}
+                      <div className="absolute bottom-2 left-2 bg-white/90 text-slate-700 text-[9px] font-black uppercase px-2 py-0.5 rounded-sm flex items-center gap-1 shadow-sm">
+                        <FiEye size={9} /> {res.views || 0}
+                      </div>
+                      <div className="absolute top-2 left-2">
+                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-sm ${res.isApproved ? "bg-emerald-500 text-white" : "bg-amber-400 text-white"}`}>
+                          {res.isApproved ? "Live" : "Review"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Info */}
+                    <div className="p-4">
+                      <h3 className="font-black uppercase text-sm tracking-tight text-slate-900 truncate mb-1">
+                        {res.title}
+                      </h3>
+                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-50">
+                        <div className="flex items-center gap-1 text-slate-400">
+                          <FiVideo size={10} />
+                          <span className="text-[10px] font-bold">{res._count?.modules || 0} lessons</span>
+                        </div>
+                        <span className="text-sm font-black text-emerald-600">
+                          {res.price === 0 ? "FREE" : npr(res.price)}
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="border-2 border-dashed border-slate-200 py-24 text-center rounded-sm">
+              <FiVideo size={32} className="text-slate-200 mx-auto mb-3" />
+              <p className="text-slate-400 font-bold uppercase text-xs tracking-widest mb-4">No resources yet</p>
+              <Link
+                href={ROUTES.CREATOR.CREATE}
+                className="inline-flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-sm hover:bg-primary-1 transition-all"
+              >
+                <FiPlus size={12} /> Create your first resource
+              </Link>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

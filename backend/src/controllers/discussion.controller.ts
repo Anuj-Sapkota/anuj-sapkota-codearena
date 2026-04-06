@@ -17,9 +17,8 @@ import { ReportType } from "../../generated/prisma/client.js";
  */
 export const getDiscussions = async (req: Request, res: Response, next: NextFunction) => {
   const { problemId } = req.params;
-  const userId = req.query.userId
-    ? parseInt(req.query.userId as string)
-    : undefined;
+  // Use the authenticated user's ID from the JWT — not a spoofable query param
+  const userId = (req as any).user?.sub ? Number((req as any).user.sub) : undefined;
   const userRole = (req as any).user?.role;
   const sortBy = req.query.sortBy as "newest" | "most_upvoted" | undefined;
   const language = req.query.language as string | undefined;

@@ -85,7 +85,12 @@ api.interceptors.response.use(
 );
 
 function _handleLogout() {
+  if (typeof window === "undefined") return;
+
   const pathname = window.location.pathname;
+
+  // Don't redirect if already on an error page or non-http origin
+  if (!window.location.protocol.startsWith("http")) return;
 
   const publicPages = [
     ROUTES.HOME,
@@ -100,7 +105,7 @@ function _handleLogout() {
     pathname.startsWith(ROUTES.AUTH.RESET_PASSWORD);
 
   if (!isPublicPage) {
-    window.location.href = ROUTES.AUTH.LOGIN;
+    window.location.replace(ROUTES.AUTH.LOGIN);
   }
 }
 

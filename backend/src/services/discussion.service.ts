@@ -191,9 +191,11 @@ export const deleteDiscussionService = async (
   discussionId: string,
   userId: number,
 ) => {
-  return await prisma.discussion.delete({
-    where: { id: discussionId, userId },
-  });
+  const discussion = await prisma.discussion.findUnique({ where: { id: discussionId } });
+  if (!discussion) throw new ServiceError("Discussion not found", 404);
+  if (discussion.userId !== userId) throw new ServiceError("Not authorized", 403);
+
+  return await prisma.discussion.delete({ where: { id: discussionId } });
 };
 
 /**

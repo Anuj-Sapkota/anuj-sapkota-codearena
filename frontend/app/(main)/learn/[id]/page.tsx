@@ -143,7 +143,7 @@ export default function CourseDetailPage() {
                       Access License
                     </span>
                     <h3 className="text-6xl font-black italic tracking-tighter">
-                      ${course?.price}
+                      {course?.price === 0 ? "FREE" : `NPR ${course?.price?.toLocaleString()}`}
                     </h3>
                   </div>
                   <div className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-2xl flex items-center gap-2">

@@ -17,34 +17,30 @@ import {
   getAssignment,
   submitAssignment,
 } from "../controllers/assignment.controller.js";
-import { authenticateRequest } from "../middleware/auth.middleware.js";
+import { authenticateRequest, optionalAuth } from "../middleware/auth.middleware.js";
+
 const router = Router();
 
-// 🔓 PUBLIC ROUTES
+// ── Public named routes (must be before /:id wildcard) ───────────────────────
 router.get("/explore", getPublicResources);
 
-// 🚀 PROTECTED ROUTES
-router.use(authenticateRequest);
+// ── Protected named routes (must be before /:id wildcard) ────────────────────
+router.get("/my-resources", authenticateRequest, getMyResources);
+router.get("/creator/stats", authenticateRequest, getCreatorStats);
+router.post("/create-series", authenticateRequest, createSeries);
+router.post("/complete-module", authenticateRequest, completeModule);
 
-// 1. Specific Action Routes (Put these FIRST)
-router.get("/creator/stats", getCreatorStats);
-router.patch("/:id/view", incrementViewCount);
-router.post("/complete-module", completeModule);
-router.get("/:id/dashboard", getResourceDashboard);
+// Assignment named routes (before /:id)
+router.put("/:resourceId/assignment", authenticateRequest, saveAssignment);
+router.get("/:resourceId/assignment", authenticateRequest, getAssignment);
+router.post("/assignment/:assignmentId/submit", authenticateRequest, submitAssignment);
 
-// Assignment routes
-router.put("/:resourceId/assignment", saveAssignment);
-router.get("/:resourceId/assignment", getAssignment);
-router.post("/assignment/:assignmentId/submit", submitAssignment);
-
-// 2. Resource CRUD Routes
-router.post("/create-series", createSeries);
-router.get("/my-resources", getMyResources);
-
-// 3. Generic ID Routes (Put these LAST)
-router.get("/:id", getResourceById);
-router.put("/:id", updateResource);
-router.patch("/:id/badge", updateResourceBadge);
-router.delete("/:id", deleteResource);
+// ── Wildcard /:id routes (LAST — catches everything not matched above) ────────
+router.get("/:id", optionalAuth, getResourceById);
+router.get("/:id/dashboard", authenticateRequest, getResourceDashboard);
+router.patch("/:id/view", authenticateRequest, incrementViewCount);
+router.put("/:id", authenticateRequest, updateResource);
+router.patch("/:id/badge", authenticateRequest, updateResourceBadge);
+router.delete("/:id", authenticateRequest, deleteResource);
 
 export default router;
