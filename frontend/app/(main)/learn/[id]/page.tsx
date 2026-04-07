@@ -18,7 +18,8 @@ import { paymentService } from "@/lib/services/payment.service";
 import { toast } from "sonner";
 
 export default function CourseDetailPage() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = params.id as string;
 
   const {
     data: course,

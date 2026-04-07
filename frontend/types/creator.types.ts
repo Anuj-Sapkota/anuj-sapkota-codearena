@@ -22,4 +22,5 @@ export interface VerifyOTPDTO {
 export interface AdminReviewDTO {
   targetUserId: number;
   status: "APPROVED" | "REJECTED";
+  reason?: string;
 }

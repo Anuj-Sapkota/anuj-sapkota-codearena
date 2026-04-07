@@ -20,7 +20,7 @@ const DIFF: Record<string, string> = {
   HARD:   "text-rose-600    bg-rose-50    border-rose-100",
 };
 
-function formatDate(iso?: string | null) {
+function formatDate(iso?: string | Date | null) {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }

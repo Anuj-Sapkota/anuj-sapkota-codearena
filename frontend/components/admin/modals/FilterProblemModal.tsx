@@ -99,7 +99,7 @@ export default function ProblemFilterModal({ isOpen, onClose, filters, setFilter
           <div className="space-y-2">
             <FormLabel>Taxonomy_Tags</FormLabel>
             <div className="flex flex-wrap gap-2">
-              {categories.map((cat) => {
+              {categories.map((cat: any) => {
                 const isSelected = localFilters.categoryIds.includes(cat.categoryId);
                 return (
                   <button

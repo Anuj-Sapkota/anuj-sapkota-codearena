@@ -50,7 +50,7 @@ export default function CreatorDashboard() {
     },
     {
       label: "Total Earnings",
-      value: statsLoading ? null : npr(stats?.totalEarnings ?? user?.totalEarnings),
+      value: statsLoading ? null : npr(stats?.totalEarnings),
       icon: <FiDollarSign size={16} className="text-emerald-500" />,
     },
     {

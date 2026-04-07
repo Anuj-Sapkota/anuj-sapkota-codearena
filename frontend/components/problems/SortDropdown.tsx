@@ -11,7 +11,7 @@ interface SortOption {
 interface SortDropdownProps {
   sortBy: string;
   onSortChange: (value: string) => void;
-  options: SortOption[];
+  options: readonly { label: string; value: string }[] | { label: string; value: string }[];
 }
 
 export default function SortDropdown({ sortBy, onSortChange, options }: SortDropdownProps) {

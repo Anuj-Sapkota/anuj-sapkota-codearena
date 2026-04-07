@@ -62,8 +62,8 @@ export default function CreateChallengeModal({ isOpen, onClose, editData }: Prop
         isPublic: editData.isPublic,
         difficulty: editData.difficulty || "MEDIUM",
         points: editData.points || 100,
-        startTime: editData.startTime ? toLocalDatetimeInput(editData.startTime) : "",
-        endTime: editData.endTime ? toLocalDatetimeInput(editData.endTime) : "",
+        startTime: editData.startTime ? toLocalDatetimeInput(String(editData.startTime)) : "",
+        endTime: editData.endTime ? toLocalDatetimeInput(String(editData.endTime)) : "",
         problemIds: linkedIds,
       });
     } else {
@@ -105,7 +105,7 @@ export default function CreateChallengeModal({ isOpen, onClose, editData }: Prop
 
   if (!isOpen) return null;
 
-  const filtered = allProblems.filter((p) =>
+  const filtered = allProblems.filter((p: any) =>
     p.title.toLowerCase().includes(problemSearch.toLowerCase())
   );
 
@@ -207,7 +207,7 @@ export default function CreateChallengeModal({ isOpen, onClose, editData }: Prop
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1">
-                {filtered.map((p) => {
+                {filtered.map((p: any) => {
                   const selected = selectedIds.includes(p.problemId);
                   return (
                     <button
