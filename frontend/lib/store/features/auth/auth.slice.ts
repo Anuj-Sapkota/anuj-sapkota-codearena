@@ -1,17 +1,16 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import {
   getMeThunk,
   loginThunk,
   logoutThunk,
   registerThunk,
+  refreshSessionThunk,
   setInitialPasswordThunk,
-  updateThunk,
 } from "@/lib/store/features/auth/auth.actions";
 
-// 🚀 1. Import your Creator Thunk so the Auth slice can listen to it
 import { verifyCreatorOTPThunk } from "@/lib/store/features/creator/creator.actions";
 
-import type { AuthState } from "@/types/auth.types";
+import type { AuthState, UserProfile } from "@/types/auth.types";
 
 /**
  * INITIAL REDUX STATE
@@ -20,6 +19,7 @@ const initialState: AuthState = {
   user: null,
   isAuthenticated: false,
   isLoading: false,
+  isHydrated: false,
   error: null,
 };
 
@@ -49,6 +49,12 @@ export const authSlice = createSlice({
         } else {
           state.user.github_id = action.payload.value;
         }
+      }
+    },
+    // Patch specific fields on the user — used by React Query mutations
+    patchUser: (state, action: PayloadAction<Partial<UserProfile>>) => {
+      if (state.user) {
+        state.user = { ...state.user, ...action.payload };
       }
     },
   },
@@ -84,32 +90,25 @@ export const authSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      /* --- UPDATE USER --- */
-      .addCase(updateThunk.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
-      })
-      .addCase(updateThunk.fulfilled, (state, action) => {
-        state.isLoading = false;
-        const updatedUserData = action.payload.data?.user;
-
-        if (state.user && updatedUserData) {
-          state.user = {
-            ...state.user,
-            ...updatedUserData,
-          };
-        }
-      })
-      .addCase(updateThunk.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload as string;
-      })
-
       /* --- GET ME --- */
       .addCase(getMeThunk.fulfilled, (state, action) => {
         state.isLoading = false;
         state.isAuthenticated = true;
         state.user = action.payload.user;
+      })
+
+      /* --- REFRESH SESSION (app boot) --- */
+      .addCase(refreshSessionThunk.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.isAuthenticated = true;
+        state.isHydrated = true;
+        state.user = action.payload.user;
+      })
+      .addCase(refreshSessionThunk.rejected, (state) => {
+        state.isLoading = false;
+        state.isHydrated = true;
+        state.user = null;
+        state.isAuthenticated = false;
       })
       
       /* --- LOGOUT --- */
@@ -148,5 +147,5 @@ export const authSlice = createSlice({
   },
 });
 
-export const { clearError, setLogout, updateSocialLinks } = authSlice.actions;
+export const { clearError, setLogout, updateSocialLinks, patchUser } = authSlice.actions;
 export default authSlice.reducer;

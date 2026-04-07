@@ -4,108 +4,87 @@ import Image from "next/image";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { toast } from "sonner";
-import { FaSpinner } from "react-icons/fa";
+import { FiLoader, FiLink, FiLink2 } from "react-icons/fi";
 
 import GoogleLogoIcon from "@/public/google-icon.svg";
 import GitHubLogoIcon from "@/public/github-icon.svg";
 import { AppDispatch } from "@/lib/store/store";
 import { updateSocialLinks } from "@/lib/store/features/auth/auth.slice";
 import { authService } from "@/lib/services/auth.service";
-
 import type { AuthProvider, UserProfile } from "@/types/auth.types";
-import { API_ROUTES } from "@/constants/routes";
+
+const PROVIDERS = [
+  { id: "google" as const, name: "Google",  icon: GoogleLogoIcon },
+  { id: "github" as const, name: "GitHub",  icon: GitHubLogoIcon },
+];
 
 export const SocialConnections = ({ user }: { user: UserProfile | null }) => {
   const dispatch = useDispatch<AppDispatch>();
-  const [busyProvider, setBusyProvider] = useState<AuthProvider | null>(null);
+  const [busy, setBusy] = useState<AuthProvider | null>(null);
 
   const handleConnect = (provider: AuthProvider) => {
-    // Redirects to backend Passport route
-    window.location.href = API_ROUTES.AUTH.SOCIAL(provider);
+    window.location.href = provider === "google"
+      ? authService.getGoogleUrl()
+      : authService.getGithubUrl();
   };
 
   const handleUnlink = async (provider: AuthProvider) => {
-    // Safety check: Don't let users lock themselves out
-    const otherProviderLinked =
-      provider === "google" ? user?.github_id : user?.google_id;
-    if (!user?.has_password && !otherProviderLinked) {
-      return toast.error(
-        "Please set a password first to avoid getting locked out."
-      );
+    const otherLinked = provider === "google" ? user?.github_id : user?.google_id;
+    if (!user?.has_password && !otherLinked) {
+      return toast.error("Set a password first to avoid getting locked out.");
     }
+    if (!confirm(`Disconnect your ${provider} account?`)) return;
 
-    if (confirm(`Are you sure you want to disconnect ${provider}?`)) {
-      try {
-        setBusyProvider(provider);
-        await authService.unlinkOAuthProvider(provider);
-        dispatch(updateSocialLinks({ provider, value: null }));
-        toast.success(`${provider} account unlinked successfully`);
-      } catch (err) {
-        console.log(err);
-        toast.error(`Failed to unlink ${provider}`);
-      } finally {
-        setBusyProvider(null);
-      }
+    try {
+      setBusy(provider);
+      await authService.unlinkOAuthProvider(provider);
+      dispatch(updateSocialLinks({ provider, value: null }));
+      toast.success(`${provider} disconnected`);
+    } catch {
+      toast.error(`Failed to disconnect ${provider}`);
+    } finally {
+      setBusy(null);
     }
   };
 
-  const providers = [
-    {
-      id: "google" as const,
-      name: "Google",
-      icon: GoogleLogoIcon,
-      val: user?.google_id,
-    },
-    {
-      id: "github" as const,
-      name: "GitHub",
-      icon: GitHubLogoIcon,
-      val: user?.github_id,
-    },
-  ];
-
   return (
-    <section className="space-y-4">
-      <h2 className="text-lg font-semibold border-b pb-2 text-gray-800">
-        Connected Accounts
-      </h2>
-      {providers.map((item) => (
-        <div
-          key={item.id}
-          className="flex items-center justify-between p-4 bg-white border border-gray-100 shadow-sm rounded-xl"
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 border">
-              <Image src={item.icon} width={20} height={20} alt={item.name} />
+    <div className="space-y-2">
+      {PROVIDERS.map(({ id, name, icon }) => {
+        const connected = id === "google" ? !!user?.google_id : !!user?.github_id;
+        const isBusy = busy === id;
+
+        return (
+          <div key={id} className="bg-white border-2 border-slate-100 rounded-sm p-4 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-sm bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0">
+                <Image src={icon} width={16} height={16} alt={name} />
+              </div>
+              <div>
+                <p className="text-sm font-black text-slate-900">{name}</p>
+                <p className={`text-[10px] font-bold ${connected ? "text-emerald-500" : "text-slate-400"}`}>
+                  {connected ? "Connected" : "Not connected"}
+                </p>
+              </div>
             </div>
-            <div className="flex flex-col text-sm">
-              <span className="font-semibold">{item.name} Account</span>
-              <span className={item.val ? "text-green-600" : "text-gray-400"}>
-                {item.val ? "Connected" : "Not linked"}
-              </span>
-            </div>
+
+            <button
+              disabled={isBusy}
+              onClick={() => connected ? handleUnlink(id) : handleConnect(id)}
+              className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 ${
+                connected
+                  ? "border-2 border-slate-200 text-slate-500 hover:border-red-300 hover:text-red-500"
+                  : "bg-slate-900 text-white hover:bg-primary-1"
+              }`}
+            >
+              {isBusy
+                ? <FiLoader size={11} className="animate-spin" />
+                : connected
+                  ? <><FiLink2 size={10} /> Disconnect</>
+                  : <><FiLink size={10} /> Connect</>}
+            </button>
           </div>
-          <button
-            disabled={busyProvider === item.id}
-            onClick={() =>
-              item.val ? handleUnlink(item.id) : handleConnect(item.id)
-            }
-            className={`min-w-[110px] px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-              item.val
-                ? "text-red-500 hover:bg-red-50"
-                : "bg-gray-900 text-white hover:bg-gray-800"
-            }`}
-          >
-            {busyProvider === item.id ? (
-              <FaSpinner className="animate-spin mx-auto" />
-            ) : item.val ? (
-              "Disconnect"
-            ) : (
-              "Connect"
-            )}
-          </button>
-        </div>
-      ))}
-    </section>
+        );
+      })}
+    </div>
   );
 };

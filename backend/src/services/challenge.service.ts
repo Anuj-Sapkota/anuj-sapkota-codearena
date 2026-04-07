@@ -221,7 +221,8 @@ export const deleteChallengeService = async (challengeId: number) => {
 };
 
 /**
- * Gets challenges that are public, with per-user completion status
+ * Gets challenges that are public, with per-user completion status.
+ * Uses a single batched submission query instead of N+1 per challenge.
  */
 export const getPublicChallengesService = async (userId?: number) => {
   const now = new Date();
@@ -240,39 +241,56 @@ export const getPublicChallengesService = async (userId?: number) => {
       orderBy: { startTime: "desc" },
     });
 
-    // For each challenge, compute how many problems this user has solved
-    const enriched = await Promise.all(
-      challenges.map(async (c) => {
-        let solvedCount = 0;
-        const totalCount = c.problems.length;
-
-        if (userId && totalCount > 0) {
-          const solved = await prisma.submission.findMany({
-            where: {
-              userId,
-              challengeId: c.challengeId,
-              status: "ACCEPTED",
-            },
-            distinct: ["problemId"],
-            select: { problemId: true },
-          });
-          solvedCount = solved.length;
-        }
-
-        const isCompleted = totalCount > 0 && solvedCount === totalCount;
-
-        return {
+    if (!userId || challenges.length === 0) {
+      return {
+        items: challenges.map((c) => ({
           ...c,
-          problems: undefined, // strip raw problems array
-          stats: {
-            solvedCount,
-            totalCount,
-            percentage: totalCount > 0 ? (solvedCount / totalCount) * 100 : 0,
-            isCompleted,
-          },
-        };
-      })
-    );
+          problems: undefined,
+          stats: { solvedCount: 0, totalCount: c.problems.length, percentage: 0, isCompleted: false },
+        })),
+        total: challenges.length,
+      };
+    }
+
+    // Collect all challenge IDs in one go
+    const challengeIds = challenges.map((c) => c.challengeId);
+
+    // Single query for all accepted submissions across all challenges for this user
+    const allSolved = await prisma.submission.findMany({
+      where: {
+        userId,
+        challengeId: { in: challengeIds },
+        status: "ACCEPTED",
+      },
+      distinct: ["problemId", "challengeId"],
+      select: { problemId: true, challengeId: true },
+    });
+
+    // Build a Map<challengeId, Set<problemId>> for O(1) lookups
+    const solvedMap = new Map<number, Set<number>>();
+    for (const s of allSolved) {
+      if (!s.challengeId) continue;
+      if (!solvedMap.has(s.challengeId)) solvedMap.set(s.challengeId, new Set());
+      solvedMap.get(s.challengeId)!.add(s.problemId);
+    }
+
+    const enriched = challenges.map((c) => {
+      const solvedSet = solvedMap.get(c.challengeId) ?? new Set();
+      const totalCount = c.problems.length;
+      const solvedCount = solvedSet.size;
+      const isCompleted = totalCount > 0 && solvedCount === totalCount;
+
+      return {
+        ...c,
+        problems: undefined,
+        stats: {
+          solvedCount,
+          totalCount,
+          percentage: totalCount > 0 ? (solvedCount / totalCount) * 100 : 0,
+          isCompleted,
+        },
+      };
+    });
 
     return { items: enriched, total: enriched.length };
   } catch (error) {

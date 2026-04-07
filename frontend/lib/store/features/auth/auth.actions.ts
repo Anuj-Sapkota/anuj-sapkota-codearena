@@ -1,15 +1,17 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 
 import { authService } from "@/lib/services/auth.service";
-import  {userService}  from "@/lib/services/user.service";
 import { handleAxiosError } from "@/utils/axios-error.util";
+import { tokenStore } from "@/lib/token";
+import axios from "axios";
+import config from "@/config";
+import { API } from "@/constants/api.constants";
 
 import type {
   ChangePasswordCredentials,
   LoginCredentials,
   RegisterCredentials,
 } from "@/types/auth.types";
-import { uploadService } from "@/lib/services/upload.service";
 
 /**
  * AUTHENTICATION--------------------------------------------------
@@ -18,7 +20,9 @@ export const registerThunk = createAsyncThunk(
   "auth/register",
   async (data: RegisterCredentials, { rejectWithValue }) => {
     try {
-      return await authService.signup(data);
+      const result = await authService.signup(data);
+      if (result.accessToken) tokenStore.set(result.accessToken);
+      return result;
     } catch (error: unknown) {
       return rejectWithValue(handleAxiosError(error, "Registration failed"));
     }
@@ -29,7 +33,9 @@ export const loginThunk = createAsyncThunk(
   "auth/login",
   async (data: LoginCredentials, { rejectWithValue }) => {
     try {
-      return await authService.login(data);
+      const result = await authService.login(data);
+      if (result.accessToken) tokenStore.set(result.accessToken);
+      return result;
     } catch (error: unknown) {
       return rejectWithValue(handleAxiosError(error, "Login failed"));
     }
@@ -37,47 +43,29 @@ export const loginThunk = createAsyncThunk(
 );
 
 /**
- * USER MANAGEMENT -----------------------------------------------------------
+ * Called on app boot — uses the httpOnly refreshToken cookie to get a new access token.
+ * This replaces getMeThunk as the primary session hydration mechanism.
  */
-export const updateThunk = createAsyncThunk(
-  "auth/updateUser",
-  async (
-    {
-      userId,
-      profileData,
-      file,
-    }: {
-      userId: number;
-      profileData: { username?: string; bio?: string };
-      file?: File;
-    },
-    { rejectWithValue },
-  ) => {
+export const refreshSessionThunk = createAsyncThunk(
+  "auth/refreshSession",
+  async (_, { rejectWithValue }) => {
     try {
-      let profile_pic_url = "";
-
-      // 1. If a new file is provided, upload it to the dedicated upload route first
-      if (file) {
-        const uploadResult = await uploadService.uploadFile(file, "profile");
-        profile_pic_url = uploadResult.url;
-      }
-
-      // 2. Prepare the final JSON payload
-      const finalData = {
-        ...profileData,
-        ...(profile_pic_url && { profile_pic: profile_pic_url }),
-      };
-
-      // 3. Update the user profile in the database with JSON
-      return await userService.updateProfile(userId, finalData);
-    } catch (error: unknown) {
-      return rejectWithValue(
-        handleAxiosError(error, "Failed to update profile"),
+      const { data } = await axios.post(
+        `${config.apiUrl}${API.AUTH.REFRESH}`,
+        {},
+        { withCredentials: true },
       );
+      if (data.accessToken) tokenStore.set(data.accessToken);
+      return data; // { accessToken, user }
+    } catch (error: unknown) {
+      return rejectWithValue(handleAxiosError(error, "Session expired"));
     }
   },
 );
 
+/**
+ * USER MANAGEMENT -----------------------------------------------------------
+ */
 export const getMeThunk = createAsyncThunk(
   "auth/getMe",
   async (_, { rejectWithValue }) => {
@@ -93,9 +81,13 @@ export const logoutThunk = createAsyncThunk(
   "auth/logout",
   async (_, { rejectWithValue }) => {
     try {
-      return await authService.logout();
+      await authService.logout();
     } catch (error: unknown) {
+      // Even if the backend call fails, clear local state
       return rejectWithValue(handleAxiosError(error, "Logout failed"));
+    } finally {
+      // Always clear the in-memory access token regardless of backend response
+      tokenStore.clear();
     }
   },
 );

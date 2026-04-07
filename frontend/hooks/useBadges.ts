@@ -1,44 +1,44 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
+import { API } from "@/constants/api.constants";
 import { toast } from "sonner";
 
 export const useBadges = () => {
   const queryClient = useQueryClient();
 
-  const { data: badges = [], isLoading } = useQuery({
+  const { data: badges, isLoading } = useQuery({
     queryKey: ["badges"],
-    queryFn: async () => (await api.get("/badge/library")).data,
+    queryFn: async () => (await api.get(API.BADGES.BASE)).data,
   });
 
   const createBadge = useMutation({
-    mutationFn: async (newBadge: { name: string; description: string; iconUrl: string }) => 
-      await api.post("/badge/admin/create", newBadge),
-    onSuccess: () => {
-      // This is the magic line: it tells React Query the 'badges' list is old
-      queryClient.invalidateQueries({ queryKey: ["badges"] });
-      toast.success("Badge minted successfully!");
-    },
-    onError: () => {
-      toast.error("Failed to save badge");
-    }
-  });
-
-  const deleteBadge = useMutation({
-    mutationFn: (id: string) => api.delete(`/badge/admin/${id}`),
+    mutationFn: async (data: { name: string; description: string; iconUrl: string }) =>
+      api.post(API.BADGES.CREATE, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["badges"] });
-      toast.success("Badge deleted permanentely");
+      toast.success("Badge created");
     },
+    onError: () => toast.error("Failed to create badge"),
   });
 
-  const updateBadge = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) =>
-      api.put(`/badge/admin/${id}`, data),
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) =>
+      api.put(API.BADGES.BY_ID(id), data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["badges"] });
-      toast.success("Badge updated successfully");
+      toast.success("Badge updated");
     },
+    onError: () => toast.error("Failed to update badge"),
   });
 
-  return { badges, isLoading, deleteBadge, updateBadge, createBadge };
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => api.delete(API.BADGES.BY_ID(id)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["badges"] });
+      toast.success("Badge removed");
+    },
+    onError: () => toast.error("Failed to delete badge"),
+  });
+
+  return { badges, isLoading, createBadge, updateMutation, deleteMutation };
 };

@@ -238,7 +238,7 @@ export default function ResourceForm({
         <div className="space-y-6 bg-white p-8 border border-slate-200 rounded-sm shadow-sm">
           <div className="space-y-2">
             <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-              Price (USD)
+              Price (NPR)
             </label>
             <input
               type="number"

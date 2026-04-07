@@ -1,26 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { AppDispatch, RootState } from "@/lib/store/store";
-import { fetchPublicChallengesThunk } from "@/lib/store/features/challenge/challenge.actions";
+import { usePublicChallenges } from "@/hooks/useChallenges";
 import { FaArrowRight } from "react-icons/fa";
 import { ChallengeCard } from "./ChallengeCard";
 import LoadingSpinner from "../ui/LoadingSpinner";
 
 export const FeaturedChallenges = () => {
-  const dispatch = useDispatch<AppDispatch>();
-
-  // Accessing the 'challenge' slice based on your slice definition
-  const { items, isLoading, error } = useSelector(
-    (state: RootState) => state.challenge,
-  );
-
-  useEffect(() => {
-    // Initial fetch for the homepage/explore view
-    // Using page 1 and a small limit for the 'Featured' section
-    dispatch(fetchPublicChallengesThunk());
-  }, [dispatch]);
+  const { data: items = [], isLoading, isError } = usePublicChallenges();
 
   if (isLoading && items.length === 0) {
     return (

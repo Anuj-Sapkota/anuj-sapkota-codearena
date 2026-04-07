@@ -1,25 +1,162 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { MetricTileProps, SubmissionRecord } from "@/types/workspace.types";
+import { useEffect, useMemo, useState } from "react";
+import { SubmissionRecord } from "@/types/workspace.types";
 import { Editor } from "@monaco-editor/react";
 import { cleanError } from "@/utils/error-cleaner.util";
 import { useSelector } from "react-redux";
 import { RootState } from "@/lib/store/store";
-import { FaArrowLeft, FaCode } from "react-icons/fa";
-import { MdAccessTime, MdMemory, MdLanguage } from "react-icons/md";
-import { FiCopy, FiCheck } from "react-icons/fi";
+import { FiArrowLeft, FiCopy, FiCheck, FiClock, FiCpu } from "react-icons/fi";
+import { submissionService } from "@/lib/services/submission.service";
+
+const LANG_MAP: Record<number, string> = {
+  63: "javascript",
+  71: "python",
+  62: "java",
+  54: "cpp",
+};
+const LANG_LABEL: Record<number, string> = {
+  63: "JavaScript",
+  71: "Python",
+  62: "Java",
+  54: "C++",
+};
+
+function computePercentile(arr: number[], value: number): number {
+  if (!arr.length) return 0;
+  const beaten = arr.filter((v) => v > value).length;
+  return Math.round((beaten / arr.length) * 100);
+}
+
+function buildHistogram(
+  arr: number[],
+  buckets: number,
+): { x: number; count: number }[] {
+  if (!arr.length) return [];
+  const min = Math.min(...arr);
+  const max = Math.max(...arr);
+  if (min === max) return [{ x: min, count: arr.length }];
+  const step = (max - min) / buckets;
+  const hist = Array.from({ length: buckets }, (_, i) => ({
+    x: min + i * step + step / 2,
+    count: 0,
+  }));
+  for (const v of arr) {
+    const idx = Math.min(Math.floor((v - min) / step), buckets - 1);
+    hist[idx].count++;
+  }
+  return hist;
+}
+
+function DistributionChart({
+  values,
+  myValue,
+  unit,
+  label,
+}: {
+  values: number[];
+  myValue: number;
+  unit: string;
+  label: string;
+}) {
+  const hist = useMemo(() => buildHistogram(values, 20), [values]);
+  const percentile = useMemo(
+    () => computePercentile(values, myValue),
+    [values, myValue],
+  );
+  const maxCount = Math.max(...hist.map((b) => b.count), 1);
+  const myValueDisplay = unit === "ms" ? myValue * 1000 : myValue / 1024;
+
+  return (
+    <div className="bg-[#1a1a1a] rounded-sm p-4 space-y-3">
+      <div className="flex items-baseline justify-between">
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+          {label}
+        </p>
+        <p className="text-[11px] font-black text-emerald-400">
+          Beats{" "}
+          <span className="text-lg text-emerald-300">{percentile}%</span> of
+          submissions
+        </p>
+      </div>
+
+      <div className="flex items-end gap-px h-16">
+        {hist.map((bar, i) => {
+          const barDisplay =
+            unit === "ms" ? bar.x * 1000 : bar.x / 1024;
+          const isMyBar =
+            Math.abs(barDisplay - myValueDisplay) <=
+            (unit === "ms" ? 5 : 0.1);
+          const height = Math.max(2, Math.round((bar.count / maxCount) * 64));
+          return (
+            <div
+              key={i}
+              title={`${barDisplay.toFixed(unit === "ms" ? 0 : 1)} ${unit}: ${bar.count}`}
+              className={`flex-1 rounded-t-sm transition-all ${
+                isMyBar ? "bg-emerald-400" : "bg-slate-700"
+              }`}
+              style={{ height }}
+            />
+          );
+        })}
+      </div>
+
+      <div className="flex justify-between text-[9px] text-slate-600 font-mono">
+        <span>
+          {unit === "ms"
+            ? `${(Math.min(...values) * 1000).toFixed(0)} ms`
+            : `${(Math.min(...values) / 1024).toFixed(1)} MB`}
+        </span>
+        <span className="text-emerald-400 font-black">
+          You:{" "}
+          {unit === "ms"
+            ? `${(myValue * 1000).toFixed(0)} ms`
+            : `${(myValue / 1024).toFixed(1)} MB`}
+        </span>
+        <span>
+          {unit === "ms"
+            ? `${(Math.max(...values) * 1000).toFixed(0)} ms`
+            : `${(Math.max(...values) / 1024).toFixed(1)} MB`}
+        </span>
+      </div>
+    </div>
+  );
+}
 
 export const SubmissionDetail = ({
   submission,
   onBack,
+  problemId,
 }: {
   submission: SubmissionRecord;
   onBack: () => void;
+  problemId?: number;
 }) => {
   const isAccepted = submission.status === "ACCEPTED";
   const { output } = useSelector((state: RootState) => state.workspace);
   const [copied, setCopied] = useState(false);
+  const [stats, setStats] = useState<
+    { time: number | null; memory: number | null }[]
+  >([]);
+
+  useEffect(() => {
+    if (!isAccepted || !problemId) return;
+    submissionService
+      .getStats(String(problemId), submission.languageId)
+      .then((res) => {
+        if (res.success) setStats(res.stats);
+      })
+      .catch(() => {});
+  }, [submission.id, isAccepted, problemId, submission.languageId]);
+
+  const runtimeValues = useMemo(
+    () => stats.map((s) => s.time).filter((v): v is number => v != null),
+    [stats],
+  );
+  const memoryValues = useMemo(
+    () => stats.map((s) => s.memory).filter((v): v is number => v != null),
+    [stats],
+  );
 
   const handleCopy = () => {
     navigator.clipboard.writeText(submission.code).then(() => {
@@ -28,148 +165,144 @@ export const SubmissionDetail = ({
     });
   };
 
-  const stats = useMemo(() => {
-    if (!isAccepted) return { runtimePercent: 0, memoryPercent: 0 };
-    const seed = submission.id
-      .split("")
-      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return {
-      runtimePercent: (seed % 40) + 55,
-      memoryPercent: ((seed * 13) % 40) + 45,
-    };
-  }, [submission.id, isAccepted]);
-
-  const getLanguage = (id: number) => {
-    const languages: Record<number, string> = {
-      63: "javascript",
-      71: "python",
-      62: "java",
-      54: "cpp",
-    };
-    return languages[id] || "javascript";
+  const statusColor: Record<string, string> = {
+    ACCEPTED: "text-emerald-400",
+    WRONG_ANSWER: "text-red-400",
+    COMPILATION_ERROR: "text-amber-400",
+    RUNTIME_ERROR: "text-orange-400",
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 p-1">
-      {/* NAVIGATION */}
+    <div className="space-y-5 animate-in fade-in duration-300">
+      {/* Back */}
       <button
         onClick={onBack}
-        className="flex items-center gap-2 text-slate-400 hover:text-slate-800 transition-colors text-xs font-bold uppercase tracking-widest group cursor-pointer"
+        className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-200 transition-colors group"
       >
-        <FaArrowLeft className="transition-transform group-hover:-translate-x-1" />
-        Back to Submissions
+        <FiArrowLeft
+          size={11}
+          className="group-hover:-translate-x-0.5 transition-transform"
+        />
+        All Submissions
       </button>
 
-      {/* HEADER SECTION */}
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-3">
-          <h2
-            className={`text-3xl font-black tracking-tighter uppercase ${
-              isAccepted ? "text-emerald-600" : "text-red-500"
-            }`}
-          >
-            {submission.status.replace("_", " ")}
-          </h2>
-          {isAccepted && (
-            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+      {/* Status */}
+      <div>
+        <h2
+          className={`text-2xl font-black uppercase tracking-tight ${
+            statusColor[submission.status] ?? "text-slate-300"
+          }`}
+        >
+          {submission.status.replace(/_/g, " ")}
+        </h2>
+        <p className="text-[11px] text-slate-500 mt-0.5 font-mono">
+          {new Date(submission.createdAt).toLocaleString()} &middot;{" "}
+          {LANG_LABEL[submission.languageId] ?? "Unknown"}
+          {submission.totalPassed != null && submission.totalCases != null && (
+            <span className="ml-2 text-slate-600">
+              {submission.totalPassed}/{submission.totalCases} cases passed
+            </span>
           )}
-        </div>
-        <p className="text-[15px] text-slate-400 font-mono font-medium">
-          {new Date(submission.createdAt).toLocaleString()}
         </p>
       </div>
 
-      {/* ERROR BOX: Redesigned for better readability */}
+      {/* Error */}
       {!isAccepted && (
-        <div className="bg-red-50 border-l-4 border-red-500 rounded-r-xl p-5">
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-2 text-red-700 font-black text-xs uppercase tracking-widest">
-              <span className="bg-red-500 text-white px-2 py-0.5 rounded text-[10px]">Error</span>
-              Execution_Failure_Logs
-            </div>
-            <pre className="text-red-600 text-[13px] font-mono whitespace-pre-wrap leading-relaxed bg-white/50 p-3 rounded-lg border border-red-100">
-              {cleanError(submission.failMessage || output) ||
-                "System could not capture specific error trace."}
-            </pre>
-          </div>
+        <div className="bg-red-950/40 border border-red-800/50 rounded-sm p-4">
+          <p className="text-[9px] font-black text-red-400 uppercase tracking-widest mb-2">
+            Error Output
+          </p>
+          <pre className="text-red-300 text-[12px] font-mono whitespace-pre-wrap leading-relaxed">
+            {cleanError(
+              submission.failMessage ||
+                (typeof output === "string" ? output : ""),
+            ) || "No error details captured."}
+          </pre>
         </div>
       )}
 
-      {/* METRICS DASHBOARD */}
-      <div className="grid grid-cols-3 gap-4">
-        <MetricTile
-          icon={<MdAccessTime />}
-          label="Runtime"
-          value={isAccepted && submission.time ? `${(submission.time * 1000).toFixed(0)} ms` : "—"}
-          isAccepted={isAccepted}
-        />
-        <MetricTile
-          icon={<MdMemory />}
-          label="Memory"
-          value={isAccepted && submission.memory ? `${(submission.memory / 1024).toFixed(1)} MB` : "—"}
-          isAccepted={isAccepted}
-        />
-        <MetricTile
-          icon={<MdLanguage />}
-          label="Language"
-          value={getLanguage(submission.languageId)}
-          isAccepted={true}
-        />
-      </div>
-
-      {/* PERFORMANCE CHART */}
+      {/* Metrics */}
       {isAccepted && (
-        <div className="bg-white border-2 border-slate-100 rounded-2xl p-6 space-y-4 shadow-sm">
-          <div className="flex justify-between items-end">
-            <div className="space-y-1">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Efficiency_Report</p>
-              <p className="text-sm text-slate-700 font-medium">
-                Your solution is faster than <span className="text-emerald-600 font-black">{stats.runtimePercent}%</span> of peers
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-[#1a1a1a] rounded-sm p-4 flex items-center gap-3">
+            <FiClock size={16} className="text-emerald-400 shrink-0" />
+            <div>
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
+                Runtime
+              </p>
+              <p className="text-lg font-black text-white font-mono">
+                {submission.time != null
+                  ? `${(submission.time * 1000).toFixed(0)} ms`
+                  : "—"}
               </p>
             </div>
-            <span className="text-2xl">🚀</span>
           </div>
-          <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden p-0.5">
-            <div
-              className="h-full bg-linear-to-r from-emerald-400 to-emerald-600 rounded-full transition-all duration-1000 ease-out shadow-[0_0_12px_rgba(16,185,129,0.3)]"
-              style={{ width: `${stats.runtimePercent}%` }}
-            />
+          <div className="bg-[#1a1a1a] rounded-sm p-4 flex items-center gap-3">
+            <FiCpu size={16} className="text-blue-400 shrink-0" />
+            <div>
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
+                Memory
+              </p>
+              <p className="text-lg font-black text-white font-mono">
+                {submission.memory != null
+                  ? `${(submission.memory / 1024).toFixed(1)} MB`
+                  : "—"}
+              </p>
+            </div>
           </div>
         </div>
       )}
 
-      {/* CODE EDITOR SECTION */}
-      <div className="rounded-2xl border-2 border-slate-100 overflow-hidden bg-[#1e1e1e] shadow-xl">
-        <div className="bg-[#2d2d2d] px-5 py-3 border-b border-white/5 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <FaCode className="text-emerald-400 text-xs" />
-            <span className="text-[10px] text-gray-300 font-black uppercase tracking-widest">
-              Source_Snapshot
-            </span>
-          </div>
+      {/* Distribution charts */}
+      {isAccepted && runtimeValues.length > 1 && submission.time != null && (
+        <DistributionChart
+          values={runtimeValues}
+          myValue={submission.time}
+          unit="ms"
+          label="Runtime Distribution"
+        />
+      )}
+      {isAccepted && memoryValues.length > 1 && submission.memory != null && (
+        <DistributionChart
+          values={memoryValues}
+          myValue={submission.memory}
+          unit="MB"
+          label="Memory Distribution"
+        />
+      )}
+
+      {/* Code viewer */}
+      <div className="rounded-sm overflow-hidden border border-slate-800">
+        <div className="bg-[#252526] px-4 py-2.5 flex items-center justify-between border-b border-slate-800">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            {LANG_LABEL[submission.languageId] ?? "Code"}
+          </span>
           <button
             onClick={handleCopy}
-            className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-gray-400 hover:text-white transition-colors px-3 py-1.5 rounded-md hover:bg-white/10"
+            className="flex items-center gap-1.5 text-[10px] font-black text-slate-500 hover:text-white transition-colors"
           >
-            {copied ? <FiCheck size={12} className="text-emerald-400" /> : <FiCopy size={12} />}
-            {copied ? "Copied!" : "Copy"}
+            {copied ? (
+              <FiCheck size={11} className="text-emerald-400" />
+            ) : (
+              <FiCopy size={11} />
+            )}
+            {copied ? "Copied" : "Copy"}
           </button>
         </div>
-        <div className="h-[400px]">
+        <div className="h-80">
           <Editor
             height="100%"
-            language={getLanguage(submission.languageId)}
+            language={LANG_MAP[submission.languageId] ?? "javascript"}
             value={submission.code}
             theme="vs-dark"
             options={{
               readOnly: true,
               minimap: { enabled: false },
-              fontSize: 14,
-              fontFamily: "'Fira Code', 'Cascadia Code', monospace",
+              fontSize: 13,
+              fontFamily: "'Fira Code', monospace",
               lineNumbers: "on",
-              padding: { top: 20 },
+              padding: { top: 12 },
               scrollBeyondLastLine: false,
-              cursorStyle: "line",
               renderLineHighlight: "none",
             }}
           />
@@ -178,16 +311,3 @@ export const SubmissionDetail = ({
     </div>
   );
 };
-
-// Sub-component for clean metric tiles
-const MetricTile = ({ icon, label, value, isAccepted }: MetricTileProps) => (
-  <div className="bg-white border-2 border-slate-100 p-4 rounded-2xl flex flex-col gap-1 shadow-sm transition-hover hover:border-slate-200">
-    <div className="flex items-center gap-2 text-slate-400">
-      <span className="text-lg">{icon}</span>
-      <span className="text-[9px] font-black uppercase tracking-[0.15em]">{label}</span>
-    </div>
-    <span className={`text-lg font-black font-mono tracking-tight ${isAccepted ? 'text-slate-800' : 'text-slate-300'}`}>
-      {value}
-    </span>
-  </div>
-);

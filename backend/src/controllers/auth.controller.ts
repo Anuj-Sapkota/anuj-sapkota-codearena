@@ -11,30 +11,36 @@ import {
 import { sendResetEmail } from "../services/mail.service.js";
 
 /**
- * PRIVATE HELPER to Standardize cookie setting across all auth methods
+ * PRIVATE HELPER to Standardize cookie setting across all auth methods.
+ * Only the refreshToken goes in an httpOnly cookie.
+ * The accessToken is returned in the response body for the client to store in memory.
  */
-const _setAuthCookies = (
-  res: Response,
-  userId: number,
-  role: string,
-  token?: string,
-) => {
-  const accessToken = token || signAccessToken({ sub: userId, role });
+const _setRefreshCookie = (res: Response, userId: number) => {
   const refreshToken = signRefreshToken({ sub: userId });
 
-  res.cookie("accessToken", accessToken, {
-    httpOnly: config.cookies.httpOnly,
-    sameSite: config.cookies.sameSite,
-    secure: config.cookies.secure,
-    maxAge: config.cookies.accessMaxAge,
-  });
-
   res.cookie("refreshToken", refreshToken, {
-    httpOnly: config.cookies.httpOnly,
+    httpOnly: true,
     sameSite: config.cookies.sameSite,
     secure: config.cookies.secure,
     maxAge: config.cookies.refreshMaxAge,
+    path: "/",
   });
+
+  return refreshToken;
+};
+
+const _clearAuthCookies = (res: Response) => {
+  const options = {
+    httpOnly: true,
+    sameSite: config.cookies.sameSite,
+    secure: config.cookies.secure,
+    path: "/",
+    expires: new Date(0),
+    maxAge: 0,
+  };
+  res.cookie("refreshToken", "", options);
+  // Clear legacy accessToken cookie if present
+  res.cookie("accessToken", "", options);
 };
 
 // --- CONTROLLER METHODS ---
@@ -46,10 +52,12 @@ const registerUser = async (
 ) => {
   try {
     const data = await authService.register(req.body);
-    _setAuthCookies(res, data.user.userId, data.user.role);
+    _setRefreshCookie(res, data.user.userId);
+    const accessToken = signAccessToken({ sub: data.user.userId, role: data.user.role });
 
     res.status(201).json({
       success: true,
+      accessToken,
       user: data.user,
     });
   } catch (err) {
@@ -64,9 +72,12 @@ const loginUser = async (
 ) => {
   try {
     const data = await authService.login(req.body);
-    _setAuthCookies(res, data.user.userId, data.user.role);
+    _setRefreshCookie(res, data.user.userId);
+    const accessToken = signAccessToken({ sub: data.user.userId, role: data.user.role });
+
     res.status(200).json({
       success: true,
+      accessToken,
       user: data.user,
     });
   } catch (err) {
@@ -81,15 +92,17 @@ const refreshToken = async (
 ) => {
   try {
     const token = req.cookies.refreshToken;
-    if (!token) throw new ServiceError("No Refresh token found", 401);
+    if (!token) throw new ServiceError("No refresh token found", 401);
 
     const payload = verifyRefreshToken(token);
     const data = await authService.getUserByUserID(Number(payload.sub));
 
-    _setAuthCookies(res, data.user.userId, data.user.role);
+    // Issue a fresh access token — return it in the body, not a cookie
+    const accessToken = signAccessToken({ sub: data.user.userId, role: data.user.role });
 
     res.status(200).json({
       success: true,
+      accessToken,
       user: data.user,
     });
   } catch (err) {
@@ -99,18 +112,7 @@ const refreshToken = async (
 
 const logoutUser = (req: Request, res: Response, next: NextFunction) => {
   try {
-    const options = {
-      httpOnly: config.cookies.httpOnly,
-      sameSite: config.cookies.sameSite,
-      secure: config.cookies.secure,
-      path: "/",
-      expires: new Date(0), // Jan 1, 1970
-      maxAge: 0,
-    };
-
-    res.cookie("accessToken", "", options);
-    res.cookie("refreshToken", "", options);
-
+    _clearAuthCookies(res);
     res.status(200).json({ message: "Logged out successfully" });
   } catch (err) {
     next(err);
@@ -121,9 +123,28 @@ const oauthSignIn = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userData = req.user as AuthUser;
 
-    _setAuthCookies(res, userData.user.userId, userData.user.role);
+    _setRefreshCookie(res, userData.user.userId);
+    const accessToken = signAccessToken({ sub: userData.user.userId, role: userData.user.role });
 
-    const redirectUrl = `${config.frontendUrl}/settings/accounts-security?status=success`; //redirection after signing from OAuth
+    // Decode the state param to determine if this was an account-linking flow
+    // (initiated from settings by an already-logged-in user) or a fresh login.
+    const rawState = (req.query.state as string) || "";
+    let isLinking = false;
+    if (rawState) {
+      try {
+        const decoded = JSON.parse(Buffer.from(rawState, "base64").toString("utf-8"));
+        isLinking = !!decoded.userId;
+      } catch {
+        // malformed state — treat as fresh login
+      }
+    }
+
+    const redirectUrl = isLinking
+      ? `${config.frontendUrl}/settings/accounts-security?status=success&token=${accessToken}`
+      : userData.user.role === "ADMIN"
+        ? `${config.frontendUrl}/admin?token=${accessToken}`
+        : `${config.frontendUrl}/explore?token=${accessToken}`;
+
     res.redirect(redirectUrl);
   } catch (err) {
     next(err);
@@ -237,8 +258,7 @@ const deleteAccount = async (
 
     await authService.deleteUserAccount(Number(userId), password);
 
-    // Clear the auth cookie if you are using cookies
-    res.clearCookie("accessToken");
+    _clearAuthCookies(res);
 
     res.status(200).json({
       success: true,

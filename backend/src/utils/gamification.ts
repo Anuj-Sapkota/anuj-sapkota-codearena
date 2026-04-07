@@ -1,6 +1,4 @@
-import { PrismaClient } from '../../generated/prisma/client.js'
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma.js'
 
 export const handleUserActivity = async (userId: number, problemId: number, difficulty: string) => {
   // 1. Define XP based on difficulty

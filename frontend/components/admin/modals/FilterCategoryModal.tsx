@@ -1,106 +1,109 @@
 "use client";
 
-import Modal from "@/components/ui/Modal";
-import { FormLabel } from "@/components/ui/Form";
-import { FaFilter, FaUndo } from "react-icons/fa";
+import { FiX, FiRotateCcw, FiCheck } from "react-icons/fi";
 
-// Defining the specific types for the union to avoid overlap issues
 type SortOption = "name_asc" | "name_desc" | "problems_high" | "problems_low";
 type ActivityFilter = "all" | "yes" | "no";
 
-interface FilterState {
-  sortBy: SortOption;
-  hasProblems: ActivityFilter;
-}
+interface FilterState { sortBy: SortOption; hasProblems: ActivityFilter; }
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   filters: FilterState;
-  setFilters: (filters: FilterState) => void;
+  setFilters: (f: FilterState) => void;
 }
 
-export default function CategoryFilterModal({ isOpen, onClose, filters, setFilters }: Props) {
-  const resetFilters = () => {
-    setFilters({ sortBy: "name_asc", hasProblems: "all" });
-  };
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: "name_asc",       label: "Name (A → Z)" },
+  { value: "name_desc",      label: "Name (Z → A)" },
+  { value: "problems_high",  label: "Most problems first" },
+  { value: "problems_low",   label: "Least problems first" },
+];
 
-  // Using 'as const' here makes TypeScript treat the IDs as literals, not generic strings
-  const activityOptions = [
-    { id: "all", label: "Show All Categories" },
-    { id: "yes", label: "Only Active (Has Problems)" },
-    { id: "no", label: "Only Empty Categories" },
-  ] as const;
+const ACTIVITY_OPTIONS: { id: ActivityFilter; label: string }[] = [
+  { id: "all", label: "All categories" },
+  { id: "yes", label: "Has problems" },
+  { id: "no",  label: "Empty categories" },
+];
+
+export default function CategoryFilterModal({ isOpen, onClose, filters, setFilters }: Props) {
+  if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
-      <div className="p-8 space-y-8">
-        {/* Header */}
-        <div className="border-b-2 border-gray-100 pb-4 flex items-center justify-between">
-          <div>
-            <h3 className="text-xl font-black text-darkest uppercase tracking-tight">Filter Records</h3>
-            <p className="text-[10px] font-bold text-muted uppercase tracking-widest mt-1">Refine taxonomy results</p>
-          </div>
-          <FaFilter className="text-primary-1" size={20} />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+      onClick={(e) => e.currentTarget === e.target && onClose()}>
+      <div className="bg-white w-full max-w-sm rounded-sm shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-200">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Filters</h3>
+          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-sm text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-all">
+            <FiX size={14} />
+          </button>
         </div>
 
-        <div className="space-y-6">
-          {/* Sorting Option */}
-          <div className="space-y-2">
-            <FormLabel>Sort</FormLabel>
-            <select 
-              value={filters.sortBy}
-              // Cast the value directly to our SortOption type
-              onChange={(e) => setFilters({ ...filters, sortBy: e.target.value as SortOption })}
-              className="w-full bg-white border-2 border-gray-200 rounded-md p-3 text-xs font-black uppercase tracking-widest cursor-pointer outline-none focus:border-primary-1 transition-colors"
-            >
-              <option value="name_asc">Name (A-Z)</option>
-              <option value="name_desc">Name (Z-A)</option>
-              <option value="problems_high">Most Problems First</option>
-              <option value="problems_low">Least Problems First</option>
-            </select>
-          </div>
-
-          {/* Problem Count Filter */}
-          <div className="space-y-2">
-            <FormLabel>Activity Level</FormLabel>
-            <div className="grid grid-cols-1 gap-2">
-              {activityOptions.map((opt) => (
+        <div className="p-6 space-y-5">
+          {/* Sort */}
+          <div>
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Sort by</p>
+            <div className="space-y-1">
+              {SORT_OPTIONS.map((o) => (
                 <button
-                  key={opt.id}
+                  key={o.value}
                   type="button"
-                  onClick={() => setFilters({ ...filters, hasProblems: opt.id })}
-                  className={`text-left px-4 py-3 border-2 rounded-md text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${
-                    filters.hasProblems === opt.id 
-                    ? "border-primary-1 bg-primary-1/5 text-primary-1" 
-                    : "border-gray-200 text-muted hover:border-gray-300"
+                  onClick={() => setFilters({ ...filters, sortBy: o.value })}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-sm border-2 text-[11px] font-bold transition-all ${
+                    filters.sortBy === o.value
+                      ? "border-slate-900 bg-slate-900 text-white"
+                      : "border-slate-100 text-slate-600 hover:border-slate-300"
                   }`}
                 >
-                  {opt.label}
+                  {o.label}
+                  {filters.sortBy === o.value && <FiCheck size={11} />}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Activity */}
+          <div>
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Activity</p>
+            <div className="space-y-1">
+              {ACTIVITY_OPTIONS.map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  onClick={() => setFilters({ ...filters, hasProblems: o.id })}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-sm border-2 text-[11px] font-bold transition-all ${
+                    filters.hasProblems === o.id
+                      ? "border-slate-900 bg-slate-900 text-white"
+                      : "border-slate-100 text-slate-600 hover:border-slate-300"
+                  }`}
+                >
+                  {o.label}
+                  {filters.hasProblems === o.id && <FiCheck size={11} />}
                 </button>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Footer Actions */}
-        <div className="flex items-center justify-between pt-4 border-t-2 border-gray-100">
-          <button 
+        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100">
+          <button
             type="button"
-            onClick={resetFilters}
-            className="flex items-center gap-2 text-muted font-black text-[10px] uppercase tracking-widest hover:text-darkest cursor-pointer transition-colors"
+            onClick={() => setFilters({ sortBy: "name_asc", hasProblems: "all" })}
+            className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors"
           >
-            <FaUndo size={10} /> Reset Filters
+            <FiRotateCcw size={11} /> Reset
           </button>
-          <button 
+          <button
             type="button"
             onClick={onClose}
-            className="bg-darkest text-white px-8 py-3 rounded-md font-black uppercase text-[10px] tracking-widest hover:bg-gray-800 cursor-pointer active:scale-95 transition-all shadow-lg shadow-darkest/10"
+            className="bg-slate-900 text-white px-5 py-2.5 rounded-sm text-[10px] font-black uppercase tracking-widest hover:bg-primary-1 transition-all active:scale-95"
           >
-            Apply Filters
+            Apply
           </button>
         </div>
       </div>
-    </Modal>
+    </div>
   );
 }

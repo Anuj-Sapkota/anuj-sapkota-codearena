@@ -1,6 +1,5 @@
-"use client";
-
-import api from "../api";
+import api from "@/lib/api";
+import { API } from "@/constants/api.constants";
 
 export const submissionService = {
   submitCode: async (
@@ -10,21 +9,25 @@ export const submissionService = {
     isFinal: boolean = false,
     challengeSlug: string | null,
   ) => {
-
-    console.log("Challenge id from frontend -submission service: ", challengeSlug)
-    const response = await api.post("/submissions/submit", {
+    const response = await api.post(`${API.SUBMISSIONS.BASE}/submit`, {
       source_code: sourceCode,
       language_id: langId,
       problemId,
       isFinal,
-      challengeSlug, 
+      challengeSlug,
     });
-
     return response.data;
   },
 
   getHistory: async (problemId: string) => {
-    const response = await api.get(`/submissions/history/${problemId}`);
+    const response = await api.get(API.SUBMISSIONS.HISTORY(problemId));
     return response.data;
+  },
+
+  getStats: async (problemId: string, languageId?: number) => {
+    const response = await api.get(API.SUBMISSIONS.STATS(problemId), {
+      params: languageId ? { languageId } : undefined,
+    });
+    return response.data; // { success, stats: [{ time, memory }] }
   },
 };

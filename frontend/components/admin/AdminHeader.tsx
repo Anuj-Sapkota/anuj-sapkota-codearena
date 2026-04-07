@@ -1,50 +1,55 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useSelector } from "react-redux";
+import { RootState } from "@/lib/store/store";
+import Image from "next/image";
+import { FiChevronRight } from "react-icons/fi";
+
+const PAGE_LABELS: Record<string, string> = {
+  admin:       "Dashboard",
+  problems:    "Problems",
+  challenges:  "Challenges",
+  categories:  "Categories",
+  badges:      "Badges",
+  moderation:  "Moderation",
+  application: "Applications",
+  users:       "Users",
+};
 
 export default function AdminHeader() {
   const pathname = usePathname();
+  const { user } = useSelector((state: RootState) => state.auth);
 
-  // 1. Split path and remove empty strings
-  // Example: /admin/categories -> ["admin", "categories"]
-  const pathParts = pathname.split("/").filter(Boolean);
+  const parts = pathname.split("/").filter(Boolean);
+  // parts[0] = "admin", parts[1] = section (optional)
+  const section = parts[1];
+  const pageLabel = section ? (PAGE_LABELS[section] ?? section) : "Dashboard";
 
-  // 2. Identify the "Context" (usually the first part after /admin) and the "Current Page"
-  // If the path is just /admin, we'll default to "Dashboard"
-  const context = pathParts.length > 1 ? pathParts[0] : "System";
-  const rawTitle = pathParts[pathParts.length - 1] || "Dashboard";
-
-  // 3. Format the title (e.g., "problem-sets" -> "Problem Sets")
-  const pageTitle = rawTitle
-    .replace(/-/g, " ")
-    .replace(/\b\w/g, (char: string) => char.toUpperCase());
-
-  const contextTitle = context
-    .replace(/-/g, " ")
-    .replace(/\b\w/g, (char: string) => char.toUpperCase());
+  const profilePic = user?.profile_pic_url ||
+    `https://api.dicebear.com/7.x/initials/svg?seed=${user?.full_name || "A"}`;
 
   return (
-    <div className="flex w-full items-center justify-between px-6">
-      <div className="flex items-center gap-2">
-        <div className="h-6 w-1 bg-indigo-600 rounded-full" /> {/* Accent bar */}
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-          {contextTitle}
-        </span>
-        <span className="text-slate-300">/</span>
-        <span className="text-xs font-bold text-slate-900 tracking-tight">
-          {pageTitle}
-        </span>
+    <div className="flex w-full items-center justify-between">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest">
+        <span className="text-slate-400">Admin</span>
+        {section && (
+          <>
+            <FiChevronRight size={10} className="text-slate-300" />
+            <span className="text-slate-900">{pageLabel}</span>
+          </>
+        )}
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="flex flex-col items-end">
-          <span className="text-xs font-bold text-slate-900">Anuj Sapkota</span>
-          <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-tighter bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">
-            Internal Admin
-          </span>
+      {/* Right side — user info */}
+      <div className="flex items-center gap-3">
+        <div className="text-right hidden sm:block">
+          <p className="text-[11px] font-black text-slate-900 leading-none">{user?.full_name || "Admin"}</p>
+          <p className="text-[9px] font-bold text-primary-1 uppercase tracking-widest mt-0.5">Administrator</p>
         </div>
-        <div className="h-9 w-9 bg-slate-900 ring-2 ring-indigo-100 rounded-lg flex items-center justify-center text-xs font-bold text-white">
-          AS
+        <div className="w-8 h-8 rounded-sm overflow-hidden border-2 border-slate-200 relative shrink-0">
+          <Image src={profilePic} alt="avatar" fill className="object-cover" />
         </div>
       </div>
     </div>

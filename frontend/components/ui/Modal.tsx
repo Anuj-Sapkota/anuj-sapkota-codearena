@@ -1,41 +1,38 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { FaCross } from 'react-icons/fa';
+import { FiX } from 'react-icons/fi';
 
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   children: React.ReactNode;
+  maxWidth?: string;
 }
 
-export default function Modal({ isOpen, onClose, children }: ModalProps) {
+export default function Modal({ isOpen, onClose, children, maxWidth = "max-w-md" }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
 
-  // Close on Escape key
   useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleEsc);
+    const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    if (isOpen) window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, [onClose]);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
   return (
-    <div 
-      className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
-      onClick={(e) => e.target === overlayRef.current && onClose()} // Close on outside click
+    <div
       ref={overlayRef}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+      onClick={(e) => e.target === overlayRef.current && onClose()}
     >
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-in zoom-in-95 duration-200">
-        {/* Close Button */}
-        <button 
+      <div className={`relative bg-white rounded-sm shadow-2xl w-full ${maxWidth} mx-4 overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200`}>
+        <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+          className="absolute top-4 right-4 z-10 w-7 h-7 flex items-center justify-center rounded-sm text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-all"
         >
-          <FaCross/>
+          <FiX size={15} />
         </button>
         {children}
       </div>

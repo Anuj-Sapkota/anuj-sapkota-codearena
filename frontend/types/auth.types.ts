@@ -13,8 +13,11 @@ export interface UserProfile {
   profile_pic_url?: string | null;
   google_id?: string | null;
   github_id?: string | null;
+  xp?: number;
+  level?: number;
+  streak?: number;
   creatorProfile?: {
-    rejectionReason?: string | null;
+    rejectionReason?: string | null;  
     portfolioUrl?: string | null;
     githubUrl?: string | null;
   } | null;
@@ -23,6 +26,7 @@ export interface UserProfile {
 export interface AuthUser {
   user: UserProfile;
   token: string;
+  accessToken?: string;
 }
 export interface LoginCredentials {
   emailOrUsername: string;
@@ -54,8 +58,9 @@ export interface TurnstileWidgetProps {
 export interface AuthState {
   user: UserProfile | null;
   isAuthenticated: boolean;
-  isLoading: boolean; // 👈 Track loading status
-  error: string | null; // 👈 Track error messages
+  isLoading: boolean;
+  isHydrated: boolean;
+  error: string | null;
 }
 // interface for modal forms
 export interface AuthModalProps {

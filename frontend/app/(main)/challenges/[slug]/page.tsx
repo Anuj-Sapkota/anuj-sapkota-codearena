@@ -1,10 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useDispatch, useSelector } from "react-redux";
-import { AppDispatch, RootState } from "@/lib/store/store";
-import { fetchChallengeBySlugThunk } from "@/lib/store/features/challenge/challenge.actions";
+import { useChallengeBySlug } from "@/hooks/useChallenges";
 import {
   FiArrowLeft, FiClock, FiAward, FiCheckCircle,
   FiChevronRight, FiLock, FiZap, FiLoader,
@@ -41,12 +38,7 @@ function Countdown({ endTime }: { endTime?: string | Date }) {
 export default function ChallengeDetailsPage() {
   const { slug } = useParams();
   const router = useRouter();
-  const dispatch = useDispatch<AppDispatch>();
-  const { currentChallenge, isLoading, error } = useSelector((state: RootState) => state.challenge);
-
-  useEffect(() => {
-    if (slug) dispatch(fetchChallengeBySlugThunk(slug as string));
-  }, [dispatch, slug]);
+  const { data: currentChallenge, isLoading, isError } = useChallengeBySlug(slug as string);
 
   if (isLoading) return (
     <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
@@ -54,7 +46,7 @@ export default function ChallengeDetailsPage() {
     </div>
   );
 
-  if (error || !currentChallenge) return (
+  if (isError || !currentChallenge) return (
     <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center text-center p-10">
       <div>
         <p className="text-slate-400 font-bold uppercase text-sm tracking-widest">Challenge not found</p>

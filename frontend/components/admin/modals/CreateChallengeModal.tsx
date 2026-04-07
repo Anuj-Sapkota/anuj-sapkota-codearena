@@ -1,38 +1,28 @@
 "use client";
 
-import { useEffect, useState, ChangeEvent } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { AppDispatch, RootState } from "@/lib/store/store";
-import {
-  createChallengeThunk,
-  updateChallengeThunk,
-} from "@/lib/store/features/challenge/challenge.actions";
-import { Challenge, CreateChallengeDTO } from "@/types/challenge.types";
-import { Problem } from "@/types/problem.types";
-import {
-  FaSearch,
-  FaTimes,
-  FaGlobe,
-  FaCheck,
-  FaSpinner,
-  FaTrophy,
-  FaChartBar,
-} from "react-icons/fa";
-import {
-  FormLabel,
-  FormInput,
-  FormTextarea,
-  FormButton,
-} from "@/components/ui/Form";
+import { FiX, FiSearch, FiCheck, FiSave, FiZap } from "react-icons/fi";
+import { LuSwords } from "react-icons/lu";
 import { toast } from "sonner";
+import { Challenge, CreateChallengeDTO } from "@/types/challenge.types";
+import { useCreateChallenge, useUpdateChallenge } from "@/hooks/useChallenges";
+import { useProblems } from "@/hooks/useProblems";
 
-// Convert a UTC ISO string to the local datetime-local input format (YYYY-MM-DDTHH:mm)
-function toLocalDatetimeInput(isoString: string): string {
-  const d = new Date(isoString);
+function toLocalDatetimeInput(iso: string) {
+  const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
+
+const fieldClass = "w-full border-2 border-slate-200 rounded-sm px-4 py-2.5 text-sm font-medium text-slate-900 bg-white outline-none focus:border-slate-900 transition-colors";
+const labelClass = "text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-1.5";
+
+const DIFF_COLORS: Record<string, string> = {
+  EASY:   "text-emerald-600 bg-emerald-50 border-emerald-100",
+  MEDIUM: "text-amber-600   bg-amber-50   border-amber-100",
+  HARD:   "text-rose-600    bg-rose-50    border-rose-100",
+};
 
 interface Props {
   isOpen: boolean;
@@ -40,351 +30,232 @@ interface Props {
   editData?: Challenge | null;
 }
 
-export default function CreateChallengeModal({
-  isOpen,
-  onClose,
-  editData,
-}: Props) {
-  const dispatch = useDispatch<AppDispatch>();
-  const { isLoading } = useSelector((state: RootState) => state.challenge);
-  const { problems: allProblems, isLoading: isLoadingProblems } = useSelector(
-    (state: RootState) => state.problem,
-  );
+export default function CreateChallengeModal({ isOpen, onClose, editData }: Props) {
+  const createChallenge = useCreateChallenge();
+  const updateChallenge = useUpdateChallenge();
+  const isLoading = createChallenge.isPending || updateChallenge.isPending;
 
-  const [problemSearch, setProblemSearch] = useState<string>("");
+  const { data: problemsData } = useProblems({ page: 1, limit: 100 });
+  const allProblems = problemsData?.data ?? [];
+  const [problemSearch, setProblemSearch] = useState("");
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    control,
-    reset,
-    formState: { errors },
-  } = useForm<CreateChallengeDTO>({
-    defaultValues: {
-      title: "",
-      slug: "",
-      description: "",
-      isPublic: false,
-      difficulty: "MEDIUM", // New Default
-      points: 100, // New Default
-      startTime: "",
-      endTime: "",
-      problemIds: [],
-    },
-  });
+  const { register, handleSubmit, setValue, control, reset, formState: { errors } } =
+    useForm<CreateChallengeDTO>({
+      defaultValues: {
+        title: "", slug: "", description: "",
+        isPublic: false, difficulty: "MEDIUM", points: 100,
+        startTime: "", endTime: "", problemIds: [],
+      },
+    });
 
-  const selectedProblemIds = useWatch({ control, name: "problemIds" }) || [];
+  const selectedIds = useWatch({ control, name: "problemIds" }) || [];
+  const titleWatch = useWatch({ control, name: "title" });
 
-  // SYNC FORM WITH EDIT DATA
   useEffect(() => {
-    if (isOpen) {
-      if (editData) {
-        const linkedIds =
-          editData.problems?.map((p: any) => Number(p.problemId)) || [];
-
-        reset({
-          title: editData.title,
-          slug: editData.slug,
-          description: editData.description || "",
-          isPublic: editData.isPublic,
-          difficulty: editData.difficulty || "MEDIUM",
-          points: editData.points || 100,
-          // Convert UTC ISO string back to local datetime-local format
-          startTime: editData.startTime
-            ? toLocalDatetimeInput(editData.startTime)
-            : "",
-          endTime: editData.endTime
-            ? toLocalDatetimeInput(editData.endTime)
-            : "",
-          problemIds: linkedIds,
-        });
-      } else {
-        reset({
-          title: "",
-          slug: "",
-          description: "",
-          isPublic: false,
-          difficulty: "MEDIUM",
-          points: 100,
-          startTime: "",
-          endTime: "",
-          problemIds: [],
-        });
-      }
+    if (!isOpen) return;
+    if (editData) {
+      const linkedIds = editData.problems?.map((p: any) => Number(p.problemId)) || [];
+      reset({
+        title: editData.title,
+        slug: editData.slug,
+        description: editData.description || "",
+        isPublic: editData.isPublic,
+        difficulty: editData.difficulty || "MEDIUM",
+        points: editData.points || 100,
+        startTime: editData.startTime ? toLocalDatetimeInput(editData.startTime) : "",
+        endTime: editData.endTime ? toLocalDatetimeInput(editData.endTime) : "",
+        problemIds: linkedIds,
+      });
+    } else {
+      reset({ title: "", slug: "", description: "", isPublic: false, difficulty: "MEDIUM", points: 100, startTime: "", endTime: "", problemIds: [] });
     }
   }, [editData, reset, isOpen]);
 
-  const challengeTitle = useWatch({ control, name: "title" });
-
   useEffect(() => {
-    if (!editData && challengeTitle) {
-      const slug = challengeTitle
-        .toLowerCase()
-        .trim()
-        .replace(/\s+/g, "-")
-        .replace(/[^\w-]+/g, "");
-      setValue("slug", slug, { shouldValidate: true });
+    if (!editData && titleWatch) {
+      setValue("slug", titleWatch.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^\w-]+/g, ""));
     }
-  }, [challengeTitle, setValue, editData]);
+  }, [titleWatch, setValue, editData]);
+
+  const toggleProblem = (id: number) => {
+    const next = selectedIds.includes(id)
+      ? selectedIds.filter((x: number) => x !== id)
+      : [...selectedIds, id];
+    setValue("problemIds", next, { shouldDirty: true });
+  };
+
+  const onSubmit = (data: CreateChallengeDTO) => {
+    const payload = {
+      ...data,
+      points: Number(data.points),
+      isPublic: String(data.isPublic) === "true",
+      startTime: data.startTime || undefined,
+      endTime: data.endTime || undefined,
+    };
+    if (editData) {
+      updateChallenge.mutate({ id: Number(editData.challengeId), data: payload }, {
+        onSuccess: () => { toast.success("Challenge updated"); onClose(); },
+      });
+    } else {
+      createChallenge.mutate(payload as any, {
+        onSuccess: () => { toast.success("Challenge created"); onClose(); },
+      });
+    }
+  };
 
   if (!isOpen) return null;
 
-  const toggleProblem = (id: number): void => {
-    const current = [...selectedProblemIds];
-    const idx = current.indexOf(id);
-    if (idx > -1) {
-      current.splice(idx, 1);
-    } else {
-      current.push(id);
-    }
-    setValue("problemIds", current, {
-      shouldDirty: true,
-      shouldValidate: true,
-    });
-  };
-
-  const onSubmit = async (data: CreateChallengeDTO) => {
-    try {
-      // Fix: send datetime strings directly — backend converts once.
-      // Do NOT do new Date() here — that applies local timezone offset twice.
-      const payload = {
-        ...data,
-        points: Number(data.points),
-        isPublic: String(data.isPublic) === "true",
-        startTime: data.startTime || undefined,
-        endTime: data.endTime || undefined,
-      };
-
-      let result;
-      if (editData) {
-        result = await dispatch(
-          updateChallengeThunk({
-            id: Number(editData.challengeId),
-            data: payload,
-          }),
-        );
-      } else {
-        result = await dispatch(createChallengeThunk(payload));
-      }
-
-      if (
-        updateChallengeThunk.fulfilled.match(result) ||
-        createChallengeThunk.fulfilled.match(result)
-      ) {
-        toast.success(editData ? "CHALLENGE_UPDATED" : "CHALLENGE_CREATED");
-        onClose();
-      }
-    } catch (error) {
-      toast.error("CRITICAL_SYSTEM_ERROR");
-    }
-  };
+  const filtered = allProblems.filter((p) =>
+    p.title.toLowerCase().includes(problemSearch.toLowerCase())
+  );
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
-      <div className="bg-white w-full max-w-4xl h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden border-2 border-gray-100">
-        <div className="p-6 border-b flex justify-between items-center bg-gray-50/50">
-          <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tighter italic">
-            {editData ? "Challenge_Edit" : "Challenge_New"}
-            <span className="text-primary-1">.</span>
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-900 transition-all"
-          >
-            <FaTimes size={20} />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-3xl h-[88vh] rounded-sm shadow-2xl flex flex-col overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
+          <div>
+            <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest">
+              {editData ? "Edit Challenge" : "New Challenge"}
+            </h2>
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+              {editData ? `Editing: ${editData.title}` : "Create a new contest"}
+            </p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-sm text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-all">
+            <FiX size={16} />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar">
-          <form
-            id="challenge-form"
-            onSubmit={handleSubmit(onSubmit)}
-            className="space-y-10"
-          >
-            {/* Title and Slug */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-1">
-                <FormLabel>Contest Title</FormLabel>
-                <FormInput
-                  placeholder="e.g. Weekly Duel #4"
-                  register={register("title", { required: "Title required" })}
-                  error={errors.title?.message}
-                />
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+          <form id="challenge-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+
+            {/* Title + Slug */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className={labelClass}>Title</label>
+                <input {...register("title", { required: "Required" })} className={fieldClass} placeholder="e.g. Weekly Duel #4" />
+                {errors.title && <p className="text-[9px] text-rose-500 mt-1">{errors.title.message}</p>}
               </div>
-              <div className="space-y-1">
-                <FormLabel>URL Slug</FormLabel>
-                <FormInput
-                  placeholder="weekly-duel-4"
-                  register={register("slug", { required: "Slug required" })}
-                  error={errors.slug?.message}
-                />
+              <div>
+                <label className={labelClass}>URL Slug</label>
+                <input {...register("slug", { required: "Required" })} className={fieldClass + " font-mono"} placeholder="weekly-duel-4" />
+                {errors.slug && <p className="text-[9px] text-rose-500 mt-1">{errors.slug.message}</p>}
               </div>
             </div>
 
-            {/* Difficulty and Points - NEW SECTION */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-primary-1/5 border-2 border-primary-1/10 rounded-xl">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-primary-1 mb-1">
-                  <FaChartBar size={12} />
-                  <FormLabel>Difficulty_Level</FormLabel>
-                </div>
-                <select
-                  {...register("difficulty", { required: true })}
-                  className="w-full h-[45px] bg-white border-2 border-gray-200 rounded-lg px-3 text-[10px] font-black uppercase outline-none focus:border-primary-1"
-                >
-                  <option value="EASY">EASY</option>
-                  <option value="MEDIUM">MEDIUM</option>
-                  <option value="HARD">HARD</option>
+            {/* Difficulty + Points */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-5 bg-slate-50 border-2 border-slate-100 rounded-sm">
+              <div>
+                <label className={labelClass}>Difficulty</label>
+                <select {...register("difficulty")} className={fieldClass + " cursor-pointer"}>
+                  <option value="EASY">Easy</option>
+                  <option value="MEDIUM">Medium</option>
+                  <option value="HARD">Hard</option>
                 </select>
               </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-primary-1 mb-1">
-                  <FaTrophy size={12} />
-                  <FormLabel>Completion Bonus Points</FormLabel>
-                </div>
-                <FormInput
-                  type="number"
-                  placeholder="e.g. 500"
-                  register={register("points", {
-                    required: "Points required",
-                    min: 0,
-                  })}
-                  error={errors.points?.message}
-                />
-                <p className="text-[9px] text-gray-400 italic">
-                  Bonus XP awarded when a user solves ALL problems in this challenge. Individual problems also award their own points.
-                </p>
+              <div>
+                <label className={labelClass}>Completion Bonus (XP)</label>
+                <input type="number" min={0} {...register("points")} className={fieldClass} placeholder="100" />
+                <p className="text-[9px] text-slate-400 mt-1">Bonus XP when all problems are solved.</p>
               </div>
             </div>
 
-            <div className="space-y-1">
-              <FormLabel>Description</FormLabel>
-              <FormTextarea
-                placeholder="Contest rules and info..."
-                register={register("description")}
-              />
+            {/* Description */}
+            <div>
+              <label className={labelClass}>Description</label>
+              <textarea {...register("description")} rows={3} className={fieldClass + " resize-none"} placeholder="Contest rules and info..." />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 bg-gray-50 border-2 border-gray-100 rounded-xl">
-              <div className="space-y-1">
-                <FormLabel>Start_Time</FormLabel>
-                <input
-                  type="datetime-local"
-                  {...register("startTime")}
-                  className="w-full bg-white border-2 border-gray-200 rounded-lg py-2.5 px-3 text-xs font-bold outline-none focus:border-primary-1"
-                />
+            {/* Schedule + Visibility */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 p-5 bg-slate-50 border-2 border-slate-100 rounded-sm">
+              <div>
+                <label className={labelClass}>Start Time</label>
+                <input type="datetime-local" {...register("startTime")} className={fieldClass} />
               </div>
-              <div className="space-y-1">
-                <FormLabel>End_Time</FormLabel>
-                <input
-                  type="datetime-local"
-                  {...register("endTime")}
-                  className="w-full bg-white border-2 border-gray-200 rounded-lg py-2.5 px-3 text-xs font-bold outline-none focus:border-primary-1"
-                />
+              <div>
+                <label className={labelClass}>End Time</label>
+                <input type="datetime-local" {...register("endTime")} className={fieldClass} />
               </div>
-              <div className="space-y-1">
-                <FormLabel>Visibility</FormLabel>
-                <select
-                  {...register("isPublic")}
-                  className="w-full h-[45px] bg-white border-2 border-gray-200 rounded-lg px-3 text-[10px] font-black uppercase outline-none focus:border-primary-1"
-                >
-                  <option value="false">Status: Draft</option>
-                  <option value="true">Status: Public</option>
+              <div>
+                <label className={labelClass}>Visibility</label>
+                <select {...register("isPublic")} className={fieldClass + " cursor-pointer"}>
+                  <option value="false">Draft</option>
+                  <option value="true">Public</option>
                 </select>
               </div>
             </div>
 
-            {/* Problem Selection */}
-            <div className="space-y-6">
-              <div className="flex items-center justify-between border-b pb-4">
-                <div className="flex items-center gap-2 text-primary-1">
-                  <FaGlobe size={14} />
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em]">
-                    03. Problem_Selection ({selectedProblemIds.length})
-                  </span>
-                </div>
-                <div className="relative w-64">
-                  <FaSearch
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
-                    size={12}
-                  />
+            {/* Problem selection */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className={labelClass}>
+                  Problems — {selectedIds.length} selected
+                </label>
+                <div className="relative w-56">
+                  <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={12} />
                   <input
                     type="text"
-                    placeholder="SEARCH_REPOSITORY..."
-                    className="w-full border-b-2 border-gray-200 py-1 pl-10 text-[10px] font-black uppercase outline-none focus:border-primary-1 transition-all"
+                    placeholder="Search..."
                     value={problemSearch}
                     onChange={(e) => setProblemSearch(e.target.value)}
+                    className="w-full border-2 border-slate-200 rounded-sm py-1.5 pl-8 pr-3 text-xs font-medium outline-none focus:border-slate-900 transition-colors"
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-80 overflow-y-auto custom-scrollbar p-1">
-                {isLoadingProblems ? (
-                  <div className="col-span-2 py-12 flex flex-col items-center justify-center opacity-60">
-                    <FaSpinner
-                      className="animate-spin text-primary-1 mb-2"
-                      size={24}
-                    />
-                    <span className="text-[10px] font-black uppercase tracking-widest">
-                      Syncing_Global_Registry...
-                    </span>
-                  </div>
-                ) : (
-                  allProblems
-                    ?.filter((p) =>
-                      p.title
-                        .toLowerCase()
-                        .includes(problemSearch.toLowerCase()),
-                    )
-                    .map((problem) => {
-                      const isSelected = selectedProblemIds.includes(
-                        problem.problemId,
-                      );
-                      return (
-                        <div
-                          key={problem.problemId}
-                          onClick={() => toggleProblem(problem.problemId)}
-                          className={`group relative flex items-center justify-between p-4 h-16 rounded-xl border-2 cursor-pointer transition-all duration-200 ${isSelected ? "border-primary-1 bg-primary-1/5 shadow-sm" : "border-gray-100 bg-white hover:border-gray-300 hover:shadow-md"}`}
-                        >
-                          <div className="flex items-center gap-3 overflow-hidden">
-                            <div
-                              className={`flex-shrink-0 h-5 w-5 rounded border-2 flex items-center justify-center transition-all ${isSelected ? "bg-primary-1 border-primary-1 text-white" : "bg-white border-gray-200 group-hover:border-gray-400"}`}
-                            >
-                              {isSelected && <FaCheck size={8} />}
-                            </div>
-                            <span
-                              className={`text-[11px] font-bold uppercase tracking-tight truncate ${isSelected ? "text-primary-1" : "text-gray-700"}`}
-                            >
-                              {problem.title}
-                            </span>
-                          </div>
-                          <span
-                            className={`flex-shrink-0 ml-2 px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-tighter ${problem.difficulty === "HARD" ? "bg-red-50 text-red-600" : problem.difficulty === "MEDIUM" ? "bg-amber-50 text-amber-600" : "bg-emerald-50 text-emerald-600"}`}
-                          >
-                            {problem.difficulty}
-                          </span>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1">
+                {filtered.map((p) => {
+                  const selected = selectedIds.includes(p.problemId);
+                  return (
+                    <button
+                      key={p.problemId}
+                      type="button"
+                      onClick={() => toggleProblem(p.problemId)}
+                      className={`flex items-center justify-between px-3 py-2.5 rounded-sm border-2 text-left transition-all ${
+                        selected
+                          ? "border-slate-900 bg-slate-900 text-white"
+                          : "border-slate-200 hover:border-slate-400"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className={`w-4 h-4 rounded-sm border-2 flex items-center justify-center shrink-0 transition-all ${
+                          selected ? "border-white bg-white" : "border-slate-300"
+                        }`}>
+                          {selected && <FiCheck size={9} className="text-slate-900" />}
                         </div>
-                      );
-                    })
-                )}
+                        <span className={`text-[11px] font-bold uppercase tracking-tight truncate ${selected ? "text-white" : "text-slate-700"}`}>
+                          {p.title}
+                        </span>
+                      </div>
+                      <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-sm border shrink-0 ml-2 ${
+                        selected ? "bg-white/20 text-white border-white/20" : DIFF_COLORS[p.difficulty] ?? ""
+                      }`}>
+                        {p.difficulty}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </form>
         </div>
 
-        <div className="p-6 border-t flex justify-end gap-4 bg-gray-50/50">
-          <button
-            onClick={onClose}
-            type="button"
-            className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-gray-900"
-          >
-            Abort_Action
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50/50 shrink-0">
+          <button onClick={onClose} className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors">
+            Cancel
           </button>
-          <div className="w-56">
-            <FormButton isLoading={isLoading} onClick={handleSubmit(onSubmit)}>
-              COMMIT_TO_REGISTRY
-            </FormButton>
-          </div>
+          <button
+            onClick={handleSubmit(onSubmit)}
+            disabled={isLoading}
+            className="flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-sm text-[10px] font-black uppercase tracking-widest hover:bg-primary-1 transition-all disabled:opacity-40 active:scale-95"
+          >
+            <FiSave size={12} />
+            {isLoading ? "Saving..." : editData ? "Save Changes" : "Create Challenge"}
+          </button>
         </div>
       </div>
     </div>

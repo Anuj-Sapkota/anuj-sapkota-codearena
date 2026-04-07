@@ -9,7 +9,7 @@ const router = express.Router();
 // --- Standard Routes ---
 router.post("/register",  authController.registerUser);
 router.post("/login", authController.loginUser);
-router.post("/logout", authenticateRequest, authController.logoutUser);
+router.post("/logout", authController.logoutUser);
 router.post("/refresh", authController.refreshToken);
 router.get("/me", authenticateRequest, authController.getMe);
 

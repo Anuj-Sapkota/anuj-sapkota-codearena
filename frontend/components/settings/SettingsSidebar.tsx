@@ -1,43 +1,40 @@
 "use client";
 
 import Link from "next/link";
-
-import type { SettingsSidebarProps } from "@/types/settings.types";
 import { SETTINGS_MENU_ITEMS } from "@/constants/routes";
 
-const SettingsSidebar = ({ activeTab }: SettingsSidebarProps) => {
+interface SettingsSidebarProps {
+  activeId: string;
+}
 
-  return (
-    <aside className="w-72 -mt-8 bg-white border border-gray-200 rounded-md shadow-xl shadow-gray-200/50 overflow-hidden z-30">
-      <nav className="flex flex-col py-3">
-        {SETTINGS_MENU_ITEMS.map(({icon:Icon, id, name, path}) => (
+const SettingsSidebar = ({ activeId }: SettingsSidebarProps) => (
+  <aside className="w-56 shrink-0 sticky top-24">
+    <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] px-3 mb-3">
+      Settings
+    </p>
+    <nav className="flex flex-col gap-0.5">
+      {SETTINGS_MENU_ITEMS.map(({ icon: Icon, id, name, path }) => {
+        const active = activeId === id;
+        return (
           <Link
             key={id}
             href={path}
-            className={`flex items-center gap-4 px-6 py-5 text-sm font-bold transition-all relative ${
-              activeTab === id
-                ? "text-primary-1 bg-primary-1/5"
-                : "text-gray-500 hover:bg-gray-50 hover:text-gray-800"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-sm text-[11px] font-black uppercase tracking-widest transition-all relative ${
+              active
+                ? "bg-slate-900 text-white"
+                : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
             }`}
           >
-            {/* Active Indicator Bar */}
-            {activeTab === id && (
-              <div className="absolute left-0 w-1.5 h-8 bg-primary-1 rounded-r-full" />
+            {active && (
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-primary-1 rounded-r-full" />
             )}
-
-            <span
-              className={`text-xl ${
-                activeTab === id ? "text-primary-1" : "text-gray-400"
-              }`}
-            >
-              <Icon/>
-            </span>
+            <Icon size={13} className={active ? "text-primary-1" : "text-slate-400"} />
             {name}
           </Link>
-        ))}
-      </nav>
-    </aside>
-  );
-};
+        );
+      })}
+    </nav>
+  </aside>
+);
 
 export default SettingsSidebar;

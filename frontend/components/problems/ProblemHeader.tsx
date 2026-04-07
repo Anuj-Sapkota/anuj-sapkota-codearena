@@ -11,6 +11,8 @@ import {
 } from "react-icons/fa";
 import { useSelector } from "react-redux";
 import { RootState } from "@/lib/store/store";
+import { ROUTES } from "@/constants/routes";
+import { authService } from "@/lib/services/auth.service";
 import { GithubRepoModal } from "@/components/github/modals/GithubRepoModal";
 
 interface ProblemHeaderProps {
@@ -19,6 +21,7 @@ interface ProblemHeaderProps {
   isRunning: boolean;
   isSubmitting: boolean;
   scrollContainerRef: RefObject<HTMLDivElement | null>;
+  problemTitle?: string;
 }
 
 export const ProblemHeader = ({
@@ -27,6 +30,7 @@ export const ProblemHeader = ({
   isRunning,
   isSubmitting,
   scrollContainerRef,
+  problemTitle,
 }: ProblemHeaderProps) => {
   const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
@@ -60,9 +64,7 @@ export const ProblemHeader = ({
 
   const handleGithubClick = () => {
     if (!isGithubConnected) {
-      const backendUrl =
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-      window.location.href = `${backendUrl}/auth/github`;
+      window.location.href = authService.getGithubUrl();
     } else {
       setIsRepoModalOpen(true);
     }
@@ -77,7 +79,7 @@ export const ProblemHeader = ({
       >
         {/* Back Button */}
         <button
-          onClick={() => router.push("/problems")}
+          onClick={() => router.push(ROUTES.MAIN.PROBLEMS)}
           className="flex items-center gap-2 text-gray-400 hover:text-white text-[10px] font-black tracking-widest transition-colors cursor-pointer group"
         >
           <FaChevronLeft
@@ -187,6 +189,7 @@ export const ProblemHeader = ({
       <GithubRepoModal
         isOpen={isRepoModalOpen}
         onClose={() => setIsRepoModalOpen(false)}
+        problemTitle={problemTitle}
       />
     </>
   );

@@ -33,8 +33,8 @@ export const resourceService = {
     const { data } = await api.get("/resources/explore", {
       params: { search },
     });
-    console.log("Data: ", data);
-    return data;
+    // Handle both old flat array and new paginated response
+    return Array.isArray(data) ? data : (data.items || []);
   },
 
   /**

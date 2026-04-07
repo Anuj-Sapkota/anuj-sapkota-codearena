@@ -4,146 +4,83 @@ import React, { useRef } from "react";
 import { FiCamera, FiLoader } from "react-icons/fi";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { useSelector } from "react-redux";
 
 import SettingsSidebar from "@/components/settings/SettingsSidebar";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
-import { AppDispatch, RootState } from "@/lib/store/store";
-import { updateThunk } from "@/lib/store/features/auth/auth.actions";
-import { useDispatch, useSelector } from "react-redux";
+import { RootState } from "@/lib/store/store";
+import { useUpdateProfile } from "@/hooks/useUpdateProfile";
+import { SETTINGS_MENU_ITEMS } from "@/constants/routes";
 
-export default function SettingsLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function SettingsLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const dispatch = useDispatch<AppDispatch>();
+  const { user } = useSelector((state: RootState) => state.auth);
+  const updateProfile = useUpdateProfile();
 
-  // 1. Get user and loading state from Redux
-  const { user, isLoading } = useSelector((state: RootState) => state.auth);
+  const profilePic = user?.profile_pic_url || `https://api.dicebear.com/7.x/initials/svg?seed=${user?.full_name || "U"}`;
+  const activeId = SETTINGS_MENU_ITEMS.find((item) => item.path === pathname)?.id ?? "basic";
 
-  // Fallback if user isn't loaded yet
-  const profilePic =
-    user?.profile_pic_url ||
-    "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix";
-
-  const getActiveTab = () => {
-    if (pathname === "/settings/accounts-security")
-      return "Account and Security";
-    if (pathname === "/settings/notifications") return "Notifications";
-    return "Basic";
-  };
-  // Uploading the file for profile picture
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user?.userId) return;
-
-    // 🚀 Logic change: We pass the raw file and an empty profileData object
-    // because we are only updating the picture in this specific handler.
-    const promise = dispatch(
-      updateThunk({
-        userId: user.userId,
-        file: file, // The raw File object
-        profileData: {}, // We aren't changing bio/username here
-      }),
-    ).unwrap();
-
-    toast.promise(promise, {
-      loading: "Uploading your new look...",
-      success: "Profile picture updated!",
-      error: (err) => err || "Failed to upload image",
-    });
+    toast.promise(
+      updateProfile.mutateAsync({ userId: user.userId, file }),
+      {
+        loading: "Uploading...",
+        success: "Profile picture updated!",
+        error: (err) => err?.message || "Upload failed",
+      },
+    );
   };
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50">
-        {/* Header Section */}
-        <div className="bg-[#48855b] border-b border-green-100/50">
-          <div className="pt-24 pb-20 px-12 max-w-7xl mx-auto">
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-5xl font-extrabold text-gray-100 tracking-tight"
-            >
-              Settings
-            </motion.h1>
-            <p className="text-slate-300 mt-4 text-lg max-w-xl">
-              Manage your personal information, security preferences, and
-              account settings.
-            </p>
-          </div>
-        </div>
+      <div className="min-h-screen bg-[#f8fafc]">
 
-        {/* Profile Picture Section */}
-        <div className="relative border-b border-gray-200 w-full bg-white h-px">
-          <div className="absolute left-[75%] -translate-x-1/2 -top-20 z-20">
-            <div className="relative group">
-              <input
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                accept="image/*"
-                onChange={handleFileChange}
-              />
-
-              {/* Avatar Container */}
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                className="w-40 h-40 rounded-full border-8 border-white bg-gray-100 overflow-hidden shadow-2xl relative"
-              >
-                <Image
-                  src={profilePic}
-                  alt="Profile"
-                  fill
-                  className={`object-cover transition-all duration-500 group-hover:scale-110 ${isLoading ? "blur-sm grayscale" : ""}`}
-                  priority
-                />
-
-                {/* Loading Spinner Overlay */}
-                <AnimatePresence>
-                  {isLoading && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="absolute inset-0 flex items-center justify-center bg-black/20"
-                    >
-                      <FiLoader className="text-white animate-spin" size={30} />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-
-              {/* Camera Button Overlay */}
-              {!isLoading && (
+        {/* ── Top banner ── */}
+        <div className="bg-slate-900 border-b border-slate-800">
+          <div className="max-w-6xl mx-auto px-6 py-10 flex items-end gap-8">
+            {/* Avatar */}
+            <div className="relative group shrink-0">
+              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
+              <div className="w-20 h-20 rounded-sm border-2 border-slate-700 bg-slate-800 overflow-hidden relative">
+                <Image src={profilePic} alt="Profile" fill className={`object-cover transition-all ${updateProfile.isPending ? "blur-sm" : ""}`} priority />
+                {updateProfile.isPending && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                    <FiLoader className="text-white animate-spin" size={20} />
+                  </div>
+                )}
+              </div>
+              {!updateProfile.isPending && (
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 cursor-pointer backdrop-blur-[2px]"
+                  className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-sm"
                 >
-                  <div className="bg-white/20 p-3 rounded-full">
-                    <FiCamera className="text-white" size={32} />
-                  </div>
+                  <FiCamera className="text-white" size={18} />
                 </button>
               )}
+            </div>
+
+            {/* Name + meta */}
+            <div className="pb-1">
+              <h1 className="text-xl font-black text-white uppercase tracking-tight">
+                {user?.full_name || "Your Profile"}
+              </h1>
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                @{user?.username} · {user?.email}
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Layout Body */}
-        <div className="flex px-12 gap-16 max-w-7xl mx-auto items-start">
-          <SettingsSidebar activeTab={getActiveTab()} />
-          <motion.main
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-            className="flex-1 pt-32 pb-24 max-w-2xl"
-          >
+        {/* ── Body ── */}
+        <div className="max-w-6xl mx-auto px-6 py-10 flex gap-8 items-start">
+          <SettingsSidebar activeId={activeId} />
+          <main className="flex-1 min-w-0">
             {children}
-          </motion.main>
+          </main>
         </div>
       </div>
     </ProtectedRoute>

@@ -1,10 +1,5 @@
 import { useState, useEffect } from "react";
-import { useDispatch } from "react-redux";
-import { AppDispatch } from "@/lib/store/store";
-import {
-  createProblemThunk,
-  updateProblemThunk,
-} from "@/lib/store/features/problems/problem.actions";
+import { useCreateProblem, useUpdateProblem } from "@/hooks/useProblems";
 import { CreateProblemDTO, Problem } from "@/types/problem.types";
 import { toast } from "sonner";
 import { Category } from "@/types/category.types";
@@ -23,8 +18,9 @@ export const useProblemForm = (
   initialData: Problem | null | undefined,
   onClose: () => void,
 ) => {
-  const dispatch = useDispatch<AppDispatch>();
-  const [isLoading, setIsLoading] = useState(false);
+  const createProblem = useCreateProblem();
+  const updateProblem = useUpdateProblem();
+  const isLoading = createProblem.isPending || updateProblem.isPending;
 
   const [formData, setFormData] = useState<CreateProblemDTO>({
     title: "",
@@ -90,28 +86,20 @@ export const useProblemForm = (
   }, [initialData, isOpen]);
 
   const handleSubmit = async () => {
-    // Validation
     if (!formData.title || !formData.content || !formData.functionName) {
       return toast.error("TITLE, CONTENT, AND FUNCTION NAME ARE MANDATORY");
     }
 
-    setIsLoading(true);
-    try {
-      if (initialData) {
-        await dispatch(
-          updateProblemThunk({ id: initialData.problemId, data: formData }),
-        ).unwrap();
-        toast.success("CHALLENGE_UPDATED_SUCCESSFULLY");
-      } else {
-        await dispatch(createProblemThunk(formData)).unwrap();
-        toast.success("CHALLENGE_DEPLOYED_SUCCESSFULLY");
-      }
-      onClose();
-    } catch (err: unknown) {
-      const msg = typeof err === "string" ? err : "An unexpected error occurred";
-      toast.error(msg);
-    } finally {
-      setIsLoading(false);
+    if (initialData) {
+      updateProblem.mutate({ id: initialData.problemId, data: formData }, {
+        onSuccess: () => { toast.success("CHALLENGE_UPDATED_SUCCESSFULLY"); onClose(); },
+        onError: (err: any) => toast.error(err.message || "Update failed"),
+      });
+    } else {
+      createProblem.mutate(formData, {
+        onSuccess: () => { toast.success("CHALLENGE_DEPLOYED_SUCCESSFULLY"); onClose(); },
+        onError: (err: any) => toast.error(err.message || "Create failed"),
+      });
     }
   };
 

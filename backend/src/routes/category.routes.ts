@@ -11,7 +11,7 @@ import {
 
 const router = express.Router();
 
-router.get("/", authenticateRequest, getCategories);
+router.get("/", getCategories);
 /**
  * @route   POST /api/categories/create
  * @desc    Create a new problem category

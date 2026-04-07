@@ -1,130 +1,70 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { toast } from "sonner"; // 1. Import Sonner
+import React, { useState } from "react";
+import { useSelector } from "react-redux";
+import { toast } from "sonner";
 import {
-  MdChatBubbleOutline,
-  MdAdd,
-  MdHistory,
-  MdFilterList,
-  MdSearch,
-  MdClose,
+  MdChatBubbleOutline, MdAdd, MdHistory, MdFilterList, MdSearch, MdClose,
 } from "react-icons/md";
-import { AppDispatch, RootState } from "@/lib/store/store.js";
+import { RootState } from "@/lib/store/store.js";
 import {
-  fetchDiscussionsThunk,
-  createDiscussionThunk,
-  toggleUpvoteThunk,
-  deleteDiscussionThunk,
-  updateDiscussionThunk,
-  reportDiscussionThunk,
-  moderateDiscussionThunk,
-} from "@/lib/store/features/discussion/discussion.actions";
+  useDiscussions, useCreateDiscussion, useToggleUpvote,
+  useDeleteDiscussion, useUpdateDiscussion, useReportDiscussion, useModerateDiscussion,
+} from "@/hooks/useDiscussions";
 import { CommentItem } from "./CommentItem";
 import { DiscussionEditor } from "./DiscussionEditor";
 import { ReportModal } from "./ReportModal";
 
 const DiscussContainer = ({ problemId }: { problemId: number }) => {
-  const dispatch = useDispatch<AppDispatch>();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [reportTarget, setReportTarget] = useState<any>(null);
-
   const [sortBy, setSortBy] = useState<"newest" | "most_upvoted">("newest");
   const [selectedLang, setSelectedLang] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { items, isLoading } = useSelector(
-    (state: RootState) => state.discussion,
-  );
-  const currentUser = useSelector(
-    (state: RootState) => (state as any).auth?.user,
-  );
+  const currentUser = useSelector((state: RootState) => (state as any).auth?.user);
   const isAdmin = currentUser?.role === "ADMIN";
 
-  useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      dispatch(
-        fetchDiscussionsThunk({
-          problemId,
-          userId: currentUser?.userId,
-          sortBy,
-          language: selectedLang === "all" ? undefined : selectedLang,
-          search: searchQuery.trim() || undefined,
-        }),
-      );
-    }, 500);
-    return () => clearTimeout(delayDebounceFn);
-  }, [
-    dispatch,
+  const { data: items = [], isLoading } = useDiscussions({
     problemId,
-    currentUser?.userId,
+    userId: currentUser?.userId,
     sortBy,
-    selectedLang,
-    searchQuery,
-  ]);
+    language: selectedLang === "all" ? undefined : selectedLang,
+    search: searchQuery.trim() || undefined,
+  });
+
+  const createDiscussion = useCreateDiscussion(problemId);
+  const toggleUpvote = useToggleUpvote(problemId);
+  const deleteDiscussion = useDeleteDiscussion(problemId);
+  const updateDiscussion = useUpdateDiscussion(problemId);
+  const reportDiscussion = useReportDiscussion(problemId);
+  const moderateDiscussion = useModerateDiscussion();
 
   const handlePostSubmit = async (content: string, language: string | null) => {
-    const result = await dispatch(
-      createDiscussionThunk({ content, problemId, language, parentId: null }),
-    );
-    if (createDiscussionThunk.fulfilled.match(result)) setIsEditorOpen(false);
+    createDiscussion.mutate({ content, problemId, language, parentId: null }, {
+      onSuccess: () => setIsEditorOpen(false),
+    });
   };
 
-  const handleReplySubmit = async (
-    parentId: string,
-    content: string,
-    language: string | null,
-  ) => {
-    await dispatch(
-      createDiscussionThunk({ content, problemId, language, parentId }),
-    );
+  const handleReplySubmit = (parentId: string, content: string, language: string | null) => {
+    createDiscussion.mutate({ content, problemId, language, parentId });
   };
 
-  // 2. Updated to handle Async result and Sonner toasts
-  const handleReportSubmit = async (type: string, details: string) => {
-    if (reportTarget) {
-      const reportPromise = dispatch(
-        reportDiscussionThunk({
-          id: reportTarget.id,
-          type,
-          details,
-        }),
-      );
-
-      // We use toast.promise for a cool loading state, or handle manually:
-      setReportTarget(null);
-
-      const result = await reportPromise;
-
-      if (reportDiscussionThunk.fulfilled.match(result)) {
-        toast.success("INCIDENT_LOGGED", {
-          description: "Our team will review this shortly.",
-        });
-      } else {
-        const errorMsg = result.payload as string;
-
-        if (errorMsg === "ALREADY_REPORTED") {
-          toast.error("DUPLICATE_REPORT", {
-            description: "You have already flagged this incident.",
-          });
-        } else {
-          toast.error("REPORT_FAILED", {
-            description: errorMsg || "Something went wrong.",
-          });
-        }
-      }
-    }
+  const handleReportSubmit = (type: string, details: string) => {
+    if (!reportTarget) return;
+    setReportTarget(null);
+    reportDiscussion.mutate({ id: reportTarget.id, type, details }, {
+      onSuccess: () => toast.success("INCIDENT_LOGGED", { description: "Our team will review this shortly." }),
+      onError: (err: any) => {
+        if (err.response?.status === 409) toast.error("DUPLICATE_REPORT", { description: "Already reported." });
+        else toast.error("REPORT_FAILED");
+      },
+    });
   };
 
-  const handleModerate = (id: string, action: "BLOCK" | "UNBLOCK") =>
-    dispatch(moderateDiscussionThunk({ id, action }));
-  const handleUpvote = (id: string) => dispatch(toggleUpvoteThunk(id));
-  const handleUpdate = (id: string, content: string, language: string | null) =>
-    dispatch(updateDiscussionThunk({ id, data: { content, language } }));
-  const handleDelete = (id: string) => {
-    if (window.confirm("DELETE_PERMANENTLY?"))
-      dispatch(deleteDiscussionThunk(id));
-  };
+  const handleModerate = (id: string, action: "BLOCK" | "UNBLOCK") => moderateDiscussion.mutate({ id, action });
+  const handleUpvote = (id: string) => toggleUpvote.mutate(id);
+  const handleUpdate = (id: string, content: string, language: string | null) => updateDiscussion.mutate({ id, data: { content, language } });
+  const handleDelete = (id: string) => { if (window.confirm("DELETE_PERMANENTLY?")) deleteDiscussion.mutate(id); };
 
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white min-h-screen animate-in fade-in slide-in-from-bottom-2 duration-500">
