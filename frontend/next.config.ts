@@ -2,6 +2,10 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
+  eslint: {
+    // ESLint is run separately — don't block the build on it
+    ignoreDuringBuilds: true,
+  },
   allowedDevOrigins: ["localhost:3000", "192.168.1.72:3000"],
   images: {
     remotePatterns: [

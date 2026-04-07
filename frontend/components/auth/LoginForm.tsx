@@ -42,7 +42,7 @@ const LoginForm = ({ onSuccess, onSwitch }: AuthModalProps) => {
       onSuccess(user);
       //checking user role to redirect
       if (user.role === "ADMIN") {
-        router.push(ROUTES.ADMIN.DASHBOAD);
+      router.push(ROUTES.ADMIN.DASHBOARD);
       } else {
         router.push(ROUTES.MAIN.EXPLORE);
       }

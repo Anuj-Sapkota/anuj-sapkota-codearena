@@ -39,6 +39,8 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+
+interface Module { title: string; url: string; type: string; }
 function SortableModule({ m, i, updateModuleTitle, removeModule }: any) {
   const {
     attributes,
@@ -129,7 +131,7 @@ export default function ResourceForm({
         title: m.title,
         url: m.contentUrl,
         type: "video",
-      })) || [],
+      })) as Module[] || [],
   });
 
   const sensors = useSensors(

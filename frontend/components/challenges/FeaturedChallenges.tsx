@@ -16,10 +16,10 @@ export const FeaturedChallenges = () => {
     );
   }
 
-  if (error) {
+  if (isError) {
     return (
       <div className="py-10 text-center text-rose-500 text-sm font-bold">
-        Failed to load challenges: {error}
+        Failed to load challenges
       </div>
     );
   }
@@ -52,7 +52,7 @@ export const FeaturedChallenges = () => {
         {items.length > 0 ? (
           items
             .slice(0, 4)
-            .map((item) => (
+            .map((item: any) => (
               <ChallengeCard
                 key={item.challengeId}
                 challenge={item}

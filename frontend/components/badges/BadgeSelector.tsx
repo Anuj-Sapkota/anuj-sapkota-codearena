@@ -1,6 +1,6 @@
 "use client";
 
-import { useBadgeLibrary } from "@/hooks/useBadges";
+import { useBadges } from "@/hooks/useBadges";
 import { Award, Loader2, Check, Info } from "lucide-react";
 
 interface BadgeSelectorProps {
@@ -12,7 +12,7 @@ export default function BadgeSelector({
   selectedId,
   onSelect,
 }: BadgeSelectorProps) {
-  const { data: badges, isLoading } = useBadgeLibrary();
+  const { badges, isLoading } = useBadges();
 
   if (isLoading)
     return (

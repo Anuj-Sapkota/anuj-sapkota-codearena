@@ -10,6 +10,8 @@ import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEn
 import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { SortableModule } from "./SortableModule";
 
+interface Module { title: string; url: string; type: string; }
+
 export function EditResourceForm({ initialData, resourceId }: { initialData: any; resourceId: string }) {
   const router = useRouter();
   const updateResource = useUpdateResourceMutation(resourceId);
@@ -20,7 +22,7 @@ export function EditResourceForm({ initialData, resourceId }: { initialData: any
     description: initialData.description,
     price: initialData.price,
     thumbnail: initialData.previewUrl,
-    modules: initialData.modules.map((m: any) => ({ title: m.title, url: m.contentUrl, type: "video" })),
+    modules: initialData.modules.map((m: any) => ({ title: m.title, url: m.contentUrl, type: "video" })) as Module[],
   });
 
   const { mutate: upload, isPending: isUploading } = useUploadMutation();
@@ -41,8 +43,8 @@ export function EditResourceForm({ initialData, resourceId }: { initialData: any
     const { active, over } = event;
     if (active.id !== over?.id) {
       setSeries((prev) => {
-        const oldIdx = prev.modules.findIndex(m => m.url === active.id);
-        const newIdx = prev.modules.findIndex(m => m.url === over?.id);
+        const oldIdx = prev.modules.findIndex((m: any) => m.url === active.id);
+        const newIdx = prev.modules.findIndex((m: any) => m.url === over?.id);
         return { ...prev, modules: arrayMove(prev.modules, oldIdx, newIdx) };
       });
     }
