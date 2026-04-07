@@ -1,4 +1,4 @@
-import { FaPlus, FaSearch, FaSlidersH } from "react-icons/fa";
+import { FiPlus, FiSearch, FiSliders } from "react-icons/fi";
 
 interface Props {
   search: string;
@@ -10,35 +10,46 @@ interface Props {
 
 export default function ProblemControls({ search, setSearch, onOpenModal, onOpenFilter, hasActiveFilters }: Props) {
   return (
-    <div className="flex flex-col space-y-6">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-gray-200 pb-8">
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black text-darkest tracking-tight uppercase"> Problem Management.</h1>
-          <p className="text-muted text-sm font-medium mt-1 uppercase tracking-widest">Problem & Test-Case Architecture</p>
+          <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">
+            Problems<span className="text-primary-1">.</span>
+          </h1>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+            Problem & test-case management
+          </p>
         </div>
-        <button onClick={onOpenModal} className="bg-primary-1 hover:bg-primary-2 text-white px-8 py-3 rounded-md font-black uppercase text-xs tracking-widest border border-primary-2 transition-all active:scale-95 shadow-lg shadow-primary-1/10 flex items-center justify-center">
-          <FaPlus size={12} className="mr-2" /> New Problem
+        <button
+          onClick={onOpenModal}
+          className="flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-sm text-[10px] font-black uppercase tracking-widest hover:bg-primary-1 transition-all active:scale-95 shrink-0"
+        >
+          <FiPlus size={13} /> New Problem
         </button>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4">
+      {/* Search + filter */}
+      <div className="flex gap-3">
         <div className="relative flex-1">
-          <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={14} />
+          <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
           <input
             type="text"
-            placeholder="Search by title or slug..."
+            placeholder="Search by title..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-white border-2 border-gray-200 rounded-md py-3 pl-11 pr-4 text-xs font-black uppercase tracking-widest outline-none focus:border-primary-1/40 transition-all"
+            className="w-full bg-white border-2 border-slate-200 rounded-sm py-2.5 pl-10 pr-4 text-sm font-medium text-slate-900 placeholder:text-slate-300 outline-none focus:border-slate-900 transition-colors"
           />
         </div>
         <button
           onClick={onOpenFilter}
-          className="flex items-center justify-center gap-3 bg-white border-2 border-gray-200 px-6 py-3 rounded-md cursor-pointer hover:bg-gray-50 transition-colors group"
+          className="flex items-center gap-2 bg-white border-2 border-slate-200 px-4 py-2.5 rounded-sm hover:border-slate-900 transition-colors group shrink-0"
         >
-          <FaSlidersH className="text-muted group-hover:text-primary-1" size={14} />
-          <span className="text-xs font-black text-muted uppercase tracking-widest">Filters</span>
-          {hasActiveFilters && <span className="h-2 w-2 bg-primary-1 rounded-full animate-pulse shadow-[0_0_8px_rgba(46,200,102,1)]" />}
+          <FiSliders size={13} className="text-slate-400 group-hover:text-slate-900 transition-colors" />
+          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest group-hover:text-slate-900 transition-colors">
+            Filters
+          </span>
+          {hasActiveFilters && <span className="w-1.5 h-1.5 bg-primary-1 rounded-full" />}
         </button>
       </div>
     </div>

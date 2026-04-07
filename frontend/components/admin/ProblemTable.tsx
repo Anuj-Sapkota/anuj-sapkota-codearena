@@ -1,7 +1,13 @@
 "use client";
 
-import { FaEdit, FaTrashAlt, FaSpinner, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { FiEdit3, FiTrash2, FiLoader, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { Problem } from "@/types/problem.types";
+
+const DIFF: Record<string, string> = {
+  EASY:   "text-emerald-600 bg-emerald-50 border-emerald-100",
+  MEDIUM: "text-amber-600   bg-amber-50   border-amber-100",
+  HARD:   "text-rose-600    bg-rose-50    border-rose-100",
+};
 
 interface Props {
   items: Problem[];
@@ -10,77 +16,83 @@ interface Props {
   setCurrentPage: (p: number) => void;
   onEdit: (p: Problem) => void;
   onDelete: (id: number, title: string) => void;
-  totalPages: number; // Prop passed from meta.pages
+  totalPages: number;
 }
 
-export default function ProblemTable({ 
-  items, 
-  isLoading, 
-  currentPage, 
-  setCurrentPage, 
-  onEdit, 
-  onDelete,
-  totalPages 
-}: Props) {
-
-  const getDifficultyColor = (diff: string) => {
-    switch (diff) {
-      case "EASY": return "text-green-500 border-green-100 bg-green-50";
-      case "MEDIUM": return "text-yellow-600 border-yellow-100 bg-yellow-50";
-      case "HARD": return "text-red-500 border-red-100 bg-red-50";
-      default: return "text-gray-500 border-gray-100 bg-gray-50";
-    }
-  };
-
+export default function ProblemTable({ items, isLoading, currentPage, setCurrentPage, onEdit, onDelete, totalPages }: Props) {
   if (isLoading && items.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-80 bg-white border-2 border-gray-200 rounded-md">
-        <FaSpinner className="animate-spin text-primary-1" size={32} />
-        <p className="text-muted text-[10px] font-black uppercase mt-4 tracking-widest">Compiling Index</p>
+      <div className="flex flex-col items-center justify-center h-64 bg-white border-2 border-slate-100 rounded-sm">
+        <FiLoader className="animate-spin text-slate-300" size={28} />
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-3">Loading</p>
+      </div>
+    );
+  }
+
+  if (!isLoading && items.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-48 bg-white border-2 border-dashed border-slate-200 rounded-sm">
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No problems found</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="bg-white border-2 border-gray-200 rounded-md overflow-hidden shadow-sm">
+    <div className="space-y-3">
+      <div className="bg-white border-2 border-slate-100 rounded-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-gray-50/80 border-b-2 border-gray-200">
-                <th className="px-6 py-5 text-[10px] font-black text-muted uppercase tracking-widest">Details</th>
-                <th className="px-6 py-5 text-[10px] font-black text-muted uppercase tracking-widest">Difficulty</th>
-                <th className="px-6 py-5 text-[10px] font-black text-muted uppercase tracking-widest text-center">Resources</th>
-                <th className="px-6 py-5 text-[10px] font-black text-muted uppercase tracking-widest text-right">Actions</th>
+              <tr className="border-b-2 border-slate-100 bg-slate-50/60">
+                {["Problem", "Difficulty", "Limits", "Actions"].map((h, i) => (
+                  <th key={h} className={`px-5 py-3.5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ${i === 3 ? "text-right" : ""}`}>
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
-              {items.map((prob) => ( // No more .slice() - render full items array
-                <tr key={prob.problemId} className="hover:bg-gray-50/30 transition-colors">
-                  <td className="px-6 py-5">
-                    <div className="flex items-center gap-4">
-                      <div className="h-2 w-2 bg-darkest shrink-0" />
+            <tbody className="divide-y divide-slate-100">
+              {items.map((prob) => (
+                <tr key={prob.problemId} className="hover:bg-slate-50/50 transition-colors group">
+                  {/* Problem */}
+                  <td className="px-5 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0" />
                       <div>
-                        <span className="font-black text-darkest uppercase text-sm block tracking-tight">{prob.title}</span>
-                        <span className="text-[10px] text-primary-1 font-bold block mt-0.5 uppercase tracking-tighter">/{prob.slug}</span>
+                        <p className="text-sm font-black text-slate-900 uppercase tracking-tight">{prob.title}</p>
+                        <p className="text-[10px] text-primary-1 font-bold mt-0.5">/{prob.slug}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-5">
-                    <span className={`px-3 py-1 text-[9px] font-black border rounded-sm ${getDifficultyColor(prob.difficulty)}`}>
+
+                  {/* Difficulty */}
+                  <td className="px-5 py-4">
+                    <span className={`px-2.5 py-1 text-[9px] font-black border rounded-sm uppercase tracking-wider ${DIFF[prob.difficulty] ?? "text-slate-500 bg-slate-50 border-slate-100"}`}>
                       {prob.difficulty}
                     </span>
                   </td>
-                  <td className="px-6 py-5 text-center font-mono text-[10px] text-muted tabular-nums">
-                    {prob.timeLimit}s / {prob.memoryLimit}MB
+
+                  {/* Limits */}
+                  <td className="px-5 py-4">
+                    <span className="text-[10px] font-mono text-slate-500">
+                      {prob.timeLimit}s · {prob.memoryLimit}MB
+                    </span>
                   </td>
-                  <td className="px-6 py-5">
-                    <div className="flex justify-end gap-3">
-                      <button onClick={() => onEdit(prob)} className="h-10 w-10 border-2 border-gray-200 flex items-center justify-center text-muted hover:text-primary-1 hover:border-primary-1/40 rounded-md transition-all cursor-pointer">
-                        <FaEdit size={14} />
+
+                  {/* Actions */}
+                  <td className="px-5 py-4">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => onEdit(prob)}
+                        className="w-8 h-8 border-2 border-slate-200 rounded-sm flex items-center justify-center text-slate-400 hover:text-primary-1 hover:border-primary-1/40 transition-all"
+                      >
+                        <FiEdit3 size={13} />
                       </button>
-                      <button onClick={() => onDelete(prob.problemId, prob.title)} className="h-10 w-10 border-2 border-gray-200 flex items-center justify-center text-muted hover:text-red-500 hover:border-red-200 rounded-md transition-all cursor-pointer">
-                        <FaTrashAlt size={14} />
+                      <button
+                        onClick={() => onDelete(prob.problemId, prob.title)}
+                        className="w-8 h-8 border-2 border-slate-200 rounded-sm flex items-center justify-center text-slate-400 hover:text-rose-500 hover:border-rose-200 transition-all"
+                      >
+                        <FiTrash2 size={13} />
                       </button>
                     </div>
                   </td>
@@ -91,30 +103,28 @@ export default function ProblemTable({
         </div>
       </div>
 
-      {/* Pagination Controls */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white border-2 border-gray-200 p-4 rounded-md shadow-sm">
-        <p className="text-[10px] font-black text-muted uppercase tracking-widest">
-           Page {currentPage} of {totalPages || 1}
+      {/* Pagination */}
+      <div className="flex items-center justify-between bg-white border-2 border-slate-100 rounded-sm px-5 py-3">
+        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+          Page {currentPage} of {totalPages || 1}
         </p>
         <div className="flex items-center gap-2">
-          <button 
-            disabled={currentPage === 1 || isLoading} 
-            onClick={() => setCurrentPage(currentPage - 1)} 
-            className="h-12 w-12 border-2 border-gray-200 flex items-center justify-center rounded-md hover:bg-gray-50 disabled:opacity-30 cursor-pointer transition-all"
+          <button
+            disabled={currentPage === 1 || isLoading}
+            onClick={() => setCurrentPage(currentPage - 1)}
+            className="w-8 h-8 border-2 border-slate-200 rounded-sm flex items-center justify-center text-slate-500 hover:border-slate-900 hover:text-slate-900 disabled:opacity-30 transition-all"
           >
-            <FaChevronLeft size={14} />
+            <FiChevronLeft size={13} />
           </button>
-          
-          <div className="flex items-center px-6 h-12 border-2 border-gray-200 rounded-md text-[10px] font-black text-darkest uppercase tracking-widest bg-gray-50/50 tabular-nums">
+          <span className="text-[10px] font-black text-slate-900 px-3 py-1.5 border-2 border-slate-100 rounded-sm bg-slate-50 tabular-nums">
             {currentPage} / {totalPages || 1}
-          </div>
-          
-          <button 
-            disabled={currentPage >= totalPages || isLoading} 
-            onClick={() => setCurrentPage(currentPage + 1)} 
-            className="h-12 w-12 border-2 border-gray-200 flex items-center justify-center rounded-md hover:bg-gray-50 disabled:opacity-30 cursor-pointer transition-all"
+          </span>
+          <button
+            disabled={currentPage >= totalPages || isLoading}
+            onClick={() => setCurrentPage(currentPage + 1)}
+            className="w-8 h-8 border-2 border-slate-200 rounded-sm flex items-center justify-center text-slate-500 hover:border-slate-900 hover:text-slate-900 disabled:opacity-30 transition-all"
           >
-            <FaChevronRight size={14} />
+            <FiChevronRight size={13} />
           </button>
         </div>
       </div>

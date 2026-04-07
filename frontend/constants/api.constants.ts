@@ -66,8 +66,9 @@ export const API = {
     IMAGE: "/upload/image",
   },
   BADGES: {
-    BASE: "/badges",
-    BY_ID: (id: number) => `/badges/${id}`,
+    BASE: "/badge/library",
+    CREATE: "/badge/admin/create",
+    BY_ID: (id: string) => `/badge/admin/${id}`,
   },
   PAYMENT: {
     INITIATE: "/payment/initiate",

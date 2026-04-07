@@ -8,6 +8,7 @@ import { refreshSessionThunk } from "@/lib/store/features/auth/auth.actions";
 import { setLogout } from "@/lib/store/features/auth/auth.slice";
 import { tokenStore } from "@/lib/token";
 import { AppDispatch } from "@/lib/store/store";
+import { ROUTES } from "@/constants/routes";
 
 export default function AuthHydrator({ children }: { children: React.ReactNode }) {
   const dispatch = useDispatch<AppDispatch>();
@@ -23,21 +24,26 @@ export default function AuthHydrator({ children }: { children: React.ReactNode }
         const params = new URLSearchParams(window.location.search);
         const oauthToken = params.get("token");
         const status = params.get("status");
+        const isOAuthFreshLogin = !!oauthToken && status !== "success";
 
-        // If a token came back in the URL (OAuth redirect), store it immediately
         if (oauthToken) {
           tokenStore.set(oauthToken);
-          // Strip token from URL right away so it's not visible or bookmarkable
           const cleanSearch = status ? `?status=${status}` : "";
           window.history.replaceState({}, document.title, window.location.pathname + cleanSearch);
         }
 
-        await dispatch(refreshSessionThunk()).unwrap();
+        const result = await dispatch(refreshSessionThunk()).unwrap();
 
-        // Show toast only for the account-linking flow (settings page redirect)
         if (status === "success") {
+          // Account linking from settings
           toast.success("Account linked successfully!");
           window.history.replaceState({}, document.title, window.location.pathname);
+        } else if (isOAuthFreshLogin) {
+          // Fresh OAuth login — redirect based on role
+          const role = result?.user?.role;
+          window.location.replace(
+            role === "ADMIN" ? ROUTES.ADMIN.DASHBOARD : ROUTES.MAIN.EXPLORE
+          );
         }
       } catch {
         dispatch(setLogout());

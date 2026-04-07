@@ -2,10 +2,12 @@
 
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { FiX, FiSave } from "react-icons/fi";
 import { useCreateCategory, useUpdateCategory } from "@/hooks/useCategories";
 import { Category, CreateCategoryDTO } from "@/types/category.types";
-import Modal from "@/components/ui/Modal";
-import { FormLabel, FormInput, FormTextarea, FormButton } from "@/components/ui/Form";
+
+const fieldClass = "w-full border-2 border-slate-200 rounded-sm px-4 py-2.5 text-sm font-medium text-slate-900 bg-white outline-none focus:border-slate-900 transition-colors";
+const labelClass = "text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-1.5";
 
 interface Props {
   isOpen: boolean;
@@ -18,107 +20,106 @@ export default function CreateCategoryModal({ isOpen, onClose, editData }: Props
   const updateCategory = useUpdateCategory();
   const isLoading = createCategory.isPending || updateCategory.isPending;
 
-  const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<CreateCategoryDTO>({
-    defaultValues: {
-      name: editData?.name || "",
-      slug: editData?.slug || "",
-      description: editData?.description || "",
-    }
-  });
+  const { register, handleSubmit, setValue, watch, reset, formState: { errors } } =
+    useForm<CreateCategoryDTO>({
+      defaultValues: { name: "", slug: "", description: "" },
+    });
 
-  const categoryName = watch("name");
   useEffect(() => {
-    if (!editData && categoryName) {
-      const slug = categoryName.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^\w-]+/g, "");
-      setValue("slug", slug);
+    if (isOpen) {
+      reset({
+        name: editData?.name || "",
+        slug: editData?.slug || "",
+        description: editData?.description || "",
+      });
     }
-  }, [categoryName, setValue, editData]);
+  }, [isOpen, editData, reset]);
+
+  const nameWatch = watch("name");
+  useEffect(() => {
+    if (!editData && nameWatch) {
+      setValue("slug", nameWatch.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^\w-]+/g, ""));
+    }
+  }, [nameWatch, setValue, editData]);
 
   const onSubmit = (data: CreateCategoryDTO) => {
     if (editData) {
-      updateCategory.mutate({ id: editData.categoryId, data }, {
-        onSuccess: () => { onClose(); reset(); },
-      });
+      updateCategory.mutate({ id: editData.categoryId, data }, { onSuccess: () => { onClose(); reset(); } });
     } else {
-      createCategory.mutate(data, {
-        onSuccess: () => { onClose(); reset(); },
-      });
+      createCategory.mutate(data, { onSuccess: () => { onClose(); reset(); } });
     }
   };
-    }
-  };
+
+  if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
-      <div className="p-8 space-y-6">
-        <div className="border-b-2 border-gray-100 pb-4">
-          <h3 className="text-2xl font-black text-darkest uppercase tracking-tight">
-            {editData ? "Modify Category" : "New Category"}
-            <span className="text-primary-1">.</span>
-          </h3>
-          <p className="text-[10px] font-bold text-muted uppercase tracking-[0.2em] mt-1">
-            {editData ? "Updating system taxonomy" : "Define a new problem tag"}
-          </p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+      onClick={(e) => e.currentTarget === e.target && onClose()}>
+      <div className="bg-white w-full max-w-md rounded-sm shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-200">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <div>
+            <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">
+              {editData ? "Edit Category" : "New Category"}
+            </h3>
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+              {editData ? "Update taxonomy entry" : "Define a new problem tag"}
+            </p>
+          </div>
+          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-sm text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-all">
+            <FiX size={14} />
+          </button>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          {/* Display Name */}
-          <div className="space-y-1">
-            <FormLabel>Display Name</FormLabel>
-            <FormInput 
-              placeholder="e.g. Dynamic Programming"
-              error={errors.name?.message}
-              register={register("name", { required: "Name is required" })}
-            />
+        {/* Form */}
+        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
+          <div>
+            <label className={labelClass}>Display Name</label>
+            <input {...register("name", { required: "Name is required" })} className={fieldClass} placeholder="e.g. Dynamic Programming" />
+            {errors.name && <p className="text-[9px] text-rose-500 mt-1">{errors.name.message}</p>}
           </div>
 
-          {/* URL Slug - Now Editable */}
-          <div className="space-y-1">
-            <FormLabel>URL Slug</FormLabel>
-            <FormInput 
-              placeholder="category-slug"
-              error={errors.slug?.message}
-              register={register("slug", { 
+          <div>
+            <label className={labelClass}>URL Slug</label>
+            <input
+              {...register("slug", {
                 required: "Slug is required",
-                pattern: {
-                    value: /^[a-z0-9-]+$/,
-                    message: "Lower case, numbers, and hyphens only"
-                }
+                pattern: { value: /^[a-z0-9-]+$/, message: "Lowercase, numbers and hyphens only" },
               })}
+              className={fieldClass + " font-mono"}
+              placeholder="dynamic-programming"
             />
+            {errors.slug && <p className="text-[9px] text-rose-500 mt-1">{errors.slug.message}</p>}
             {editData && (
-              <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded flex items-start gap-2">
-                <span className="text-amber-600 text-[10px] font-black uppercase leading-none mt-0.5">Note:</span>
-                <p className="text-[10px] text-amber-700 font-medium leading-tight">
-                  Changing the slug will break any existing URLs shared externally for this category.
-                </p>
-              </div>
+              <p className="text-[9px] text-amber-600 mt-1">Changing the slug may break existing shared URLs.</p>
             )}
           </div>
 
-          {/* Description */}
-          <div className="space-y-1">
-            <FormLabel>Description</FormLabel>
-            <FormTextarea 
-              placeholder="Explain what problems fall into this category..."
-              register={register("description")}
+          <div>
+            <label className={labelClass}>Description</label>
+            <textarea
+              {...register("description")}
+              rows={3}
+              className={fieldClass + " resize-none"}
+              placeholder="What problems fall into this category?"
             />
           </div>
 
-          <div className="flex items-center justify-between pt-4">
-            <button 
-              type="button" 
-              onClick={onClose} 
-              className="text-muted font-black text-xs uppercase tracking-widest hover:text-darkest transition-colors"
-            >
-              Discard
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors">
+              Cancel
             </button>
-            <FormButton isLoading={isLoading} type="submit">
-              {editData ? "Update Record" : "Confirm Entry"}
-            </FormButton>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-sm text-[10px] font-black uppercase tracking-widest hover:bg-primary-1 transition-all disabled:opacity-40 active:scale-95"
+            >
+              <FiSave size={12} />
+              {isLoading ? "Saving..." : editData ? "Save Changes" : "Create"}
+            </button>
           </div>
         </form>
       </div>
-    </Modal>
+    </div>
   );
 }
