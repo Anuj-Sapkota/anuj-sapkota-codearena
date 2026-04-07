@@ -19,6 +19,7 @@ const initialState: AuthState = {
   user: null,
   isAuthenticated: false,
   isLoading: false,
+  isHydrated: false,
   error: null,
 };
 
@@ -100,10 +101,12 @@ export const authSlice = createSlice({
       .addCase(refreshSessionThunk.fulfilled, (state, action) => {
         state.isLoading = false;
         state.isAuthenticated = true;
+        state.isHydrated = true;
         state.user = action.payload.user;
       })
       .addCase(refreshSessionThunk.rejected, (state) => {
         state.isLoading = false;
+        state.isHydrated = true;
         state.user = null;
         state.isAuthenticated = false;
       })

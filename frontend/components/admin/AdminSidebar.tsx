@@ -1,101 +1,116 @@
 "use client";
 
-import { logoutThunk } from "@/lib/store/features/auth/auth.actions";
-import { AppDispatch } from "@/lib/store/store";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import Image from "next/image";
+import { usePathname, useRouter } from "next/navigation";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/lib/store/store";
+import { logoutThunk } from "@/lib/store/features/auth/auth.actions";
+import { tokenStore } from "@/lib/token";
+import { ROUTES } from "@/constants/routes";
 import {
-  FaColumns,
-  FaCode,
-  FaTags,
-  FaUsers,
-  FaChartBar,
-  FaTimes,
-  FaShieldAlt,
-  FaMailBulk,
-  FaStar, // Added for Moderation
-} from "react-icons/fa";
-import { FiLogOut } from "react-icons/fi";
+  FiGrid, FiCode, FiTag, FiShield, FiMail,
+  FiAward, FiLogOut, FiX, FiExternalLink,
+} from "react-icons/fi";
 import { LuSwords } from "react-icons/lu";
-import { useDispatch } from "react-redux";
 
-interface AdminSidebarProps {
-  onClose?: () => void;
-}
-
-const navItems = [
-  { name: "Dashboard", href: "/admin", icon: FaChartBar },
-  { name: "Categories", href: "/admin/categories", icon: FaTags },
-  { name: "Problems", href: "/admin/problems", icon: FaCode },
-  { name: "Challenges", href: "/admin/challenges", icon: LuSwords },
-  { name: "Moderation", href: "/admin/moderation", icon: FaShieldAlt }, // Completed this
-  { name: "Badge", href: "/admin/badges", icon: FaStar },
-  { name: "Applications", href: "/admin/application", icon: FaMailBulk },
-  { name: "Users", href: "/admin/users", icon: FaUsers },
+const NAV = [
+  { label: "Dashboard",    href: ROUTES.ADMIN.DASHBOARD,   icon: FiGrid },
+  { label: "Problems",     href: ROUTES.ADMIN.PROBLEMS,    icon: FiCode },
+  { label: "Challenges",   href: ROUTES.ADMIN.CHALLENGES,  icon: LuSwords },
+  { label: "Categories",   href: ROUTES.ADMIN.CATEGORIES,  icon: FiTag },
+  { label: "Badges",       href: ROUTES.ADMIN.BADGES,      icon: FiAward },
+  { label: "Moderation",   href: ROUTES.ADMIN.MODERATION,  icon: FiShield },
+  { label: "Applications", href: ROUTES.ADMIN.APPLICATION, icon: FiMail },
 ];
 
-export default function AdminSidebar({ onClose }: AdminSidebarProps) {
+export default function AdminSidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
   const dispatch = useDispatch<AppDispatch>();
+  const router = useRouter();
+  const { user } = useSelector((state: RootState) => state.auth);
+
+  const profilePic = user?.profile_pic_url ||
+    `https://api.dicebear.com/7.x/initials/svg?seed=${user?.full_name || "A"}`;
+
+  const handleLogout = async () => {
+    await dispatch(logoutThunk());
+    tokenStore.clear();
+    router.replace(ROUTES.MAIN.EXPLORE);
+  };
 
   return (
     <aside className="flex h-full w-64 flex-col bg-white border-r border-slate-200">
-      <div className="p-6 flex items-center justify-between">
-        <Link
-          href="/"
-          className="flex items-center gap-2 text-primary-1 font-bold text-xl"
-        >
-          <FaColumns />
-          <span>
-            CodeArena{" "}
-            <span className="text-[10px] font-normal text-slate-400">
-              ADMIN
-            </span>
-          </span>
+      {/* Brand */}
+      <div className="px-5 py-4 flex items-center justify-between border-b border-slate-100">
+        <Link href={ROUTES.ADMIN.DASHBOARD} className="flex items-center gap-2.5">
+          <div className="w-7 h-7 bg-slate-900 rounded-sm flex items-center justify-center shrink-0">
+            <FiGrid size={13} className="text-white" />
+          </div>
+          <div>
+            <p className="text-[11px] font-black text-slate-900 uppercase tracking-widest leading-none">CodeArena</p>
+            <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-0.5">Admin Panel</p>
+          </div>
         </Link>
-
-        {/* Mobile Close Button */}
-        <button
-          onClick={onClose}
-          className="md:hidden text-slate-400 hover:text-slate-600"
-        >
-          <FaTimes size={18} />
+        <button onClick={onClose} className="md:hidden text-slate-400 hover:text-slate-700 transition-colors">
+          <FiX size={16} />
         </button>
       </div>
 
-      <nav className="flex-1 px-4 space-y-1">
-        {navItems.map((item) => {
-          // Check if the current pathname starts with the item href to keep it active
-          // when viewing sub-pages (like /admin/moderation/logs)
-          const isActive =
-            pathname === item.href || pathname.startsWith(`${item.href}/`);
-
+      {/* Nav */}
+      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+        <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.25em] px-3 mb-3">Navigation</p>
+        {NAV.map(({ label, href, icon: Icon }) => {
+          const active = pathname === href ||
+            (href !== ROUTES.ADMIN.DASHBOARD && pathname.startsWith(href));
           return (
             <Link
-              key={item.href}
-              href={item.href}
+              key={href}
+              href={href}
               onClick={onClose}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
-                isActive
-                  ? "bg-primary-1 text-white shadow-md shadow-primary-1/20"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-primary-1"
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-sm text-[11px] font-black uppercase tracking-widest transition-all relative ${
+                active
+                  ? "bg-slate-900 text-white"
+                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
               }`}
             >
-              <item.icon
-                className={isActive ? "text-white" : "text-slate-400"}
-              />
-              {item.name}
+              {active && (
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-primary-1 rounded-r-full" />
+              )}
+              <Icon size={13} className={active ? "text-primary-1" : "text-slate-400"} />
+              {label}
             </Link>
           );
         })}
       </nav>
 
-      <div className="mx-4 mt-3 pt-3 border-t border-gray-100 mb-14">
+      {/* Footer */}
+      <div className="border-t border-slate-100 p-3 space-y-1">
         <button
-          onClick={() => dispatch(logoutThunk())}
-          className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl text-red-500 hover:bg-red-50 transition-all text-sm font-black cursor-pointer"
+          onClick={() => { router.push(ROUTES.MAIN.EXPLORE); onClose?.(); }}
+          className="flex items-center gap-2.5 w-full px-3 py-2 rounded-sm text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-slate-50 hover:text-slate-700 transition-all"
         >
-          <FiLogOut size={18} /> LOGOUT
+          <FiExternalLink size={12} />
+          User View
+        </button>
+
+        {/* Profile */}
+        <div className="flex items-center gap-3 px-3 py-2.5 rounded-sm bg-slate-50 border border-slate-100">
+          <div className="w-7 h-7 rounded-sm overflow-hidden border border-slate-200 shrink-0 relative">
+            <Image src={profilePic} alt="avatar" fill className="object-cover" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-black text-slate-900 truncate">{user?.full_name || "Admin"}</p>
+            <p className="text-[8px] font-bold text-slate-400 truncate">@{user?.username}</p>
+          </div>
+        </div>
+
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-2.5 w-full px-3 py-2 rounded-sm text-[10px] font-black uppercase tracking-widest text-rose-500 hover:bg-rose-50 transition-all"
+        >
+          <FiLogOut size={12} />
+          Logout
         </button>
       </div>
     </aside>

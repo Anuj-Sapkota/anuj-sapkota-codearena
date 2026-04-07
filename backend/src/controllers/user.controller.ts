@@ -130,10 +130,11 @@ export const getUserProfile = async (
         include: { problem: { select: { title: true, problemId: true } } },
       }),
 
-      // D. Heatmap Data
+      // D. Heatmap Data — only accepted submissions count
       prisma.submission.findMany({
         where: {
           userId: targetId,
+          status: "ACCEPTED",
           createdAt: {
             gte: new Date(new Date().setFullYear(new Date().getFullYear() - 1)),
           },

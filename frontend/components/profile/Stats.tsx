@@ -17,9 +17,11 @@ export function StatCard({ label, value, color, icon }: any) {
 }
 
 export function DifficultyCircle({ label, count, total, color }: any) {
-  const percentage = Math.min(((count || 0) / total) * 100, 100);
-  // Using a 264 circumference for the r=42 circle
+  const safeCount = count || 0;
+  const safeTotal = total || 0;
+  const percentage = safeTotal > 0 ? Math.min((safeCount / safeTotal) * 100, 100) : 0;
   const circumference = 2 * Math.PI * 42;
+  const offset = circumference - (circumference * percentage) / 100;
 
   return (
     <div className="flex flex-col items-center group">
@@ -44,9 +46,7 @@ export function DifficultyCircle({ label, count, total, color }: any) {
             strokeWidth="7"
             fill="transparent"
             strokeDasharray={circumference}
-            strokeDashoffset={
-              circumference - (circumference * percentage) / 100
-            }
+            strokeDashoffset={offset}
             className={`${color} transition-all duration-1000 ease-out`}
             strokeLinecap="round"
           />

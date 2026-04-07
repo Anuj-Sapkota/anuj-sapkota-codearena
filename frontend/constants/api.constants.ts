@@ -73,4 +73,7 @@ export const API = {
     INITIATE: "/payment/initiate",
     VERIFY: "/payment/verify",
   },
+  ADMIN: {
+    STATS: "/admin/stats",
+  },
 } as const;

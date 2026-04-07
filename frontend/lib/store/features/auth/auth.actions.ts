@@ -81,9 +81,13 @@ export const logoutThunk = createAsyncThunk(
   "auth/logout",
   async (_, { rejectWithValue }) => {
     try {
-      return await authService.logout();
+      await authService.logout();
     } catch (error: unknown) {
+      // Even if the backend call fails, clear local state
       return rejectWithValue(handleAxiosError(error, "Logout failed"));
+    } finally {
+      // Always clear the in-memory access token regardless of backend response
+      tokenStore.clear();
     }
   },
 );

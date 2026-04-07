@@ -363,7 +363,12 @@ export default function Navbar() {
                     <FiSettings size={16} /> Settings
                   </Link>
                   <div className="my-1 border-t border-slate-100" />
-                  <button onClick={() => dispatch(logoutThunk())}
+                  <button
+                    onClick={async () => {
+                      setShowProfileOptions(false);
+                      await dispatch(logoutThunk());
+                      router.replace(ROUTES.MAIN.EXPLORE);
+                    }}
                     className="flex items-center gap-3 w-full px-4 py-2.5 text-rose-500 hover:bg-rose-50 text-sm font-bold transition-colors text-left"
                   >
                     <FiLogOut size={16} /> Logout
