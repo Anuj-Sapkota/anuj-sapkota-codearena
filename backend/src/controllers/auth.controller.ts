@@ -311,51 +311,51 @@ const initiateGithubAuth = (
   next: NextFunction,
 ) => {
   try {
-    // 1. Check if user is already logged in by looking at the cookie
-    const token = req.cookies.accessToken;
+    // Read the Bearer token from Authorization header (new flow)
+    // or fall back to the legacy accessToken cookie
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.startsWith("Bearer ")
+      ? authHeader.slice(7)
+      : req.cookies?.accessToken;
+
     let state: string | undefined = undefined;
 
     if (token) {
       try {
-        // 2. Decode the token to get the userId
         const decoded = jwt.verify(token, config.jwt.jwtSecret) as any;
-
-        // 3. Encode the userId into a base64 string (the "sticky note")
-        state = Buffer.from(JSON.stringify({ userId: decoded.sub })).toString(
-          "base64",
-        );
-      } catch (err) {
-        state = undefined; // Invalid token? Treat as guest
+        state = Buffer.from(JSON.stringify({ userId: decoded.sub })).toString("base64");
+      } catch {
+        state = undefined;
       }
     }
 
-    // 4. Trigger Passport and pass the state
     passport.authenticate("github", {
       session: false,
       scope: ["user:email", "repo"],
-      state: state, // This goes to GitHub and comes back to us
+      state,
     })(req, res, next);
   } catch (err) {
     next(err);
   }
 };
 
-// Also do the same for Google if you want linking there
 const initiateGoogleAuth = (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
-  const token = req.cookies.accessToken;
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.startsWith("Bearer ")
+    ? authHeader.slice(7)
+    : req.cookies?.accessToken;
+
   let state: string | undefined = undefined;
 
   if (token) {
     try {
       const decoded = jwt.verify(token, config.jwt.jwtSecret) as any;
-      state = Buffer.from(JSON.stringify({ userId: decoded.sub })).toString(
-        "base64",
-      );
-    } catch (err) {
+      state = Buffer.from(JSON.stringify({ userId: decoded.sub })).toString("base64");
+    } catch {
       state = undefined;
     }
   }
@@ -363,7 +363,7 @@ const initiateGoogleAuth = (
   passport.authenticate("google", {
     session: false,
     scope: ["profile", "email"],
-    state: state,
+    state,
   })(req, res, next);
 };
 export default {
