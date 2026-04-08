@@ -35,11 +35,16 @@ app.use(cookieParser());
 app.use(express.json());
 
 const corsOptions = {
-  origin: ["http://localhost:3000"], //________________DEVELOPMENT ONLY ____________________________________
+  origin: [
+    "http://localhost:3000",
+    "https://codearena-frontend-ivory.vercel.app",
+  ],
   credentials: true,
 };
 
 app.use(cors(corsOptions));
+
+app.options("*", cors(corsOptions));
 
 // Auth
 app.use("/api/auth", authRoute);
