@@ -1,6 +1,5 @@
 import axios from "axios";
-
-const JUDGE0_URL = process.env.JUDGE0_URL || "http://localhost:2358";
+import config from "../configs/config.js";
 
 export const submitCode = async (
   sourceCode: string,
@@ -12,7 +11,7 @@ export const submitCode = async (
   try {
     const response = await axios.post(
       // 1. MUST HAVE base64_encoded=true
-      `${JUDGE0_URL}/submissions?base64_encoded=true&wait=true`,
+      `${config.judge0Url}/submissions?base64_encoded=true&wait=true`,
       {
         // 2. MUST BE ENCODED with Buffer (Node.js)
         source_code: Buffer.from(sourceCode).toString("base64"),

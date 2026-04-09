@@ -17,7 +17,7 @@ const config = {
   port: Number(process.env.PORT),
   saltRound,
   frontendUrl: process.env.FRONTEND_URL,
-
+  judge0Url: process.env.JUDGE0_URL,
   jwt: {
     jwtSecret: accessSecret,
     jwtRefreshSecret: refreshSecret,
