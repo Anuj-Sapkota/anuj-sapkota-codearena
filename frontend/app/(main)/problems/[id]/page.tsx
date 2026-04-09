@@ -83,6 +83,13 @@ export default function WorkspacePage({
     if (problemError) { toast.error("Failed to load environment."); router.push("/problems"); }
   }, [problemError, router]);
 
+  // Fetch submission history when problem loads OR when submissions tab is opened
+  useEffect(() => {
+    if (problem?.problemId) {
+      dispatch(fetchSubmissionHistoryThunk(problem.problemId.toString()));
+    }
+  }, [problem?.problemId, dispatch]);
+
   useEffect(() => {
     if (activeTab === "submissions" && problem?.problemId) {
       dispatch(fetchSubmissionHistoryThunk(problem.problemId.toString()));

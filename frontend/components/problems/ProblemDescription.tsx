@@ -1,6 +1,7 @@
 "use client";
 
 import { useDispatch, useSelector } from "react-redux";
+import { useEffect } from "react";
 import { RootState, AppDispatch } from "@/lib/store/store";
 import { FormLabel } from "@/components/ui/Form";
 import { MarkdownRenderer } from "@/components/problems/MarkdownRenderer";
@@ -8,6 +9,7 @@ import {
   setDescriptionTab,
   setSelectedSubmission,
 } from "@/lib/store/features/workspace/workspace.slice";
+import { fetchSubmissionHistoryThunk } from "@/lib/store/features/workspace/workspace.actions";
 import { SubmissionDetail } from "./SubmissionDetail";
 import { SubmissionList } from "./SubmissionList";
 import { MdDescription, MdList } from "react-icons/md";
@@ -21,6 +23,13 @@ export const ProblemDescription = ({ problem }: { problem: Problem }) => {
   const { descriptionTab, selectedSubmission } = useSelector(
     (state: RootState) => state.workspace,
   );
+
+  // Fetch history whenever the submissions tab becomes active
+  useEffect(() => {
+    if (descriptionTab === "submissions" && problem?.problemId) {
+      dispatch(fetchSubmissionHistoryThunk(problem.problemId.toString()));
+    }
+  }, [descriptionTab, problem?.problemId, dispatch]);
 
   const handleBackToList = () => {
     dispatch(setDescriptionTab("submissions"));

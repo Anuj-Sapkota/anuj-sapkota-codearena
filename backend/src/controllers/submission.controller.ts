@@ -84,8 +84,18 @@ export const handleSubmission = async (
           console.log(`  Actual Clean:   ${normalizedActual}`);
         }
 
+        const decodeB64 = (s: string | null | undefined): string => {
+          if (!s) return "";
+          try { return Buffer.from(s, "base64").toString("utf-8").trim(); } catch { return s; }
+        };
+
+        const decodedStderr = decodeB64(execution.stderr);
+        const decodedCompileOutput = decodeB64(execution.compile_output);
+
         return {
           ...execution,
+          stderr: decodedStderr,
+          compile_output: decodedCompileOutput,
           isCorrect,
           decodedOutput: actualOutput,
           isSample: tc.isSample,

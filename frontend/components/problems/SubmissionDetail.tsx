@@ -28,10 +28,7 @@ function computePercentile(arr: number[], value: number): number {
   return Math.round((beaten / arr.length) * 100);
 }
 
-function buildHistogram(
-  arr: number[],
-  buckets: number,
-): { x: number; count: number }[] {
+function buildHistogram(arr: number[], buckets: number): { x: number; count: number }[] {
   if (!arr.length) return [];
   const min = Math.min(...arr);
   const max = Math.max(...arr);
@@ -48,76 +45,112 @@ function buildHistogram(
   return hist;
 }
 
+// Percentile ring (SVG donut)
+function PercentileRing({ pct }: { pct: number }) {
+  const R = 28, cx = 36, cy = 36;
+  const circ = 2 * Math.PI * R;
+  const filled = (pct / 100) * circ;
+  const color = pct >= 75 ? "#10b981" : pct >= 40 ? "#f59e0b" : "#ef4444";
+  return (
+    <svg width={72} height={72} className="-rotate-90">
+      <circle cx={cx} cy={cy} r={R} fill="none" stroke="#1e293b" strokeWidth={6} />
+      <circle
+        cx={cx} cy={cy} r={R}
+        fill="none"
+        stroke={color}
+        strokeWidth={6}
+        strokeDasharray={`${filled} ${circ - filled}`}
+        strokeLinecap="round"
+        style={{ transition: "stroke-dasharray 1s ease" }}
+      />
+    </svg>
+  );
+}
+
 function DistributionChart({
   values,
   myValue,
   unit,
   label,
+  icon,
 }: {
   values: number[];
   myValue: number;
   unit: string;
   label: string;
+  icon: React.ReactNode;
 }) {
-  const hist = useMemo(() => buildHistogram(values, 20), [values]);
-  const percentile = useMemo(
-    () => computePercentile(values, myValue),
-    [values, myValue],
-  );
+  const hist = useMemo(() => buildHistogram(values, 24), [values]);
+  const percentile = useMemo(() => computePercentile(values, myValue), [values, myValue]);
   const maxCount = Math.max(...hist.map((b) => b.count), 1);
-  const myValueDisplay = unit === "ms" ? myValue * 1000 : myValue / 1024;
+
+  const fmt = (v: number) => unit === "ms"
+    ? `${(v * 1000).toFixed(0)} ms`
+    : `${(v / 1024).toFixed(1)} MB`;
+
+  const myDisplay = fmt(myValue);
+  const minDisplay = fmt(Math.min(...values));
+  const maxDisplay = fmt(Math.max(...values));
+
+  const myValueRaw = unit === "ms" ? myValue * 1000 : myValue / 1024;
+
+  const pctColor = percentile >= 75 ? "text-emerald-400" : percentile >= 40 ? "text-amber-400" : "text-rose-400";
+  const barHighlight = percentile >= 75 ? "bg-emerald-400" : percentile >= 40 ? "bg-amber-400" : "bg-rose-400";
 
   return (
-    <div className="bg-[#1a1a1a] rounded-sm p-4 space-y-3">
-      <div className="flex items-baseline justify-between">
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-          {label}
-        </p>
-        <p className="text-[11px] font-black text-emerald-400">
-          Beats{" "}
-          <span className="text-lg text-emerald-300">{percentile}%</span> of
-          submissions
-        </p>
+    <div className="bg-[#161b22] border border-slate-800 rounded-sm overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 py-3 border-b border-slate-800/60">
+        <div className="flex items-center gap-2">
+          {icon}
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</span>
+        </div>
+        <span className="text-[10px] font-bold text-slate-500">{values.length} submissions</span>
       </div>
 
-      <div className="flex items-end gap-px h-16">
-        {hist.map((bar, i) => {
-          const barDisplay =
-            unit === "ms" ? bar.x * 1000 : bar.x / 1024;
-          const isMyBar =
-            Math.abs(barDisplay - myValueDisplay) <=
-            (unit === "ms" ? 5 : 0.1);
-          const height = Math.max(2, Math.round((bar.count / maxCount) * 64));
-          return (
-            <div
-              key={i}
-              title={`${barDisplay.toFixed(unit === "ms" ? 0 : 1)} ${unit}: ${bar.count}`}
-              className={`flex-1 rounded-t-sm transition-all ${
-                isMyBar ? "bg-emerald-400" : "bg-slate-700"
-              }`}
-              style={{ height }}
-            />
-          );
-        })}
-      </div>
+      <div className="p-5">
+        {/* Percentile + value row */}
+        <div className="flex items-center gap-5 mb-5">
+          <div className="relative shrink-0">
+            <PercentileRing pct={percentile} />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className={`text-[13px] font-black ${pctColor}`}>{percentile}%</span>
+            </div>
+          </div>
+          <div>
+            <p className="text-[10px] text-slate-500 font-bold mb-0.5">Your submission</p>
+            <p className="text-2xl font-black text-white font-mono tracking-tight">{myDisplay}</p>
+            <p className={`text-[10px] font-black uppercase tracking-widest mt-1 ${pctColor}`}>
+              Faster than {percentile}% of {LANG_LABEL[0] ?? ""} submissions
+            </p>
+          </div>
+        </div>
 
-      <div className="flex justify-between text-[9px] text-slate-600 font-mono">
-        <span>
-          {unit === "ms"
-            ? `${(Math.min(...values) * 1000).toFixed(0)} ms`
-            : `${(Math.min(...values) / 1024).toFixed(1)} MB`}
-        </span>
-        <span className="text-emerald-400 font-black">
-          You:{" "}
-          {unit === "ms"
-            ? `${(myValue * 1000).toFixed(0)} ms`
-            : `${(myValue / 1024).toFixed(1)} MB`}
-        </span>
-        <span>
-          {unit === "ms"
-            ? `${(Math.max(...values) * 1000).toFixed(0)} ms`
-            : `${(Math.max(...values) / 1024).toFixed(1)} MB`}
-        </span>
+        {/* Bar chart */}
+        <div className="flex items-end gap-px h-14 mb-2">
+          {hist.map((bar, i) => {
+            const barRaw = unit === "ms" ? bar.x * 1000 : bar.x / 1024;
+            const isMyBar = Math.abs(barRaw - myValueRaw) <= (unit === "ms" ? Math.max((myValueRaw * 0.05), 2) : 0.15);
+            const h = Math.max(2, Math.round((bar.count / maxCount) * 56));
+            return (
+              <div
+                key={i}
+                title={`${unit === "ms" ? barRaw.toFixed(0) : barRaw.toFixed(1)} ${unit}: ${bar.count}`}
+                className={`flex-1 rounded-t-sm transition-all duration-300 ${
+                  isMyBar ? barHighlight : "bg-slate-700/60 hover:bg-slate-600/60"
+                }`}
+                style={{ height: h }}
+              />
+            );
+          })}
+        </div>
+
+        {/* X-axis labels */}
+        <div className="flex justify-between text-[9px] font-mono text-slate-600">
+          <span>{minDisplay}</span>
+          <span className={`font-black ${pctColor}`}>{myDisplay} ← you</span>
+          <span>{maxDisplay}</span>
+        </div>
       </div>
     </div>
   );
@@ -260,6 +293,7 @@ export const SubmissionDetail = ({
           myValue={submission.time}
           unit="ms"
           label="Runtime Distribution"
+          icon={<FiClock size={12} className="text-emerald-400" />}
         />
       )}
       {isAccepted && memoryValues.length > 1 && submission.memory != null && (
@@ -268,6 +302,7 @@ export const SubmissionDetail = ({
           myValue={submission.memory}
           unit="MB"
           label="Memory Distribution"
+          icon={<FiCpu size={12} className="text-blue-400" />}
         />
       )}
 

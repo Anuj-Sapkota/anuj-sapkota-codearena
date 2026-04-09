@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useDispatch } from "react-redux";
 import { toast } from "sonner";
 
-import { refreshSessionThunk } from "@/lib/store/features/auth/auth.actions";
+import { refreshSessionThunk, getMeThunk } from "@/lib/store/features/auth/auth.actions";
 import { setLogout } from "@/lib/store/features/auth/auth.slice";
 import { tokenStore } from "@/lib/token";
 import { AppDispatch } from "@/lib/store/store";
@@ -26,21 +26,33 @@ export default function AuthHydrator({ children }: { children: React.ReactNode }
         const status = params.get("status");
         const isOAuthFreshLogin = !!oauthToken && status !== "success";
 
-        // OAuth redirect: token comes in the URL
+        // Store OAuth token immediately so api.ts sends it as Bearer
         if (oauthToken) {
           tokenStore.set(oauthToken);
           const cleanSearch = status ? `?status=${status}` : "";
           window.history.replaceState({}, document.title, window.location.pathname + cleanSearch);
         }
 
-        // If we already have a token in memory (e.g. just logged in via form),
-        // still call refresh to get the latest user data and validate the session.
-        // But if refresh fails and we have a token, don't log out — the token is valid.
-        const alreadyHasToken = !!tokenStore.get();
+        let result: any = null;
 
         try {
-          const result = await dispatch(refreshSessionThunk()).unwrap();
+          // Try refresh cookie first (works when same-origin or sameSite=none+secure)
+          result = await dispatch(refreshSessionThunk()).unwrap();
+        } catch {
+          // Refresh cookie failed — if we have a Bearer token in memory, use getMe instead
+          if (tokenStore.get()) {
+            try {
+              result = await dispatch(getMeThunk()).unwrap();
+            } catch {
+              // Both failed — guest
+              if (!oauthToken) dispatch(setLogout());
+            }
+          } else {
+            dispatch(setLogout());
+          }
+        }
 
+        if (result) {
           if (status === "success") {
             toast.success("Account linked successfully!");
             window.history.replaceState({}, document.title, window.location.pathname);
@@ -50,13 +62,6 @@ export default function AuthHydrator({ children }: { children: React.ReactNode }
               role === "ADMIN" ? ROUTES.ADMIN.DASHBOARD : ROUTES.MAIN.EXPLORE
             );
           }
-        } catch {
-          // Refresh failed — only log out if we don't already have a valid in-memory token
-          if (!alreadyHasToken) {
-            dispatch(setLogout());
-          }
-          // If we have a token in memory, the user is still logged in from this session
-          // (e.g. they just logged in and the cookie hasn't propagated yet)
         }
       } catch {
         dispatch(setLogout());

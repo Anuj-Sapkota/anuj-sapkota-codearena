@@ -34,16 +34,27 @@ connectCloudinary();
 app.use(cookieParser());
 app.use(express.json());
 
+const allowedOrigins = [
+  "http://localhost:3000",
+  ...(config.frontendUrl ? [config.frontendUrl] : []),
+  // Add any additional Vercel preview URLs
+  /https:\/\/.*\.vercel\.app$/,
+];
+
 const corsOptions = {
-  origin: [
-    "http://localhost:3000",
-    "https://codearena-frontend-ivory.vercel.app",
-  ],
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Allow requests with no origin (mobile apps, curl, server-to-server)
+    if (!origin) return callback(null, true);
+    const allowed = allowedOrigins.some((o) =>
+      typeof o === "string" ? o === origin : o.test(origin)
+    );
+    if (allowed) return callback(null, true);
+    callback(new Error(`CORS: origin ${origin} not allowed`));
+  },
   credentials: true,
 };
 
 app.use(cors(corsOptions));
-
 app.options(/.*/, cors(corsOptions));
 
 // Auth

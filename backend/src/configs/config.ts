@@ -12,8 +12,9 @@ if (!accessSecret || !refreshSecret) {
   throw new Error("Missing JWT env variables");
 }
 
+const isProduction = process.env.NODE_ENV === "production";
+
 const config = {
-  // databaseUrl: process.env.DATABASE_URL || "",
   port: Number(process.env.PORT),
   saltRound,
   frontendUrl: process.env.FRONTEND_URL,
@@ -21,16 +22,18 @@ const config = {
   jwt: {
     jwtSecret: accessSecret,
     jwtRefreshSecret: refreshSecret,
-    jwtExpiresIn: 15 * 60, // 15 minutes
-    jwtRefreshExpiresIn: 7 * 24 * 60 * 60, // 7 days
+    jwtExpiresIn: 15 * 60,
+    jwtRefreshExpiresIn: 7 * 24 * 60 * 60,
   },
 
   cookies: {
-    accessMaxAge: Number(process.env.COOKIE_ACCESS_MAX_AGE),
-    refreshMaxAge: Number(process.env.COOKIE_REFRESH_MAX_AGE),
-    secure: process.env.COOKIE_SECURE === "true",
-    sameSite: process.env.COOKIE_SAMESITE as "strict" | "lax" | "none",
-    httpOnly: process.env.COOKIE_HTTPONLY === "true",
+    accessMaxAge: Number(process.env.COOKIE_ACCESS_MAX_AGE) || 900000,
+    refreshMaxAge: Number(process.env.COOKIE_REFRESH_MAX_AGE) || 604800000,
+    // In production: secure=true, sameSite=none (required for cross-origin cookies)
+    // In development: secure=false, sameSite=lax
+    secure: isProduction ? true : process.env.COOKIE_SECURE === "true",
+    sameSite: isProduction ? "none" : (process.env.COOKIE_SAMESITE as "strict" | "lax" | "none" || "lax"),
+    httpOnly: true,
   },
 
   google: {
