@@ -20,34 +20,31 @@ export default function AuthHydrator({ children }: { children: React.ReactNode }
     hasChecked.current = true;
 
     const init = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const oauthToken = params.get("token");
+      const status = params.get("status");
+      const isOAuthFreshLogin = !!oauthToken && status !== "success";
+
+      // Store OAuth token immediately — api.ts will send it as Bearer on all requests
+      if (oauthToken) {
+        tokenStore.set(oauthToken);
+        const cleanSearch = status ? `?status=${status}` : "";
+        window.history.replaceState({}, document.title, window.location.pathname + cleanSearch);
+      }
+
       try {
-        const params = new URLSearchParams(window.location.search);
-        const oauthToken = params.get("token");
-        const status = params.get("status");
-        const isOAuthFreshLogin = !!oauthToken && status !== "success";
-
-        // Store OAuth token immediately so api.ts sends it as Bearer
-        if (oauthToken) {
-          tokenStore.set(oauthToken);
-          const cleanSearch = status ? `?status=${status}` : "";
-          window.history.replaceState({}, document.title, window.location.pathname + cleanSearch);
-        }
-
         let result: any = null;
 
-        try {
-          // Try refresh cookie first (works when same-origin or sameSite=none+secure)
-          result = await dispatch(refreshSessionThunk()).unwrap();
-        } catch {
-          // Refresh cookie failed — if we have a Bearer token in memory, use getMe instead
-          if (tokenStore.get()) {
-            try {
-              result = await dispatch(getMeThunk()).unwrap();
-            } catch {
-              // Both failed — guest
-              if (!oauthToken) dispatch(setLogout());
-            }
-          } else {
+        if (oauthToken) {
+          // OAuth flow: we have a valid Bearer token — use getMe directly.
+          // Skip refresh entirely because the refresh cookie is unreliable cross-origin.
+          result = await dispatch(getMeThunk()).unwrap();
+        } else {
+          // Normal page load: try refresh cookie to restore session
+          try {
+            result = await dispatch(refreshSessionThunk()).unwrap();
+          } catch {
+            // No valid session — guest user
             dispatch(setLogout());
           }
         }
