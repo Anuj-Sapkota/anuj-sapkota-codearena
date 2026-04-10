@@ -161,7 +161,7 @@ https://codearena-frontend-ivory.vercel.app/
 ## Project Structure
 
 ```
-codearena/
+anuj-sapkota-codearena/
 │
 ├── frontend/               # Next.js frontend application
 │   ├── app/                # App router pages
@@ -185,17 +185,14 @@ codearena/
 
 ## Screenshots
 
+**Login page**
+![Login page](image.png)
 
-- Login page
-![alt text](image.png)
-- User dashboard
-![alt text](image-1.png)
-- Problem solving workspace
-![alt text](image-2.png)
-- Creator studio
+**User dashboard**
+![User dashboard](image-1.png)
 
-- Admin panel
-- Leaderboard
+**Problem solving workspace**
+![Problem solving workspace](image-2.png)
 
 ---
 
@@ -215,9 +212,9 @@ Possible improvements for the system:
 
 ## Authors
 
-Student Name
-Program / Department
-University / College Name
+- **Student Name**: Anuj Sapkota
+- **Program / Department**: Bsc (Hons) Computing
+- **University / College Name**: Itahari International College
 
 ---
 
