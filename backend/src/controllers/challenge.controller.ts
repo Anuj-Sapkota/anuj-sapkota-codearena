@@ -42,11 +42,12 @@ export const getAllChallenges = async (
   next: NextFunction,
 ) => {
   try {
-    const { page, limit } = req.query;
+    const { page, limit, search } = req.query;
 
     const results = await getAllChallengesService({
       page: page as string,
       limit: limit as string,
+      search: search as string | undefined,
     });
 
     return res.status(200).json({

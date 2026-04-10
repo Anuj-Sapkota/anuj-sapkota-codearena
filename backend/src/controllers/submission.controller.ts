@@ -2,6 +2,11 @@ import type { NextFunction, Request, Response } from "express";
 import * as Judge0Service from "../services/judge0.service.js";
 import { prisma } from "../lib/prisma.js";
 import { wrapUserCode } from "../utils/code-wrapper.util.js";
+import {
+  notifyFirstSolve,
+  notifyLevelUp,
+  notifyChallengeCompleted,
+} from "../services/notification.service.js";
 
 // Helper function at the top of submission.controller.ts
 const calculateMetrics = (results: any[]) => {
@@ -195,6 +200,8 @@ export const handleSubmission = async (
             if (previousSolved === 0) {
               // First solve: award XP + update streak
               const xpGained = problem.points || 50;
+              const newLevel = Math.floor((user.xp + xpGained) / 500) + 1;
+              const leveledUp = newLevel > user.level;
               await tx.user.update({
                 where: { userId: Number(userId) },
                 data: {
@@ -202,7 +209,7 @@ export const handleSubmission = async (
                   total_points: { increment: xpGained },
                   streak: newStreak,
                   lastActivityDate: now,
-                  level: Math.floor((user.xp + xpGained) / 500) + 1,
+                  level: newLevel,
                 },
               });
               await tx.activity.create({
@@ -213,6 +220,11 @@ export const handleSubmission = async (
                   createdAt: now,
                 },
               });
+              // Notify first solve (fire-and-forget, outside tx)
+              notifyFirstSolve(Number(userId), problem.title, xpGained).catch(() => {});
+              if (leveledUp) {
+                notifyLevelUp(Number(userId), newLevel).catch(() => {});
+              }
             } else {
               // Re-solve: only update streak + lastActivityDate, no XP
               await tx.user.update({
@@ -265,6 +277,8 @@ export const handleSubmission = async (
                     xpGained: bonusXp,
                   },
                 });
+                // Notify challenge completion (fire-and-forget, outside tx)
+                notifyChallengeCompleted(Number(userId), challenge.title, bonusXp).catch(() => {});
               }
             }
           }

@@ -2,6 +2,21 @@ import { prisma } from "../lib/prisma.js";
 import { ServiceError } from "../errors/service.error.js";
 
 /**
+ * Auto-expires challenges whose endTime has passed by setting isPublic = false.
+ * Called lazily on every admin list fetch — no cron needed.
+ */
+const autoExpireChallenges = async () => {
+  const now = new Date();
+  await prisma.challenge.updateMany({
+    where: {
+      isPublic: true,
+      endTime: { lt: now },
+    },
+    data: { isPublic: false },
+  });
+};
+
+/**
  * Creates a challenge using the provided slug.
  */
 export const createChallengeService = async (data: any) => {
@@ -59,28 +74,36 @@ export const createChallengeService = async (data: any) => {
 export const getAllChallengesService = async ({
   page,
   limit,
+  search,
 }: {
   page?: string;
   limit?: string;
+  search?: string;
 }) => {
+  // Expire any challenges whose endTime has passed before returning the list
+  await autoExpireChallenges();
+
   const p = parseInt(page || "1");
   const l = parseInt(limit || "10");
   const skip = (p - 1) * l;
 
+  const where: any = search
+    ? { title: { contains: search, mode: "insensitive" } }
+    : {};
+
   try {
     const [items, total] = await Promise.all([
       prisma.challenge.findMany({
+        where,
         skip,
         take: l,
         include: {
-          // THIS IS THE CRITICAL FIX:
-          // Ensuring the problems (Join Table) are included in the list view
           problems: true,
           _count: { select: { problems: true } },
         },
         orderBy: { createdAt: "desc" },
       }),
-      prisma.challenge.count(),
+      prisma.challenge.count({ where }),
     ]);
 
     return {
@@ -225,6 +248,9 @@ export const deleteChallengeService = async (challengeId: number) => {
  * Uses a single batched submission query instead of N+1 per challenge.
  */
 export const getPublicChallengesService = async (userId?: number) => {
+  // Expire any challenges whose endTime has passed
+  await autoExpireChallenges();
+
   const now = new Date();
 
   try {

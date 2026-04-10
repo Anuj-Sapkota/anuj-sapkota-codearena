@@ -32,6 +32,7 @@ export const ROUTES = {
     BADGES: "/admin/badges",
     MODERATION: "/admin/moderation",
     APPLICATION: "/admin/application",
+    USERS: "/admin/users",
   },
 
   CREATOR: {

@@ -31,7 +31,7 @@ export default function CreatorDashboard() {
     });
   };
 
-  if (user?.creatorStatus !== "APPROVED") {
+  if (user?.role !== "CREATOR" && user?.role !== "ADMIN") {
     return (
       <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
         <div className="text-center">

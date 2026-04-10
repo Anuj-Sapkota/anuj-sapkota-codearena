@@ -76,5 +76,8 @@ export const API = {
   },
   ADMIN: {
     STATS: "/admin/stats",
+    USERS: "/admin/users",
+    USER_ROLE: (id: number) => `/admin/users/${id}/role`,
+    USER_BAN: (id: number) => `/admin/users/${id}/ban`,
   },
 } as const;

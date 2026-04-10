@@ -27,6 +27,7 @@ import badgeRoutes from "./routes/badge.routes.js";
 import leaderboardRoutes from "./routes/leaderboard.routes.js";
 import searchRoutes from "./routes/search.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
+import notificationRoutes from "./routes/notification.routes.js";
 
 const app = express();
 connectCloudinary();
@@ -97,6 +98,7 @@ app.use("/api/badge", badgeRoutes);
 app.use("/api/leaderboard", leaderboardRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 console.log("BACKEND123");
 // This is the "Catch-All" middleware

@@ -1,6 +1,7 @@
 import { ServiceError } from "../errors/service.error.js";
 import { prisma } from "../lib/prisma.js";
 import { sendVerificationEmail } from "./mail.service.js";
+import { notifyCreatorApproved, notifyCreatorRejected } from "./notification.service.js";
 
 export const applyToBecomeCreatorService = async (userId: number, data: any) => {
   const { bio, portfolioUrl, githubUrl } = data; // Added githubUrl from your form
@@ -84,27 +85,32 @@ export const adminReviewCreatorService = async (
   status: "APPROVED" | "REJECTED",
   reason?: string,
 ) => {
-  return await prisma.$transaction(async (tx) => {
-    // 1. Update the User's Status and Role
-    const user = await tx.user.update({
+  const user = await prisma.$transaction(async (tx) => {
+    const u = await tx.user.update({
       where: { userId },
       data: {
         creatorStatus: status,
         role: status === "APPROVED" ? "CREATOR" : "USER",
       },
     });
-
-    // 2. Update the Profile Status and Reason
     await tx.creatorProfile.update({
       where: { userId },
       data: {
-        status: status, // Keep the enums in sync
+        status,
         rejectionReason: status === "REJECTED" ? reason : null,
       },
     });
-
-    return user;
+    return u;
   });
+
+  // Fire notification outside the transaction (non-blocking)
+  if (status === "APPROVED") {
+    notifyCreatorApproved(userId).catch(() => {});
+  } else {
+    notifyCreatorRejected(userId, reason).catch(() => {});
+  }
+
+  return user;
 };
 
 export const getPendingApplicationsService = async () => {

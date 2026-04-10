@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  FiSearch, FiBell, FiUser, FiLogOut, FiSettings,
+  FiSearch, FiUser, FiLogOut, FiSettings,
   FiChevronDown, FiShield, FiPlusCircle, FiBriefcase,
   FiCode, FiBook, FiZap, FiLoader, FiX,
 } from "react-icons/fi";
@@ -19,6 +19,7 @@ import RegisterForm from "@/components/auth/RegisterForm";
 import { logoutThunk } from "@/lib/store/features/auth/auth.actions";
 import { AppDispatch, RootState } from "@/lib/store/store";
 import { NAV_ITEMS, ROUTES } from "@/constants/routes";
+import NotificationBell from "@/components/layout/NotificationBell";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
@@ -307,10 +308,7 @@ export default function Navbar() {
             <StreakBadge streak={user?.streak ?? 0} />
 
             {/* Bell */}
-            <button className="relative p-2 text-slate-400 hover:text-slate-900 transition-colors">
-              <FiBell size={20} />
-              <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-primary-1 rounded-full" />
-            </button>
+            <NotificationBell />
 
             {/* Profile dropdown */}
             <div className="relative" ref={modalRef}>

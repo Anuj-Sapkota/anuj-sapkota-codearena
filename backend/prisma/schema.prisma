@@ -22,6 +22,16 @@ enum ApplicationStatus {
   REJECTED
 }
 
+enum NotificationType {
+  CREATOR_APPROVED
+  CREATOR_REJECTED
+  BADGE_EARNED
+  CHALLENGE_COMPLETED
+  FIRST_SOLVE
+  LEVEL_UP
+  SYSTEM
+}
+
 enum ResourceType {
   VIDEO
   PDF
@@ -110,6 +120,7 @@ model User {
   created_at DateTime    @default(now())
   updated_at DateTime    @updatedAt
   userBadges UserBadge[]
+  notifications Notification[]
 
   @@map("users")
 }
@@ -499,4 +510,23 @@ model AssignmentAttempt {
   createdAt DateTime @default(now())
 
   @@map("assignment_attempts")
+}
+
+// --- NOTIFICATIONS ---
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    Int
+  user      User             @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  type      NotificationType
+  title     String
+  message   String           @db.Text
+  isRead    Boolean          @default(false)
+  link      String?          // Optional deep-link (e.g. /challenges/weekly-duel)
+
+  createdAt DateTime         @default(now())
+
+  @@index([userId, isRead])
+  @@map("notifications")
 }

@@ -25,6 +25,41 @@ const useAdminStats = () =>
   });
 
 // ─── Bar chart (pure SVG, no lib needed) ─────────────────────────────────────
+function BarChart({
+  data,
+  valueKey,
+  color,
+  maxOverride,
+}: {
+  data: { label: string; [key: string]: any }[];
+  valueKey: string;
+  color: string;
+  maxOverride?: number;
+}) {
+  const maxVal = maxOverride ?? Math.max(...data.map((d) => d[valueKey] ?? 0), 1);
+  const H = 80;
+
+  return (
+    <div className="flex items-end gap-1.5 h-[80px] w-full">
+      {data.map((d, i) => {
+        const val = d[valueKey] ?? 0;
+        const h = Math.round((val / maxVal) * H);
+        return (
+          <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative">
+            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] font-black px-2 py-1 rounded-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
+              {val}
+            </div>
+            <div className="w-full flex flex-col justify-end" style={{ height: H }}>
+              <div className={`w-full rounded-sm transition-all duration-700 ${color}`} style={{ height: Math.max(h, 2) }} />
+            </div>
+            <span className="text-[8px] font-black text-slate-400 uppercase">{d.label}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function SubmissionChart({ data }: { data: { label: string; total: number; accepted: number }[] }) {
   const maxVal = Math.max(...data.map((d) => d.total), 1);
   const H = 80;
@@ -36,21 +71,12 @@ function SubmissionChart({ data }: { data: { label: string; total: number; accep
         const acceptedH = Math.round((d.accepted / maxVal) * H);
         return (
           <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative">
-            {/* Tooltip */}
             <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] font-black px-2 py-1 rounded-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
               {d.total} total · {d.accepted} accepted
             </div>
             <div className="w-full flex flex-col justify-end" style={{ height: H }}>
-              {/* Total bar (background) */}
-              <div
-                className="w-full bg-slate-100 rounded-sm relative overflow-hidden"
-                style={{ height: Math.max(totalH, 2) }}
-              >
-                {/* Accepted bar (overlay) */}
-                <div
-                  className="absolute bottom-0 left-0 right-0 bg-primary-1 rounded-sm transition-all duration-700"
-                  style={{ height: Math.max(acceptedH, 0) }}
-                />
+              <div className="w-full bg-slate-100 rounded-sm relative overflow-hidden" style={{ height: Math.max(totalH, 2) }}>
+                <div className="absolute bottom-0 left-0 right-0 bg-primary-1 rounded-sm transition-all duration-700" style={{ height: Math.max(acceptedH, 0) }} />
               </div>
             </div>
             <span className="text-[8px] font-black text-slate-400 uppercase">{d.label}</span>
@@ -184,6 +210,7 @@ export default function AdminDashboard() {
         <StatCard label="Acceptance Rate"   value={`${counts.acceptanceRate ?? 0}%`} icon={<FiCheckCircle size={15} className="text-emerald-500" />} />
         <StatCard label="Today Submissions" value={counts.todaySubmissions ?? 0}  icon={<FiZap size={15} className="text-amber-500" />} />
         <StatCard label="Resources"         value={counts.resources ?? 0}         icon={<FiBook size={15} className="text-blue-400" />} />
+        <StatCard label="New Users (7d)"    value={counts.newUsersThisWeek ?? 0}  icon={<FiUsers size={15} className="text-violet-500" />} href={ROUTES.ADMIN.USERS} />
         <StatCard label="Pending Applications" value={counts.pendingApplications ?? 0} icon={<FiMail size={15} className="text-amber-500" />} href={ROUTES.ADMIN.APPLICATION} alert={(counts.pendingApplications ?? 0) > 0} />
         <StatCard label="Flagged Discussions"  value={counts.flaggedDiscussions ?? 0}  icon={<FiAlertCircle size={15} className="text-rose-500" />} href={ROUTES.ADMIN.MODERATION} alert={(counts.flaggedDiscussions ?? 0) > 0} />
       </div>
@@ -215,6 +242,22 @@ export default function AdminDashboard() {
             ? <DifficultyDonut data={difficulty} />
             : <div className="h-20 flex items-center justify-center text-[10px] text-slate-300 font-black uppercase tracking-widest">No problems yet</div>}
         </div>
+      </div>
+
+      {/* ── New users chart ── */}
+      <div className="bg-white border-2 border-slate-100 rounded-sm p-6">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">User Growth</p>
+            <p className="text-sm font-black text-slate-900 mt-0.5">New Signups — Last 7 Days</p>
+          </div>
+          <Link href={ROUTES.ADMIN.USERS} className="text-[10px] font-black text-primary-1 uppercase tracking-widest hover:underline">
+            Manage Users →
+          </Link>
+        </div>
+        {chart.length > 0
+          ? <BarChart data={chart} valueKey="newUsers" color="bg-violet-400" />
+          : <div className="h-20 flex items-center justify-center text-[10px] text-slate-300 font-black uppercase tracking-widest">No signups yet</div>}
       </div>
 
       {/* ── Bottom row ── */}
