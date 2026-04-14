@@ -3,8 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { FiBell, FiCheck, FiTrash2, FiX } from "react-icons/fi";
-
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+import api from "@/lib/api";
 
 type Notification = {
   id: string;
@@ -17,9 +16,8 @@ type Notification = {
 };
 
 async function fetchNotifications(): Promise<{ notifications: Notification[]; unreadCount: number }> {
-  const res = await fetch(`${API}/notifications`, { credentials: "include" });
-  if (!res.ok) throw new Error("Failed to fetch");
-  return res.json();
+  const res = await api.get("/notifications");
+  return res.data;
 }
 
 function timeAgo(dateStr: string) {
@@ -56,15 +54,15 @@ export default function NotificationBell() {
 
   const markRead = useMutation({
     mutationFn: async (id?: string) => {
-      const url = id ? `${API}/notifications/${id}/read` : `${API}/notifications/read`;
-      await fetch(url, { method: "PATCH", credentials: "include" });
+      const url = id ? `/notifications/${id}/read` : `/notifications/read`;
+      await api.patch(url);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
   });
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      await fetch(`${API}/notifications/${id}`, { method: "DELETE", credentials: "include" });
+      await api.delete(`/notifications/${id}`);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
   });

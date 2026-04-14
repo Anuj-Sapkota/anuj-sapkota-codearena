@@ -8,35 +8,52 @@ export const initiateEsewaPayment = async (req: Request, res: Response) => {
     const { resourceId } = req.body;
     const userId = (req as any).user.sub;
 
-    // 1. DEFINE EXACT STRINGS
-    const amountValue = "100"; // No decimals, no spaces
+    // Fetch actual resource price from DB
+    const resource = await prisma.resource.findUnique({
+      where: { id: resourceId },
+      select: { price: true },
+    });
+
+    if (!resource) {
+      return res.status(404).json({ message: "Resource not found" });
+    }
+
+    // eSewa sandbox credentials (test only)
     const productCode = "EPAYTEST";
-    const txnUuid = `${userId}-${resourceId}-${Date.now()}`;
     const secret = "8gBm/:&EnhH.1/q";
 
-    // 2. CREATE HASH (Order matters: total_amount, transaction_uuid, product_code)
-    const hashString = `total_amount=${amountValue},transaction_uuid=${txnUuid},product_code=${productCode}`;
+    // eSewa requires integer string — no decimals, no commas
+    const amount = Math.max(Math.round(resource.price ?? 100), 10);
+    const amountValue = String(amount); // e.g. "500" not "500.00"
 
+    const txnUuid = `${userId}-${resourceId}-${Date.now()}`;
+
+    // Hash: MUST use the exact same string that goes into total_amount field
+    const hashString = `total_amount=${amountValue},transaction_uuid=${txnUuid},product_code=${productCode}`;
     const signature = crypto
       .createHmac("sha256", secret)
       .update(hashString)
       .digest("base64");
 
-    // 3. RETURN RESPONSE (Ensure keys match the form fields eSewa expects)
-    res.json({
+    console.log("eSewa hash input:", hashString);
+    console.log("eSewa signature:", signature);
+
+    const payload = {
       amount: amountValue,
       tax_amount: "0",
-      total_amount: amountValue, // MUST match the hashString exactly
+      total_amount: amountValue,
       transaction_uuid: txnUuid,
       product_code: productCode,
       product_service_charge: "0",
       product_delivery_charge: "0",
-      success_url: "http://localhost:3000/payment/success",
-      failure_url: "http://localhost:3000/payment/failure",
+      success_url: `${process.env.FRONTEND_URL}/payment/success`,
+      failure_url: `${process.env.FRONTEND_URL}/payment/failure`,
       signed_field_names: "total_amount,transaction_uuid,product_code",
       signature,
-      payment_url: "https://rc-epay.esewa.com.np/api/epay/main/v2/form",
-    });
+    };
+
+    console.log("eSewa payload:", payload);
+    res.json(payload);
   } catch (err) {
     res.status(500).json({ message: "Initialization error" });
   }
