@@ -2,6 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import {
   FiArrowRight, FiCheck, FiCheckCircle, FiClock,
   FiLock, FiLoader, FiPlay, FiUsers, FiZap, FiBookOpen, FiArrowLeft,
@@ -13,6 +14,9 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/lib/store/store";
 import Link from "next/link";
 import { ROUTES } from "@/constants/routes";
+import Modal from "@/components/ui/Modal";
+import LoginForm from "@/components/auth/LoginForm";
+import RegisterForm from "@/components/auth/RegisterForm";
 
 const PERKS = [
   "Lifetime Access",
@@ -26,6 +30,7 @@ export default function CourseDetailPage() {
   const router = useRouter();
   const id = params.id as string;
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const [authModal, setAuthModal] = useState<"login" | "register" | null>(null);
 
   const { data: course, isLoading, isError } = useQuery({
     queryKey: ["resource", id],
@@ -34,7 +39,7 @@ export default function CourseDetailPage() {
 
   const handlePayment = async () => {
     if (!isAuthenticated) {
-      router.push(ROUTES.AUTH.LOGIN);
+      setAuthModal("login");
       return;
     }
     try {
@@ -328,6 +333,14 @@ export default function CourseDetailPage() {
           </button>
         </div>
       </section>
+
+      {/* Auth modals — shown when guest clicks enroll */}
+      <Modal isOpen={authModal === "login"} onClose={() => setAuthModal(null)}>
+        <LoginForm onSuccess={() => setAuthModal(null)} onSwitch={() => setAuthModal("register")} />
+      </Modal>
+      <Modal isOpen={authModal === "register"} onClose={() => setAuthModal(null)}>
+        <RegisterForm onSuccess={() => setAuthModal(null)} onSwitch={() => setAuthModal("login")} />
+      </Modal>
 
     </div>
   );

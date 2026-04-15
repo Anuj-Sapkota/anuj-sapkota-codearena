@@ -1,9 +1,9 @@
 import { Router } from "express";
-import { getLeaderboard } from "../controllers/leaderboard.controller.js";
-import { authenticateRequest } from "../middleware/auth.middleware.js";
+import { getLeaderboard, getProblemLeaderboard } from "../controllers/leaderboard.controller.js";
 
 const router = Router();
-// Leaderboard is public — guests can see rankings
+
 router.get("/", getLeaderboard);
+router.get("/problem/:problemId", getProblemLeaderboard);
 
 export default router;

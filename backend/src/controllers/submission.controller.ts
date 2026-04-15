@@ -7,6 +7,7 @@ import {
   notifyLevelUp,
   notifyChallengeCompleted,
 } from "../services/notification.service.js";
+import { calculateLevel } from "../utils/gamification.js";
 
 // Helper function at the top of submission.controller.ts
 const calculateMetrics = (results: any[]) => {
@@ -129,6 +130,10 @@ export const handleSubmission = async (
     }
 
     let newSubmission = null;
+    // Track what happened for post-transaction notifications
+    let notifyFirstSolveData: { title: string; xp: number } | null = null;
+    let notifyLevelUpData: number | null = null;
+    let notifyChallengeData: { title: string; xp: number } | null = null;
 
     if (isFinal && userId) {
       newSubmission = await prisma.$transaction(async (tx) => {
@@ -169,8 +174,7 @@ export const handleSubmission = async (
             },
           });
 
-          // --- 🏆 GAMIFICATION LOGIC START ---
-          // XP only on first solve — streak updates on every accepted submission
+          // --- 🏆 GAMIFICATION LOGIC ---
           const previousSolved = await tx.submission.count({
             where: {
               userId: Number(userId),
@@ -184,28 +188,30 @@ export const handleSubmission = async (
           const user = await tx.user.findUnique({ where: { userId: Number(userId) } });
 
           if (user) {
-            // ── Streak: calendar-day based, updates on every accepted submission ──
+            // ── Streak: calendar-day based ──
             let newStreak = user.streak;
             if (user.lastActivityDate) {
               const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
               const lastMidnight = new Date(user.lastActivityDate.getFullYear(), user.lastActivityDate.getMonth(), user.lastActivityDate.getDate());
               const daysDiff = Math.round((todayMidnight.getTime() - lastMidnight.getTime()) / 86_400_000);
-              if (daysDiff === 0) newStreak = user.streak;       // same day, no change
-              else if (daysDiff === 1) newStreak = user.streak + 1; // consecutive day
-              else newStreak = 1;                                  // gap — reset
+              if (daysDiff === 0) newStreak = user.streak;
+              else if (daysDiff === 1) newStreak = user.streak + 1;
+              else newStreak = 1;
             } else {
               newStreak = 1;
             }
 
             if (previousSolved === 0) {
-              // First solve: award XP + update streak
+              // First solve: award XP, recalculate level correctly
               const xpGained = problem.points || 50;
-              const newLevel = Math.floor((user.xp + xpGained) / 500) + 1;
+              const newTotalXp = user.xp + xpGained;
+              const newLevel = calculateLevel(newTotalXp);
               const leveledUp = newLevel > user.level;
+
               await tx.user.update({
                 where: { userId: Number(userId) },
                 data: {
-                  xp: { increment: xpGained },
+                  xp: newTotalXp,
                   total_points: { increment: xpGained },
                   streak: newStreak,
                   lastActivityDate: now,
@@ -216,17 +222,16 @@ export const handleSubmission = async (
                 data: {
                   userId: Number(userId),
                   type: `${problem.difficulty.toUpperCase()}_SOLVED`,
-                  xpGained: xpGained,
+                  xpGained,
                   createdAt: now,
                 },
               });
-              // Notify first solve (fire-and-forget, outside tx)
-              notifyFirstSolve(Number(userId), problem.title, xpGained).catch(() => {});
-              if (leveledUp) {
-                notifyLevelUp(Number(userId), newLevel).catch(() => {});
-              }
+
+              // Queue notifications (fire after transaction)
+              notifyFirstSolveData = { title: problem.title, xp: xpGained };
+              if (leveledUp) notifyLevelUpData = newLevel;
             } else {
-              // Re-solve: only update streak + lastActivityDate, no XP
+              // Re-solve: only update streak
               await tx.user.update({
                 where: { userId: Number(userId) },
                 data: { streak: newStreak, lastActivityDate: now },
@@ -242,7 +247,6 @@ export const handleSubmission = async (
             });
             const totalInChallenge = challengeProblems.length;
 
-            // Single distinct query — no redundant count()
             const distinctSolved = await tx.submission.findMany({
               where: {
                 userId: Number(userId),
@@ -254,7 +258,6 @@ export const handleSubmission = async (
             });
 
             if (distinctSolved.length === totalInChallenge) {
-              // Check they haven't already received the bonus
               const alreadyBonused = await tx.activity.findFirst({
                 where: {
                   userId: Number(userId),
@@ -263,11 +266,20 @@ export const handleSubmission = async (
               });
               if (!alreadyBonused) {
                 const bonusXp = challenge.points;
+                // Fetch fresh user XP to recalculate level correctly
+                const freshUser = await tx.user.findUnique({
+                  where: { userId: Number(userId) },
+                  select: { xp: true, level: true },
+                });
+                const newTotalXp = (freshUser?.xp ?? 0) + bonusXp;
+                const newLevel = calculateLevel(newTotalXp);
+
                 await tx.user.update({
                   where: { userId: Number(userId) },
                   data: {
-                    xp: { increment: bonusXp },
+                    xp: newTotalXp,
                     total_points: { increment: bonusXp },
+                    level: newLevel,
                   },
                 });
                 await tx.activity.create({
@@ -277,15 +289,25 @@ export const handleSubmission = async (
                     xpGained: bonusXp,
                   },
                 });
-                // Notify challenge completion (fire-and-forget, outside tx)
-                notifyChallengeCompleted(Number(userId), challenge.title, bonusXp).catch(() => {});
+
+                notifyChallengeData = { title: challenge.title, xp: bonusXp };
               }
             }
           }
-          // --- 🏆 GAMIFICATION LOGIC END ---
         }
         return submission;
       });
+
+      // ── Fire notifications after transaction commits ──────────────────────
+      if (notifyFirstSolveData) {
+        notifyFirstSolve(Number(userId), notifyFirstSolveData.title, notifyFirstSolveData.xp).catch(() => {});
+      }
+      if (notifyLevelUpData) {
+        notifyLevelUp(Number(userId), notifyLevelUpData).catch(() => {});
+      }
+      if (notifyChallengeData) {
+        notifyChallengeCompleted(Number(userId), notifyChallengeData.title, notifyChallengeData.xp).catch(() => {});
+      }
     }
 
     return res.status(200).json({

@@ -1,12 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { FaSortAmountDown, FaChevronDown } from "react-icons/fa";
-
-interface SortOption {
-  label: string;
-  value: string;
-}
+import { FiChevronDown, FiArrowDown } from "react-icons/fi";
 
 interface SortDropdownProps {
   sortBy: string;
@@ -15,56 +10,45 @@ interface SortDropdownProps {
 }
 
 export default function SortDropdown({ sortBy, onSortChange, options }: SortDropdownProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const currentLabel = options.find((o) => o.value === sortBy)?.label || "Sort By";
+  const currentLabel = options.find((o) => o.value === sortBy)?.label || "Sort by";
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative shrink-0" ref={ref}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="h-[64px] min-w-[200px] bg-slate-100 border-2 border-slate-200 rounded-md flex items-center justify-between px-6 hover:border-primary-1 transition-all group"
+        onClick={() => setOpen((v) => !v)}
+        className={`flex items-center gap-2 px-4 py-3 border-2 rounded-sm text-[11px] font-black uppercase tracking-widest transition-all bg-white ${
+          open ? "border-primary-1 text-primary-1" : "border-slate-200 text-slate-500 hover:border-slate-400"
+        }`}
       >
-        <div className="flex items-center gap-3">
-          <FaSortAmountDown className="text-slate-500 group-hover:text-primary-1" size={18} />
-          <span className="text-xs font-black uppercase tracking-widest text-slate-600 group-hover:text-darkest">
-            {currentLabel}
-          </span>
-        </div>
-        <FaChevronDown 
-          className={`text-slate-400 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} 
-          size={12} 
-        />
+        <FiArrowDown size={13} />
+        <span>{currentLabel}</span>
+        <FiChevronDown size={12} className={`transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </button>
 
-      {isOpen && (
-        <div className="absolute top-[calc(100%+8px)] left-0 right-0 bg-white border-2 border-slate-100 rounded-md shadow-2xl z-[50] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-          {options.map((option) => (
+      {open && (
+        <div className="absolute top-[calc(100%+6px)] right-0 min-w-[180px] bg-white border-2 border-slate-100 rounded-sm shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+          {options.map((opt) => (
             <button
-              key={option.value}
-              onClick={() => {
-                onSortChange(option.value);
-                setIsOpen(false);
-              }}
-              className={`w-full text-left px-6 py-4 text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-colors border-l-4 ${
-                sortBy === option.value 
-                  ? "text-primary-1 bg-slate-50 border-primary-1" 
-                  : "text-slate-500 border-transparent"
+              key={opt.value}
+              onClick={() => { onSortChange(opt.value); setOpen(false); }}
+              className={`w-full text-left px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-colors border-l-2 ${
+                sortBy === opt.value
+                  ? "text-primary-1 bg-primary-1/5 border-primary-1"
+                  : "text-slate-500 border-transparent hover:bg-slate-50 hover:text-slate-900"
               }`}
             >
-              {option.label}
+              {opt.label}
             </button>
           ))}
         </div>

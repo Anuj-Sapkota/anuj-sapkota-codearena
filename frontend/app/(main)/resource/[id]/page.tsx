@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useResourceById } from "@/hooks/useResource";
 import { useSelector } from "react-redux";
 import { RootState } from "@/lib/store/store";
@@ -397,8 +397,9 @@ function AssignmentPanel({ resourceId, assignment, badge, isCreator, onPassed }:
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function ResourcePlayerPage() {
   const { id } = useParams();
+  const router = useRouter();
   const { data: resource, isLoading, error } = useResourceById(id as string);
-  const { user } = useSelector((state: RootState) => state.auth);
+  const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
 
   const [activeModuleId, setActiveModuleId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -420,6 +421,14 @@ export default function ResourcePlayerPage() {
     }
     if (resource?.assignment?.hasPassed) setAssignmentPassed(true);
   }, [resource]);
+
+  // ── Access gate: redirect to course detail if not owned ──────────────────
+  useEffect(() => {
+    if (!resource || isLoading) return;
+    if (!resource.isOwned && !resource.isCreator) {
+      router.replace(`/learn/${id}`);
+    }
+  }, [resource, isLoading, id, router]);
 
   useEffect(() => {
     if (resource?.modules?.length && !activeModuleId) {

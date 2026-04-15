@@ -5,6 +5,7 @@ import { FiZap } from "react-icons/fi";
 import Link from "next/link";
 import { ROUTES } from "@/constants/routes";
 import { UserProfile } from "@/types/auth.types";
+import { xpToNextLevel, levelProgress } from "@/lib/gamification";
 
 interface UserStatsHeaderProps {
   user: UserProfile;
@@ -16,14 +17,14 @@ export function UserStatsHeader({ user, userRank }: UserStatsHeaderProps) {
   const xp = user.xp ?? 0;
   const level = user.level ?? 1;
   const streak = user.streak ?? 0;
-  const xpInLevel = xp % 500;
-  const xpToNext = 500 - xpInLevel;
+  const toNext = xpToNextLevel(xp);
+  const pct = levelProgress(xp);
 
   const stats = [
-    { label: "XP Points",   value: xp.toLocaleString(),          icon: <FiZap className="text-primary-1" /> },
-    { label: "Level",       value: `Lv. ${level}`,               icon: <FaStar className="text-amber-500" /> },
+    { label: "XP Points",   value: xp.toLocaleString(),             icon: <FiZap className="text-primary-1" /> },
+    { label: "Level",       value: `Lv. ${level}`,                  icon: <FaStar className="text-amber-500" /> },
     { label: "Weekly Rank", value: userRank ? `#${userRank}` : "—", icon: <FaTrophy className="text-amber-500" /> },
-    { label: "Streak",      value: `${streak} 🔥`,               icon: <FaFire className="text-rose-500" /> },
+    { label: "Streak",      value: `${streak} 🔥`,                  icon: <FaFire className="text-rose-500" /> },
   ];
 
   return (
@@ -33,8 +34,8 @@ export function UserStatsHeader({ user, userRank }: UserStatsHeaderProps) {
       </h1>
       <p className="text-slate-500 font-medium mb-6">
         {userRank
-          ? <>Your current rank is <span className="text-slate-900 font-bold">#{userRank}</span>. You are <span className="text-primary-1 font-bold">{xpToNext} XP</span> away from level {level + 1}.</>
-          : <>You are <span className="text-primary-1 font-bold">{xpToNext} XP</span> away from level {level + 1}. Keep solving!</>}
+          ? <>Your current rank is <span className="text-slate-900 font-bold">#{userRank}</span>. You are <span className="text-primary-1 font-bold">{toNext} XP</span> away from level {level + 1}.</>
+          : <>You are <span className="text-primary-1 font-bold">{toNext} XP</span> away from level {level + 1}. Keep solving!</>}
       </p>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -52,10 +53,10 @@ export function UserStatsHeader({ user, userRank }: UserStatsHeaderProps) {
       <div className="bg-white border border-slate-200 p-4 rounded-sm shadow-sm">
         <div className="flex justify-between items-center mb-2">
           <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Progress to Level {level + 1}</span>
-          <span className="text-[10px] font-black text-primary-1">{xpInLevel} / 500 XP</span>
+          <span className="text-[10px] font-black text-primary-1">{pct}% · {toNext} XP to go</span>
         </div>
         <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-          <div className="h-full bg-primary-1 transition-all duration-700 rounded-full" style={{ width: `${(xpInLevel / 500) * 100}%` }} />
+          <div className="h-full bg-primary-1 transition-all duration-700 rounded-full" style={{ width: `${pct}%` }} />
         </div>
       </div>
     </header>

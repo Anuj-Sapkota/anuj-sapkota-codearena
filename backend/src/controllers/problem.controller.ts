@@ -48,8 +48,8 @@ export const getAllProblems = async (req: Request, res: Response) => {
     } = req.query;
 
     // 2. Determine the User ID
-    // Priority: Authenticated Token (req.user) > Query Param (?userId=123)
-    const tokenUserId = (req as any).user?.userId;
+    // Priority: Authenticated Token (req.user.sub) > Query Param (?userId=123)
+    const tokenUserId = (req as any).user?.sub;
     const effectiveUserId = tokenUserId
       ? Number(tokenUserId)
       : queryUserId

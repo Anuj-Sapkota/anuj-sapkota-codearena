@@ -2,6 +2,19 @@
 
 import { Problem } from "@/types/problem.types";
 import { useRouter } from "next/navigation";
+import { FiArrowRight } from "react-icons/fi";
+
+const DIFF_STYLE: Record<string, string> = {
+  EASY:   "text-emerald-600 bg-emerald-50",
+  MEDIUM: "text-amber-600 bg-amber-50",
+  HARD:   "text-rose-600 bg-rose-50",
+};
+
+const STATUS_STYLE: Record<string, { dot: string; label: string }> = {
+  SOLVED:    { dot: "bg-emerald-500", label: "Solved" },
+  ATTEMPTED: { dot: "bg-amber-400",   label: "Attempted" },
+  UNSOLVED:  { dot: "bg-slate-200",   label: "—" },
+};
 
 interface ProblemListItemProps {
   prob: Problem;
@@ -10,65 +23,54 @@ interface ProblemListItemProps {
 
 export default function ProblemListItem({ prob, idx }: ProblemListItemProps) {
   const router = useRouter();
-
-  const getStatusInfo = (status: Problem["status"]) => {
-    switch (status) {
-      case "SOLVED":
-        return { label: "Completed", color: "text-emerald-500" };
-      case "ATTEMPTED":
-        return { label: "Attempted", color: "text-orange-500" };
-      default:
-        return { label: "Awaiting", color: "text-slate-400" };
-    }
-  };
-
-  const statusInfo = getStatusInfo(prob.status);
-
-  // REDIRECT TO /problems/[id]
-  const handleSolveRedirect = () => {
-    // Navigating to the dynamic ID route under problems
-    router.push(`/problems/${prob.problemId}`);
-  };
+  const status = STATUS_STYLE[prob.status ?? "UNSOLVED"] ?? STATUS_STYLE.UNSOLVED;
+  const diff = DIFF_STYLE[prob.difficulty] ?? "text-slate-500 bg-slate-100";
 
   return (
-    <div className={`flex flex-col sm:flex-row sm:items-center justify-between p-6 md:p-8 rounded-md transition-all border-2 border-transparent hover:border-primary-1/40 hover:shadow-sm ${idx % 2 === 0 ? "bg-slate-50" : "bg-white border-slate-100"}`}>
-      
-      <div className="flex items-center gap-4 md:gap-8 mb-4 sm:mb-0">
-        <span className="font-mono text-sm font-black text-slate-300 hidden md:block">
-          {(idx + 1).toString().padStart(2, "0")}
+    <button
+      onClick={() => router.push(`/problems/${prob.problemId}`)}
+      className="w-full grid grid-cols-12 items-center px-5 py-4 border-b-2 border-slate-100 last:border-0 hover:bg-slate-50 transition-colors group text-left"
+    >
+      {/* # */}
+      <div className="col-span-1">
+        <span className="text-[11px] font-black text-slate-300 tabular-nums group-hover:text-slate-400 transition-colors">
+          {String(idx + 1).padStart(2, "0")}
         </span>
-        <div>
-          <span className="font-black text-slate-900 uppercase text-base md:text-lg block tracking-tight mb-1">
-            {prob.title}
-          </span>
-          <span className="text-[9px] md:text-[10px] font-bold text-slate-400 bg-slate-200/50 px-2 py-0.5 rounded uppercase">
-            ID: {prob.problemId}
-          </span>
-        </div>
       </div>
 
-      <div className="flex items-center justify-between sm:justify-end gap-6 md:gap-12 border-t sm:border-t-0 pt-4 sm:pt-0">
-        <div className="text-left sm:text-right">
-          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Status</p>
-          <span className={`text-[10px] md:text-[11px] font-black uppercase ${statusInfo.color}`}>
-            {statusInfo.label}
-          </span>
-        </div>
-        
-        <div className="text-left sm:text-right w-16 md:w-20">
-          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Level</p>
-          <span className="text-[10px] md:text-[11px] font-black text-slate-900 uppercase">
-            {prob.difficulty}
-          </span>
-        </div>
-
-        <button 
-          onClick={handleSolveRedirect}
-          className="px-6 md:px-8 py-2.5 md:py-3 border-2 border-primary-1 text-primary-1 text-[10px] md:text-[11px] font-black uppercase tracking-widest rounded hover:bg-primary-1 hover:text-white transition-all active:scale-95"
-        >
-          Solve_
-        </button>
+      {/* Title */}
+      <div className="col-span-5 min-w-0 pr-4">
+        <span className="text-sm font-bold text-slate-800 group-hover:text-primary-1 transition-colors truncate block">
+          {prob.title}
+        </span>
       </div>
-    </div>
+
+      {/* Difficulty */}
+      <div className="col-span-2">
+        <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-sm ${diff}`}>
+          {prob.difficulty}
+        </span>
+      </div>
+
+      {/* Status */}
+      <div className="col-span-2 flex items-center gap-2">
+        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${status.dot}`} />
+        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">
+          {status.label}
+        </span>
+      </div>
+
+      {/* XP */}
+      <div className="col-span-2 flex items-center justify-end gap-1">
+        <span className="text-[11px] font-black text-primary-1">
+          {prob.points ?? 50}
+        </span>
+        <span className="text-[9px] font-black text-slate-400 uppercase">xp</span>
+        <FiArrowRight
+          size={12}
+          className="text-slate-300 group-hover:text-primary-1 group-hover:translate-x-0.5 transition-all ml-1"
+        />
+      </div>
+    </button>
   );
 }
