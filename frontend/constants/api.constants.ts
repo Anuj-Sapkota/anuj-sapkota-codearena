@@ -58,8 +58,8 @@ export const API = {
   },
   CREATOR: {
     APPLY: "/creator/apply",
-    VERIFY_OTP: "/creator/verify-otp",
-    APPLICATIONS: "/creator/applications",
+    VERIFY_OTP: "/creator/verify",
+    APPLICATIONS: "/creator/pending-creators",
     REVIEW: (id: number) => `/creator/applications/${id}/review`,
   },
   UPLOAD: {
@@ -79,5 +79,11 @@ export const API = {
     USERS: "/admin/users",
     USER_ROLE: (id: number) => `/admin/users/${id}/role`,
     USER_BAN: (id: number) => `/admin/users/${id}/ban`,
+  },
+  NOTIFICATIONS: {
+    BASE: "/notifications",
+    READ_ALL: "/notifications/read",
+    READ_ONE: (id: string) => `/notifications/${id}/read`,
+    DELETE: (id: string) => `/notifications/${id}`,
   },
 } as const;

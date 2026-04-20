@@ -18,20 +18,14 @@ router.get("/", getCategories);
  * @access  Private (Admin Only)
  */
 router.post(
-  "/create",
+  "/",
   authenticateRequest,
-  authorizeRequest("ADMIN"), // Gatekeeper: Only ADMIN role can pass
+  authorizeRequest("ADMIN"),
   createCategory,
 );
 
-/**
- * @route   GET /api/categories/:id
- * @desc    Get details for a specific category
- * @access  Private (Authenticated Users)
- */
 router.get("/:id", authenticateRequest, getCategoryById);
 
-// New Routes
-router.put("/update/:id", authenticateRequest, authorizeRequest("ADMIN"), updateCategory);
-router.delete("/delete/:id", authenticateRequest, authorizeRequest("ADMIN"), deleteCategory);
+router.put("/:id", authenticateRequest, authorizeRequest("ADMIN"), updateCategory);
+router.delete("/:id", authenticateRequest, authorizeRequest("ADMIN"), deleteCategory);
 export default router;

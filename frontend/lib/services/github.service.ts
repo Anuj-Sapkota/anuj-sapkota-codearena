@@ -4,7 +4,8 @@ import { GithubContent, GithubRepo } from "@/types/github.types";
 export const githubService = {
   fetchRepos: async (): Promise<GithubRepo[]> => {
     const { data } = await api.get("/github/repos");
-    return data;
+    // Backend returns { success: true, repos: [...] }
+    return data.repos ?? data;
   },
 
   fetchRepoContents: async (
@@ -12,8 +13,9 @@ export const githubService = {
     repo: string,
     path: string,
   ): Promise<GithubContent[]> => {
-    const { data } = await api.get("/github/contents", {
-      params: { owner, repo, path },
+    // Backend route: GET /github/repos/:owner/:repo/contents?path=...
+    const { data } = await api.get(`/github/repos/${owner}/${repo}/contents`, {
+      params: { path },
     });
     return data;
   },
@@ -24,7 +26,8 @@ export const githubService = {
     path: string,
     folderName: string,
   ): Promise<void> => {
-    await api.post("/github/create-folder", { owner, repo, path, folderName });
+    // Backend route: POST /github/repos/create-folder
+    await api.post("/github/repos/create-folder", { owner, repo, path, folderName });
   },
 
   pushCode: async (

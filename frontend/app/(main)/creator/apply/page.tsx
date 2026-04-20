@@ -6,21 +6,20 @@ import { AppDispatch, RootState } from "@/lib/store/store";
 import { setStep } from "@/lib/store/features/creator/creator.slice";
 import { FiPlus, FiFileText, FiAlertCircle, FiClock, FiCheckCircle } from "react-icons/fi";
 import CreatorApplicationForm from "@/components/creator/applications/CreatorApplicationForm";
-import { useApplyCreator, useVerifyCreatorOTP } from "@/hooks/useCreator";
+import { useApplyCreator } from "@/hooks/useCreator";
 import { verifyCreatorOTPThunk } from "@/lib/store/features/creator/creator.actions";
 
 export default function CreatorApplyPage() {
   const dispatch = useDispatch<AppDispatch>();
   const { user, isLoading: authLoading } = useSelector((state: RootState) => state.auth);
   // step is pure UI state — keep in Redux
-  const { step } = useSelector((state: RootState) => state.creator);
+  const { step, isSubmitting: reduxSubmitting, error: reduxError } = useSelector((state: RootState) => state.creator);
 
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({ bio: "", portfolioUrl: "", githubUrl: "" });
   const [otp, setOtp] = useState("");
 
   const applyCreator = useApplyCreator();
-  const verifyOTP = useVerifyCreatorOTP();
 
   if (authLoading) return <div className="p-20 text-center uppercase font-black text-xs tracking-widest">Loading Profile...</div>;
 
@@ -114,8 +113,8 @@ export default function CreatorApplyPage() {
         setFormData={setFormData}
         otp={otp}
         setOtp={setOtp}
-        isSubmitting={applyCreator.isPending || verifyOTP.isPending}
-        error={applyCreator.error?.message || verifyOTP.error?.message || null}
+        isSubmitting={applyCreator.isPending || reduxSubmitting}
+        error={applyCreator.error?.message || reduxError || null}
         handleApply={(e: any) => {
           e.preventDefault();
           applyCreator.mutate(formData, {

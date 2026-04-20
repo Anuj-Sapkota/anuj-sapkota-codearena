@@ -12,18 +12,18 @@ export const applyToBecomeCreatorService = async (userId: number, data: any) => 
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   const expiry = new Date(Date.now() + 10 * 60000); // 10 mins
 
-  return await prisma.$transaction(async (tx) => {
+  const profile = await prisma.$transaction(async (tx) => {
     // 1. Create or Update the Profile (Keep status as NOT_APPLIED until OTP is verified)
     const profile = await tx.creatorProfile.upsert({
       where: { userId },
       update: {
         bio,
         portfolioUrl,
-        githubUrl, // Ensure this exists in your model
+        githubUrl,
         otpCode: otp,
         otpExpiresAt: expiry,
         isEmailVerified: false,
-        status: "NOT_APPLIED", 
+        status: "NOT_APPLIED",
       },
       create: {
         userId,
@@ -42,9 +42,13 @@ export const applyToBecomeCreatorService = async (userId: number, data: any) => 
       data: { creatorStatus: "NOT_APPLIED" },
     });
 
-    await sendVerificationEmail(user.email, otp);
     return profile;
   });
+
+  // Send email AFTER the transaction commits — avoids timeout
+  await sendVerificationEmail(user.email, otp);
+
+  return profile;
 };
 
 export const verifyCreatorOTPService = async (userId: number, otp: string) => {

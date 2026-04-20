@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "postgresql" 
 }
 
 // --- ENUMS ---
@@ -44,11 +44,6 @@ enum InputType {
   ARRAY
   STRING
   BOOLEAN
-}
-
-enum ChallengeType {
-  SCHEDULED
-  STATIC
 }
 
 enum ChallengeDifficulty {
@@ -114,7 +109,6 @@ model User {
   creatorProfile CreatorProfile?
   ownedResources Resource[]
   purchases      Purchase[]
-  reviews        Review[]
   assignmentAttempts AssignmentAttempt[]
 
   created_at DateTime    @default(now())
@@ -179,16 +173,11 @@ model CreatorProfile {
   userId Int  @unique
   user   User @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
-  // Sync this status with the User.creatorStatus in your backend logic
-  status CreatorStatus @default(PENDING)
-
-  bio             String? @db.Text
+  status          CreatorStatus @default(PENDING)
   portfolioUrl    String?
-  rejectionReason String? @db.Text
-
+  rejectionReason String?       @db.Text
   githubUrl       String?
-  views           Int       @default(0)
-  isEmailVerified Boolean   @default(false)
+  isEmailVerified Boolean       @default(false)
   otpCode         String?
   otpExpiresAt    DateTime?
 
@@ -209,9 +198,6 @@ model Resource {
   previewUrl  String?
   price       Float        @default(0.0)
   language    String?
-
-  avgRating    Float   @default(0.0)
-  totalReviews Int     @default(0)
   views        Int     @default(0)
   isApproved   Boolean @default(false)
   isPublished  Boolean @default(false)
@@ -219,12 +205,9 @@ model Resource {
   creatorId Int
   creator   User @relation(fields: [creatorId], references: [userId])
 
-  problemId Int?
-  problem   Problem? @relation(fields: [problemId], references: [problemId])
   badgeId   String?
   badge     Badge?   @relation(fields: [badgeId], references: [id])
 
-  reviews    Review[]
   modules    Module[]
   purchases  Purchase[]
   assignment Assignment?
@@ -271,23 +254,6 @@ model Purchase {
   @@map("purchases")
 }
 
-model Review {
-  id      String @id @default(cuid())
-  rating  Int
-  comment String @db.Text
-
-  userId     Int
-  resourceId String
-
-  user     User     @relation(fields: [userId], references: [userId])
-  resource Resource @relation(fields: [resourceId], references: [id])
-
-  createdAt DateTime @default(now())
-
-  @@unique([userId, resourceId])
-  @@map("resource_reviews")
-}
-
 // --- DISCUSSIONS & MODERATION ---
 
 model Discussion {
@@ -295,7 +261,6 @@ model Discussion {
   title    String?
   content  String  @db.Text
   language String?
-  isPinned Boolean @default(false)
 
   userId Int
   user   User @relation(fields: [userId], references: [userId], onDelete: Cascade)
@@ -367,7 +332,6 @@ model Problem {
   userStatuses UserProblemStatus[]
   challenges   ChallengeProblem[]
   discussions  Discussion[]
-  resources    Resource[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -405,12 +369,11 @@ model Submission {
   challengeId Int?
   code        String   @db.Text
   languageId  Int
-  status      String // Values like "Accepted", "Wrong Answer"
+  status      String
   totalPassed Int      @default(0)
   totalCases  Int      @default(0)
   memory      Int?
   time        Float?
-  token       String?  @unique
   failMessage String?
   createdAt   DateTime @default(now())
 
@@ -439,7 +402,6 @@ model Challenge {
   slug        String              @unique
   description String?             @db.Text
   bannerUrl   String?
-  type        ChallengeType       @default(SCHEDULED)
   difficulty  ChallengeDifficulty @default(MEDIUM)
   points      Int                 @default(100)
   isPublic    Boolean             @default(false)
