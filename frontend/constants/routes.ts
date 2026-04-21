@@ -1,4 +1,4 @@
-import { FiBell, FiSettings, FiUser } from "react-icons/fi";
+import { FiBell, FiSettings, FiUser, FiShoppingBag } from "react-icons/fi";
 
 export const ROUTES = {
   HOME: "/",
@@ -20,6 +20,7 @@ export const ROUTES = {
     SETTINGS: "/settings",
     ACCOUNTS_SECURITY: "/settings/accounts-security",
     NOTIFICATIONS: "/settings/notifications",
+    PURCHASES: "/settings/purchases",
     RESOURCE: "/resource",
     PAYMENT: "/payment",
   },
@@ -33,6 +34,7 @@ export const ROUTES = {
     MODERATION: "/admin/moderation",
     APPLICATION: "/admin/application",
     USERS: "/admin/users",
+    PAYMENTS: "/admin/payments",
   },
 
   CREATOR: {
@@ -66,9 +68,10 @@ export const NAV_ITEMS = [
 ] as const;
 
 export const SETTINGS_MENU_ITEMS = [
-  { id: "basic",    name: "Basic Info",           icon: FiUser,     path: ROUTES.MAIN.SETTINGS },
-  { id: "security", name: "Account and Security", icon: FiSettings, path: ROUTES.MAIN.ACCOUNTS_SECURITY },
-  { id: "notifications", name: "Notifications",   icon: FiBell,     path: ROUTES.MAIN.NOTIFICATIONS },
+  { id: "basic",     name: "Basic Info",           icon: FiUser,        path: ROUTES.MAIN.SETTINGS },
+  { id: "security",  name: "Account and Security", icon: FiSettings,    path: ROUTES.MAIN.ACCOUNTS_SECURITY },
+  { id: "notifications", name: "Notifications",    icon: FiBell,        path: ROUTES.MAIN.NOTIFICATIONS },
+  { id: "purchases", name: "Purchase History",      icon: FiShoppingBag, path: ROUTES.MAIN.PURCHASES },
 ] as const;
 
 export const ADMIN_NAV_ITEMS = [

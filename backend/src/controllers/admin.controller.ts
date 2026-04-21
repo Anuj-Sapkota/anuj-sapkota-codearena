@@ -5,6 +5,7 @@ import {
   updateUserRoleService,
   banUserService,
 } from "../services/admin.service.js";
+import { createNotification, notifyRoleChanged } from "../services/notification.service.js";
 
 export const getAdminStats = async (req: Request, res: Response) => {
   try {
@@ -40,6 +41,10 @@ export const updateUserRole = async (req: Request, res: Response) => {
     }
 
     const updated = await updateUserRoleService(Number(userId), role);
+
+    // Notify user of role change (non-blocking)
+    notifyRoleChanged(Number(userId), role, updated.previousRole ?? "USER").catch(() => {});
+
     res.json({ success: true, user: updated });
   } catch (err) {
     res.status(500).json({ message: "Failed to update role" });
@@ -50,6 +55,10 @@ export const banUser = async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
     const updated = await banUserService(Number(userId));
+
+    // Notify user they've been demoted
+    notifyRoleChanged(Number(userId), "USER", updated.previousRole ?? "CREATOR").catch(() => {});
+
     res.json({ success: true, user: updated });
   } catch (err) {
     res.status(500).json({ message: "Failed to ban user" });

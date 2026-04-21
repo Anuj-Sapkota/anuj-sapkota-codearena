@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/lib/store/store";
-import { FaSpinner, FaChevronLeft } from "react-icons/fa";
+import { FiLoader, FiChevronLeft, FiArrowRight } from "react-icons/fi";
 import { toast } from "sonner";
 import { FileExplorerStep } from "../FileExplorerStep";
 import { RepoListStep } from "../RepoListStep";
@@ -11,6 +11,22 @@ import { GithubContent, GithubRepo } from "@/types/github.types";
 import { githubService } from "@/lib/services/github.service";
 
 const LANG_EXT: Record<number, string> = { 63: "js", 71: "py", 54: "cpp", 62: "java" };
+
+// Step indicator dots
+function StepDots({ step }: { step: 1 | 2 }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      {[1, 2].map((s) => (
+        <div
+          key={s}
+          className={`rounded-full transition-all duration-300 ${
+            step === s ? "w-4 h-1.5 bg-slate-900" : "w-1.5 h-1.5 bg-slate-200"
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
 
 export const GithubRepoModal = ({
   isOpen,
@@ -101,7 +117,7 @@ export const GithubRepoModal = ({
       );
       setPushSuccessUrl(result.url);
     } catch {
-      toast.error("Push failed");
+      toast.error("Push failed — check your GitHub token permissions");
     } finally {
       setIsPushing(false);
     }
@@ -119,11 +135,13 @@ export const GithubRepoModal = ({
   if (pushSuccessUrl) return <PushSuccessView url={pushSuccessUrl} onClose={handleClose} />;
 
   return (
-    <div className="fixed inset-0 z-100 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 font-sans">
-      <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-lg rounded-sm shadow-2xl border border-slate-200 flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200">
+
         <ModalHeader step={step} path={currentPath} onClose={handleClose} />
 
-        <div className="flex-1 overflow-hidden flex flex-col bg-slate-50">
+        {/* Body */}
+        <div className="flex-1 overflow-hidden flex flex-col bg-[#f8fafc]">
           {step === 1 ? (
             <RepoListStep
               repos={repos}
@@ -153,20 +171,31 @@ export const GithubRepoModal = ({
           )}
         </div>
 
-        <div className="p-6 bg-white border-t border-slate-100 flex justify-between">
-          <button
-            onClick={() => (step === 2 ? setStep(1) : handleClose())}
-            className="text-[10px] font-black uppercase text-slate-400 hover:text-slate-800 flex items-center gap-2 transition-colors"
-          >
-            {step === 2 && <FaChevronLeft />}
-            {step === 2 ? "Go_Back" : "Cancel"}
-          </button>
+        {/* Footer */}
+        <div className="flex items-center justify-between px-5 py-4 border-t border-slate-100 bg-white shrink-0">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => (step === 2 ? setStep(1) : handleClose())}
+              className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors"
+            >
+              {step === 2 && <FiChevronLeft size={11} />}
+              {step === 2 ? "Back" : "Cancel"}
+            </button>
+            <StepDots step={step} />
+          </div>
+
           <button
             disabled={!selectedRepo || isPushing || !selectedSubmission}
-            onClick={step === 1 ? () => { setStep(2); loadDirectory(""); } : handlePush}
-            className="bg-slate-900 text-white px-10 py-4 rounded-2xl font-black text-[10px] tracking-widest uppercase hover:bg-emerald-600 disabled:bg-slate-200 transition-all flex items-center gap-2 shadow-xl"
+            onClick={step === 1
+              ? () => { setStep(2); loadDirectory(""); }
+              : handlePush}
+            className="flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-sm text-[10px] font-black uppercase tracking-widest hover:bg-primary-1 transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
           >
-            {isPushing ? <FaSpinner className="animate-spin" /> : step === 1 ? "Next_Phase" : "Execute_Push"}
+            {isPushing
+              ? <><FiLoader size={12} className="animate-spin" /> Pushing...</>
+              : step === 1
+                ? <><FiArrowRight size={12} /> Select Location</>
+                : <><FiArrowRight size={12} /> Push to GitHub</>}
           </button>
         </div>
       </div>

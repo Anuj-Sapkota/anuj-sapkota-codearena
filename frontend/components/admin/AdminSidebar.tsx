@@ -10,7 +10,7 @@ import { tokenStore } from "@/lib/token";
 import { ROUTES } from "@/constants/routes";
 import {
   FiGrid, FiCode, FiTag, FiShield, FiMail,
-  FiAward, FiLogOut, FiX, FiExternalLink, FiUsers,
+  FiAward, FiLogOut, FiX, FiExternalLink, FiUsers, FiDollarSign,
 } from "react-icons/fi";
 import { LuSwords } from "react-icons/lu";
 
@@ -23,6 +23,7 @@ const NAV = [
   { label: "Moderation",   href: ROUTES.ADMIN.MODERATION,  icon: FiShield },
   { label: "Applications", href: ROUTES.ADMIN.APPLICATION, icon: FiMail },
   { label: "Users",        href: ROUTES.ADMIN.USERS,       icon: FiUsers },
+  { label: "Payments",     href: ROUTES.ADMIN.PAYMENTS,    icon: FiDollarSign },
 ];
 
 export default function AdminSidebar({ onClose }: { onClose?: () => void }) {

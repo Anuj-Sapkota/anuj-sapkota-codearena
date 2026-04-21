@@ -55,8 +55,8 @@ export default function ChallengeDetailsPage() {
     </div>
   );
 
-  const stats = currentChallenge.stats || { solvedCount: 0, totalCount: 0, percentage: 0 };
-  const isCompleted = stats.solvedCount > 0 && stats.solvedCount === stats.totalCount;
+  const stats = currentChallenge.stats || { solvedCount: 0, totalCount: 0, percentage: 0, isCompleted: false };
+  const isCompleted = stats.isCompleted ?? (stats.solvedCount > 0 && stats.solvedCount === stats.totalCount);
   const diffKey = (currentChallenge.difficulty?.toUpperCase() || "MEDIUM") as keyof typeof DIFF;
   const cfg = DIFF[diffKey] || DIFF.MEDIUM;
 
@@ -184,7 +184,7 @@ export default function ChallengeDetailsPage() {
                       ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                       : "bg-slate-900 text-white group-hover:bg-blue-600"
                   }`}>
-                    {cp.isSolved ? "Done" : "Solve"} <FiChevronRight size={10} />
+                    {cp.isSolved ? "Review" : "Solve"} <FiChevronRight size={10} />
                   </button>
                 </div>
               );

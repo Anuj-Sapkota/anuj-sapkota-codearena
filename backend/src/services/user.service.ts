@@ -25,6 +25,9 @@ export const updateUserService = async (
   }
 
   // 3. Forbidden Fields Check
+  if (!data || typeof data !== "object") {
+    throw { message: "Request body is missing or invalid", statusCode: 400 };
+  }
   for (let field of forbiddenFields) {
     if (field in data) {
       throw { message: `Cannot Update ${field}`, statusCode: 403 };

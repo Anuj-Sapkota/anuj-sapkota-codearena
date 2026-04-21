@@ -155,6 +155,7 @@ export const getChallengeBySlugService = async (
   // console.log("Problem with status: ", problemsWithStatus)// -----------------------HERE is solved is getting false------------------//
   const solvedCount = problemsWithStatus.filter((p) => p.isSolved).length;
   const totalCount = problemsWithStatus.length;
+  const isCompleted = totalCount > 0 && solvedCount === totalCount;
   return {
     ...challenge,
     problems: problemsWithStatus,
@@ -162,6 +163,7 @@ export const getChallengeBySlugService = async (
       solvedCount,
       totalCount,
       percentage: totalCount > 0 ? (solvedCount / totalCount) * 100 : 0,
+      isCompleted,
     },
   };
 };

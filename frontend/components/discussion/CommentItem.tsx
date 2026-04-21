@@ -220,12 +220,18 @@ export const CommentItem = ({
                   {!isOwner && !isAdmin && (
                     <button
                       onClick={() => {
+                        if (comment.hasReported) return;
                         onReport(comment);
                         setShowMenu(false);
                       }}
-                      className="w-full flex items-center cursor-pointer gap-3 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-amber-600 hover:bg-amber-50"
+                      disabled={comment.hasReported}
+                      className={`w-full flex items-center cursor-pointer gap-3 px-4 py-2 text-[10px] font-black uppercase tracking-widest ${
+                        comment.hasReported
+                          ? "text-slate-400 cursor-not-allowed"
+                          : "text-amber-600 hover:bg-amber-50"
+                      }`}
                     >
-                      <HiOutlineFlag /> Report_Flag
+                      <HiOutlineFlag /> {comment.hasReported ? "Reported" : "Report_Flag"}
                     </button>
                   )}
                   {isAdmin && (

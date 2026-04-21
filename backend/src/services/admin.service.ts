@@ -121,17 +121,21 @@ export const getUsersService = async (params: {
 };
 
 export const updateUserRoleService = async (userId: number, role: string) => {
-  return prisma.user.update({
+  const current = await prisma.user.findUnique({ where: { userId }, select: { role: true } });
+  const updated = await prisma.user.update({
     where: { userId },
     data: { role },
     select: { userId: true, username: true, role: true },
   });
+  return { ...updated, previousRole: current?.role ?? "USER" };
 };
 
 export const banUserService = async (userId: number) => {
-  return prisma.user.update({
+  const current = await prisma.user.findUnique({ where: { userId }, select: { role: true } });
+  const updated = await prisma.user.update({
     where: { userId },
     data: { role: "USER", creatorStatus: "NOT_APPLIED" },
     select: { userId: true, username: true, role: true },
   });
+  return { ...updated, previousRole: current?.role ?? "CREATOR" };
 };

@@ -1,8 +1,8 @@
 import type { NextFunction, Request, Response } from "express";
 import * as Judge0Service from "../services/judge0.service.js";
-import { prisma } from "../lib/prisma.js";
 import { wrapUserCode } from "../utils/code-wrapper.util.js";
 import {
+  getProblemWithTestCasesService,
   processSubmissionService,
   getSubmissionHistoryService,
   getSubmissionStatsService,
@@ -19,61 +19,27 @@ const calculateMetrics = (results: any[]) => {
   };
 };
 
-export const handleSubmission = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const handleSubmission = async (req: Request, res: Response, next: NextFunction) => {
   const { source_code, language_id, problemId, isFinal, challengeSlug } = req.body;
   const userId = (req as any).user.sub;
 
   try {
-    const problem = await prisma.problem.findUnique({
-      where: { problemId: Number(problemId) },
-      include: { testCases: true },
-    });
-
-    if (!problem) {
-      return res.status(404).json({ success: false, message: "Problem not found" });
-    }
+    const problem = await getProblemWithTestCasesService(Number(problemId));
+    if (!problem) return res.status(404).json({ success: false, message: "Problem not found" });
 
     const results = await Promise.all(
       problem.testCases.map(async (tc) => {
-        const wrappedCode = wrapUserCode(
-          source_code, language_id, tc.input,
-          problem.functionName || "solution", problem.inputType,
-        );
-
-        const execution = await Judge0Service.submitCode(
-          wrappedCode, language_id, tc.input, problem.timeLimit, problem.memoryLimit,
-        );
+        const wrappedCode = wrapUserCode(source_code, language_id, tc.input, problem.functionName || "solution", problem.inputType);
+        const execution = await Judge0Service.submitCode(wrappedCode, language_id, tc.input, problem.timeLimit, problem.memoryLimit);
 
         const statusId = execution?.status?.id;
-        const actualOutput = execution.stdout
-          ? Buffer.from(execution.stdout, "base64").toString("utf-8").trim()
-          : "";
-
-        const clean = (str: string) =>
-          str.replace(/[\[\]\s]/g, "").replace(/,,+/g, ",");
-
-        const normalizedActual = clean(actualOutput);
-        const normalizedExpected = clean(tc.expectedOutput);
-        const isMatch = normalizedActual === normalizedExpected && normalizedActual !== "";
+        const actualOutput = execution.stdout ? Buffer.from(execution.stdout, "base64").toString("utf-8").trim() : "";
+        const clean = (str: string) => str.replace(/[\[\]\s]/g, "").replace(/,,+/g, ",");
+        const isMatch = clean(actualOutput) === clean(tc.expectedOutput) && clean(actualOutput) !== "";
         const isCorrect = statusId === 3 && isMatch;
+        const decodeB64 = (s: string | null | undefined) => { if (!s) return ""; try { return Buffer.from(s, "base64").toString("utf-8").trim(); } catch { return s; } };
 
-        const decodeB64 = (s: string | null | undefined): string => {
-          if (!s) return "";
-          try { return Buffer.from(s, "base64").toString("utf-8").trim(); } catch { return s; }
-        };
-
-        return {
-          ...execution,
-          stderr: decodeB64(execution.stderr),
-          compile_output: decodeB64(execution.compile_output),
-          isCorrect,
-          decodedOutput: actualOutput,
-          isSample: tc.isSample,
-        };
+        return { ...execution, stderr: decodeB64(execution.stderr), compile_output: decodeB64(execution.compile_output), isCorrect, decodedOutput: actualOutput, isSample: tc.isSample };
       }),
     );
 
@@ -88,35 +54,18 @@ export const handleSubmission = async (
     else if (results.find((r) => r.status?.id >= 7 && r.status?.id <= 12)) finalStatus = "RUNTIME_ERROR";
 
     let newSubmission = null;
-
     if (isFinal && userId) {
       newSubmission = await processSubmissionService({
-        userId: Number(userId),
-        problemId: Number(problemId),
-        challengeSlug: String(challengeSlug || ""),
-        source_code,
-        language_id: Number(language_id),
-        finalStatus,
-        totalPassed,
-        totalCases: results.length,
-        rawTime: metrics.rawTime,
-        rawMemory: metrics.rawMemory,
-        failMessage,
-        allPassed,
+        userId: Number(userId), problemId: Number(problemId),
+        challengeSlug: String(challengeSlug || ""), source_code,
+        language_id: Number(language_id), finalStatus, totalPassed,
+        totalCases: results.length, rawTime: metrics.rawTime,
+        rawMemory: metrics.rawMemory, failMessage, allPassed,
       });
     }
 
-    return res.status(200).json({
-      success: true,
-      results,
-      allPassed,
-      totalPassed,
-      totalCases: results.length,
-      metrics: { runtime: metrics.runtime, memory: metrics.memory },
-      newSubmission,
-    });
+    return res.status(200).json({ success: true, results, allPassed, totalPassed, totalCases: results.length, metrics: { runtime: metrics.runtime, memory: metrics.memory }, newSubmission });
   } catch (error: any) {
-    console.error(error);
     next(error);
   }
 };

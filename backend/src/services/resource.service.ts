@@ -291,11 +291,27 @@ export const getCreatorStatsService = async (userId: number) => {
   });
 
   const gross = totalGrossRevenue._sum.amount || 0;
+  const creatorEarnings = gross * 0.8;
+
+  // Also fetch the user's actual balance fields
+  const user = await prisma.user.findUnique({
+    where: { userId },
+    select: { pendingEarnings: true, totalWithdrawn: true, totalEarnings: true },
+  });
+
+  // If pendingEarnings is 0 but they have earnings, backfill it
+  // (handles users who had purchases before the pendingEarnings field was added)
+  const pendingEarnings = (user?.pendingEarnings ?? 0) > 0
+    ? user!.pendingEarnings
+    : Math.max(0, creatorEarnings - (user?.totalWithdrawn ?? 0));
+
   return {
-    totalEarnings: gross * 0.8,
+    totalEarnings: creatorEarnings,
     grossRevenue: gross,
     totalResourceViews: resourceAggregation._sum.views || 0,
     resourceCount: resourceAggregation._count.id || 0,
+    pendingEarnings,
+    totalWithdrawn: user?.totalWithdrawn ?? 0,
   };
 };
 

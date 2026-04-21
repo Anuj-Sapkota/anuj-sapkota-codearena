@@ -124,6 +124,7 @@ const DiscussContainer = ({ problemId }: { problemId: number }) => {
                   className="appearance-none bg-slate-100 border border-slate-200 text-[9px] font-black uppercase tracking-widest rounded-xl pl-8 pr-4 py-2.5 outline-none cursor-pointer"
                 >
                   <option value="all">All_Langs</option>
+                  <option value="javascript">JavaScript</option>
                   <option value="python">Python</option>
                   <option value="cpp">C++</option>
                   <option value="java">Java</option>

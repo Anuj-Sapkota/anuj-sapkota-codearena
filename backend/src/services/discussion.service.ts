@@ -1,5 +1,8 @@
 import type { ReportType } from "../../generated/prisma/client.js";
 import { prisma } from "../lib/prisma.js";
+import { ServiceError } from "../errors/service.error.js";
+import { createNotification } from "./notification.service.js";
+import { truncate } from "../utils/truncate.util.js";
 
 /**
  * Helper to recursively inject hasUpvoted into discussion trees
@@ -7,9 +10,8 @@ import { prisma } from "../lib/prisma.js";
 const formatDiscussion = (disc: any): any => {
   return {
     ...disc,
-    // If the array exists and has at least one entry, the user has upvoted
     hasUpvoted: disc.upvoteTracks ? disc.upvoteTracks.length > 0 : false,
-    // Recursively format replies
+    hasReported: disc.reports ? disc.reports.length > 0 : false,
     replies: disc.replies ? disc.replies.map(formatDiscussion) : [],
   };
 };
@@ -61,6 +63,9 @@ export const getByProblem = async (
       upvoteTracks: currentUserId
         ? { where: { userId: currentUserId } }
         : false,
+      reports: currentUserId
+        ? { where: { userId: currentUserId }, select: { id: true } }
+        : false,
       replies: {
         // Apply the same OR logic to replies so owners see their blocked replies too
         where:
@@ -73,6 +78,9 @@ export const getByProblem = async (
           user: { select: { userId: true, username: true, role: true } },
           upvoteTracks: currentUserId
             ? { where: { userId: currentUserId } }
+            : false,
+          reports: currentUserId
+            ? { where: { userId: currentUserId }, select: { id: true } }
             : false,
         },
         orderBy: { createdAt: "asc" },
@@ -153,6 +161,24 @@ export const createDiscussionService = async (data: {
     },
   });
 
+  // Notify parent comment owner when someone replies to their comment
+  if (data.parentId) {
+    const parent = await prisma.discussion.findUnique({
+      where: { id: data.parentId },
+      select: { userId: true, content: true, problemId: true },
+    });
+    // Don't notify if replying to own comment
+    if (parent && parent.userId !== data.userId) {
+      await createNotification({
+        userId: parent.userId,
+        type: "SYSTEM",
+        title: "New reply to your comment 💬",
+        message: `Someone replied to your comment: "${truncate(parent.content)}"`,
+        link: `/problems/${parent.problemId}#discussion-${data.parentId}`,
+      });
+    }
+  }
+
   return formatDiscussion(newPost);
 };
 
@@ -164,10 +190,15 @@ export const updateDiscussionService = async (
   userId: number,
   data: { content?: string; language?: string | null },
 ) => {
+  // Verify ownership first
+  const existing = await prisma.discussion.findUnique({ where: { id: discussionId } });
+  if (!existing) throw new ServiceError("Discussion not found", 404);
+  if (existing.userId !== userId) throw new ServiceError("Not authorized", 403);
+
   const updated = await prisma.discussion.update({
-    where: { id: discussionId, userId },
+    where: { id: discussionId },
     data: {
-      ...data,
+      ...(data.content !== undefined && { content: data.content }),
       language:
         data.language !== undefined
           ? data.language
@@ -178,6 +209,13 @@ export const updateDiscussionService = async (
         select: { username: true, full_name: true, profile_pic_url: true },
       },
       upvoteTracks: { where: { userId } },
+      replies: {
+        include: {
+          user: { select: { username: true, full_name: true, profile_pic_url: true } },
+          upvoteTracks: { where: { userId } },
+        },
+        orderBy: { createdAt: "asc" },
+      },
     },
   });
 
@@ -191,11 +229,14 @@ export const deleteDiscussionService = async (
   discussionId: string,
   userId: number,
 ) => {
-  const discussion = await prisma.discussion.findUnique({ where: { id: discussionId } });
+  const discussion = await prisma.discussion.findUnique({
+    where: { id: discussionId },
+  });
   if (!discussion) throw new ServiceError("Discussion not found", 404);
   if (discussion.userId !== userId) throw new ServiceError("Not authorized", 403);
 
-  return await prisma.discussion.delete({ where: { id: discussionId } });
+  await prisma.discussion.delete({ where: { id: discussionId } });
+  return { success: true };
 };
 
 /**
@@ -223,10 +264,21 @@ export const reportDiscussionService = async (
     const updatedStatus = await tx.discussion.update({
       where: { id: discussionId },
       data: { reportCount: { increment: 1 } },
-      select: { reportCount: true, isBlocked: true },
+      select: { reportCount: true, isBlocked: true, userId: true, content: true, problemId: true },
     });
 
-    // 3. Auto-moderation logic: Block if threshold reached (3 reports)
+    // 3. Notify the comment owner that their comment was reported
+    if (updatedStatus.userId !== userId) {
+      await createNotification({
+        userId: updatedStatus.userId,
+        type: "SYSTEM",
+        title: "Your comment was reported ⚠️",
+        message: `Your comment "${truncate(updatedStatus.content)}" has been reported by a community member.`,
+        link: `/problems/${updatedStatus.problemId}#discussion-${discussionId}`,
+      });
+    }
+
+    // 4. Auto-moderation logic: Block if threshold reached (3 reports)
     const REPORT_THRESHOLD = 3;
     if (
       updatedStatus.reportCount >= REPORT_THRESHOLD &&
@@ -236,12 +288,22 @@ export const reportDiscussionService = async (
         where: { id: discussionId },
         data: { isBlocked: true },
       });
+
+      // Notify the owner their comment has been hidden
+      await createNotification({
+        userId: updatedStatus.userId,
+        type: "SYSTEM",
+        title: "Your comment has been hidden 🚫",
+        message: `Your comment "${truncate(updatedStatus.content)}" has been hidden from the community due to multiple reports. Our moderation team will review it shortly.`,
+        link: `/problems/${updatedStatus.problemId}#discussion-${discussionId}`,
+      });
+
       console.log(
         `[AUTO_MOD] Discussion ${discussionId} blocked at ${updatedStatus.reportCount} reports.`,
       );
     }
 
-    // 4. Return the FULL updated discussion object
+    // 5. Return the FULL updated discussion object
     return await tx.discussion.findUnique({
       where: { id: discussionId },
       include: {
@@ -265,7 +327,7 @@ export const reportDiscussionService = async (
         _count: {
           select: {
             replies: true,
-            upvoteTracks: true, // Correct relation name from your schema
+            upvoteTracks: true,
             reports: true,
           },
         },
@@ -314,27 +376,50 @@ export const moderateDiscussionService = async (
   id: string,
   action: "BLOCK" | "UNBLOCK",
 ) => {
-  return await prisma.$transaction(async (tx) => {
+  // Fetch discussion before transaction so we have content + problemId for notification
+  const discussion = await prisma.discussion.findUnique({
+    where: { id },
+    select: { userId: true, content: true, problemId: true },
+  });
+  if (!discussion) throw new ServiceError("Discussion not found", 404);
+
+  const result = await prisma.$transaction(async (tx) => {
     // 1. Update the discussion status
     const updated = await tx.discussion.update({
       where: { id },
       data: {
         isBlocked: action === "BLOCK",
-        // If unblocking, we reset the counter to give the user a clean slate
         reportCount: action === "UNBLOCK" ? 0 : undefined,
       },
     });
 
     // 2. If UNBLOCKING, delete the associated reports so the dashboard stays clean
     if (action === "UNBLOCK") {
-      await tx.discussionReport.deleteMany({
-        where: { discussionId: id },
-      });
-      console.log(
-        `ADMIN_ACTION: Discussion ${id} cleared and reports deleted.`,
-      );
+      await tx.discussionReport.deleteMany({ where: { discussionId: id } });
+      console.log(`ADMIN_ACTION: Discussion ${id} cleared and reports deleted.`);
     }
 
     return updated;
   });
+
+  // 3. Send notification to comment owner
+  if (action === "BLOCK") {
+    await createNotification({
+      userId: discussion.userId,
+      type: "SYSTEM",
+      title: "Your comment has been blocked 🚫",
+      message: `Your comment "${truncate(discussion.content)}" has been blocked by a moderator for violating community guidelines.`,
+      link: `/problems/${discussion.problemId}`,
+    });
+  } else {
+    await createNotification({
+      userId: discussion.userId,
+      type: "SYSTEM",
+      title: "Your comment has been restored ✅",
+      message: `Your comment "${truncate(discussion.content)}" has been reviewed and restored by a moderator. It is now visible to the community again.`,
+      link: `/problems/${discussion.problemId}#discussion-${id}`,
+    });
+  }
+
+  return result;
 };

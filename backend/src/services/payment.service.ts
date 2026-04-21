@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { prisma } from "../lib/prisma.js";
 import { ServiceError } from "../errors/service.error.js";
+import { notifyCoursePurchased } from "./notification.service.js";
 
 const ESEWA_PRODUCT_CODE = "EPAYTEST";
 const ESEWA_SECRET = "8gBm/:&EnhH.1/q";
@@ -48,28 +49,57 @@ export const verifyEsewaService = async (encodedData: string) => {
   const [uId, resId] = decodedData.transaction_uuid.split("-");
   const totalAmount = parseFloat(decodedData.total_amount.replace(/,/g, ""));
   const creatorEarnings = totalAmount * 0.8;
+  const studentId = parseInt(uId);
+
+  // Check if purchase already exists — prevents double-processing on duplicate callbacks
+  const existingPurchase = await prisma.purchase.findUnique({
+    where: { userId_resourceId: { userId: studentId, resourceId: resId } },
+  });
 
   const result = await prisma.$transaction(async (tx) => {
     const purchase = await tx.purchase.upsert({
-      where: { userId_resourceId: { userId: parseInt(uId), resourceId: resId } },
-      update: { amount: totalAmount },
-      create: { userId: parseInt(uId), resourceId: resId, amount: totalAmount },
+      where: { userId_resourceId: { userId: studentId, resourceId: resId } },
+      update: {},  // no-op on duplicate — don't update amount
+      create: { userId: studentId, resourceId: resId, amount: totalAmount },
     });
 
     const resource = await tx.resource.findUnique({
       where: { id: resId },
-      select: { creatorId: true },
+      select: { creatorId: true, title: true },
     });
 
     if (!resource) throw new Error("Resource not found during payment verification");
 
-    await tx.user.update({
-      where: { userId: resource.creatorId },
-      data: { totalEarnings: { increment: creatorEarnings } },
-    });
+    // Only credit earnings on first-time purchase
+    if (!existingPurchase) {
+      await tx.user.update({
+        where: { userId: resource.creatorId },
+        data: {
+          totalEarnings: { increment: creatorEarnings },
+          pendingEarnings: { increment: creatorEarnings },
+        },
+      });
+    }
 
-    return { purchase, resId };
+    return {
+      purchase,
+      resId,
+      creatorId: resource.creatorId,
+      resourceTitle: resource.title,
+      isNew: !existingPurchase,
+    };
   });
+
+  // Only notify on first-time purchase — prevents duplicate notifications on eSewa callback retries
+  if (result.isNew) {
+    notifyCoursePurchased(
+      studentId,
+      result.creatorId,
+      result.resourceTitle,
+      totalAmount,
+      result.resId,
+    ).catch(() => {});
+  }
 
   return { resourceId: result.resId, totalAmount, creatorEarnings };
 };

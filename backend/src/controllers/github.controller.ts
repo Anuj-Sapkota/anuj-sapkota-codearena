@@ -6,8 +6,6 @@ import {
 } from "../services/github.service.js";
 import type { Request, Response, NextFunction } from "express";
 import { findUserRaw } from "../services/user.service.js";
-import { prisma } from "../lib/prisma.js";
-import axios from "axios";
 
 export const getRepos = async (
   req: Request,
@@ -107,9 +105,7 @@ export const folderCreation = async (
   const userId = (req as any).user.sub;
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { userId: Number(userId) },
-    });
+    const user = await findUserRaw(Number(userId));
     if (!user?.github_access_token) {
       return res.status(401).json({ message: "GitHub not connected" });
     }

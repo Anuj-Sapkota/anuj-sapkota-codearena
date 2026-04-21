@@ -6,6 +6,13 @@ import {
   notifyChallengeCompleted,
 } from "./notification.service.js";
 
+export const getProblemWithTestCasesService = async (problemId: number) => {
+  return prisma.problem.findUnique({
+    where: { problemId },
+    include: { testCases: true },
+  });
+};
+
 export const processSubmissionService = async (params: {
   userId: number;
   problemId: number;

@@ -174,12 +174,12 @@ export default function AdminDashboard() {
   const recentUsers = data?.recentUsers ?? [];
 
   const quickLinks = [
-    { label: "Problems",     href: ROUTES.ADMIN.PROBLEMS,     icon: <FiCode size={14} className="text-blue-500" /> },
-    { label: "Challenges",   href: ROUTES.ADMIN.CHALLENGES,   icon: <LuSwords size={14} className="text-violet-500" /> },
-    { label: "Categories",   href: ROUTES.ADMIN.CATEGORIES,   icon: <FiBarChart2 size={14} className="text-slate-500" /> },
-    { label: "Badges",       href: ROUTES.ADMIN.BADGES,       icon: <FiAward size={14} className="text-amber-500" /> },
-    { label: "Moderation",   href: ROUTES.ADMIN.MODERATION,   icon: <FiShield size={14} className="text-rose-500" /> },
-    { label: "Applications", href: ROUTES.ADMIN.APPLICATION,  icon: <FiMail size={14} className="text-emerald-500" /> },
+    { label: "Problems",     href: ROUTES.ADMIN.PROBLEMS,     icon: <FiCode size={14} className="text-blue-500" />,     badge: 0 },
+    { label: "Challenges",   href: ROUTES.ADMIN.CHALLENGES,   icon: <LuSwords size={14} className="text-violet-500" />, badge: 0 },
+    { label: "Categories",   href: ROUTES.ADMIN.CATEGORIES,   icon: <FiBarChart2 size={14} className="text-slate-500" />, badge: 0 },
+    { label: "Badges",       href: ROUTES.ADMIN.BADGES,       icon: <FiAward size={14} className="text-amber-500" />,   badge: 0 },
+    { label: "Moderation",   href: ROUTES.ADMIN.MODERATION,   icon: <FiShield size={14} className="text-rose-500" />,   badge: counts.flaggedDiscussions ?? 0 },
+    { label: "Applications", href: ROUTES.ADMIN.APPLICATION,  icon: <FiMail size={14} className="text-emerald-500" />,  badge: counts.pendingApplications ?? 0 },
   ];
 
   if (isLoading) {
@@ -300,12 +300,17 @@ export default function AdminDashboard() {
               <Link
                 key={l.href}
                 href={l.href}
-                className="flex items-center gap-2.5 p-3 border-2 border-slate-100 rounded-sm hover:border-slate-900 hover:bg-slate-50 transition-all group"
+                className="relative flex items-center gap-2.5 p-3 border-2 border-slate-100 rounded-sm hover:border-slate-900 hover:bg-slate-50 transition-all group"
               >
                 {l.icon}
                 <span className="text-[10px] font-black text-slate-600 uppercase tracking-wider group-hover:text-slate-900 transition-colors">
                   {l.label}
                 </span>
+                {l.badge > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-rose-500 text-white text-[9px] font-black rounded-full flex items-center justify-center px-1 shadow-sm">
+                    {l.badge > 9 ? "9+" : l.badge}
+                  </span>
+                )}
               </Link>
             ))}
           </div>

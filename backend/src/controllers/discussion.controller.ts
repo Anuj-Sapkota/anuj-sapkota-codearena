@@ -11,6 +11,9 @@ import {
 } from "../services/discussion.service.js";
 import { ServiceError } from "../errors/service.error.js";
 import { ReportType } from "../../generated/prisma/client.js";
+import { prisma } from "../lib/prisma.js";
+import { createNotification } from "../services/notification.service.js";
+import { truncate } from "../utils/truncate.util.js";
 
 /**
  * GET /api/discussions/problem/:problemId
@@ -131,17 +134,37 @@ export const deleteDiscussion = async (
 ) => {
   try {
     const { id } = req.params;
-    const userId = (req as any).user?.sub;
+    const userId = Number((req as any).user?.sub);
+    const userRole = (req as any).user?.role;
 
     if (!userId) throw new ServiceError("AUTH_CONTEXT_MISSING", 401);
     if (!id) throw new ServiceError("DISCUSSION_ID_REQUIRED", 400);
 
-    await deleteDiscussionService(id, Number(userId));
+    // Admins can delete any comment — fetch it first to notify the owner
+    if (userRole === "ADMIN") {
+      const discussion = await prisma.discussion.findUnique({
+        where: { id },
+        include: { problem: { select: { title: true } } },
+      });
+      if (!discussion) throw new ServiceError("Discussion not found", 404);
 
-    res.status(200).json({
-      success: true,
-      message: "DISCUSSION_DELETED",
-    });
+      await prisma.discussion.delete({ where: { id } });
+
+      // Notify the comment owner if admin deleted someone else's comment
+      if (discussion.userId !== userId) {
+        await createNotification({
+          userId: discussion.userId,
+          type: "SYSTEM",
+          title: "Your comment was removed 🗑️",
+          message: `Your comment "${truncate(discussion.content)}" on "${discussion.problem.title}" was removed by a moderator due to community guideline violations.`,
+          link: `/problems/${discussion.problemId}`,
+        });
+      }
+    } else {
+      await deleteDiscussionService(id, userId);
+    }
+
+    res.status(200).json({ success: true, message: "DISCUSSION_DELETED" });
   } catch (err) {
     next(err);
   }

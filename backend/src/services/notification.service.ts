@@ -10,6 +10,16 @@ interface CreateNotificationInput {
 }
 
 export const createNotification = async (data: CreateNotificationInput) => {
+  // Deduplicate: don't create the same notification twice within 60 seconds
+  const recent = await prisma.notification.findFirst({
+    where: {
+      userId: data.userId,
+      type: data.type,
+      title: data.title,
+      createdAt: { gte: new Date(Date.now() - 60_000) },
+    },
+  });
+  if (recent) return recent;
   return prisma.notification.create({ data });
 };
 
@@ -101,3 +111,65 @@ export const notifyLevelUp = (userId: number, newLevel: number) =>
     message: `Keep solving problems to reach the next level.`,
     link: "/explore",
   });
+
+// ─── Payment notifications ────────────────────────────────────────────────────
+
+export const notifyCoursePurchased = (
+  studentId: number,
+  creatorId: number,
+  resourceTitle: string,
+  amount: number,
+  resourceId: string,
+) => {
+  const npr = (v: number) => `NPR ${v.toLocaleString()}`;
+  return Promise.all([
+    // Student: enrollment confirmed
+    createNotification({
+      userId: studentId,
+      type: "SYSTEM",
+      title: "Enrollment Confirmed 🎓",
+      message: `You've successfully enrolled in "${resourceTitle}". Start learning now!`,
+      link: `/resource/${resourceId}`,
+    }),
+    // Creator: new sale
+    createNotification({
+      userId: creatorId,
+      type: "SYSTEM",
+      title: "New Course Sale 💰",
+      message: `Someone purchased "${resourceTitle}". You earned ${npr(amount * 0.8)} (80% of ${npr(amount)}).`,
+      link: "/creator/dashboard",
+    }),
+  ]);
+};
+
+// ─── Role change notifications ────────────────────────────────────────────────
+
+export const notifyRoleChanged = (userId: number, newRole: string, oldRole: string) => {
+  const messages: Record<string, { title: string; message: string }> = {
+    ADMIN: {
+      title: "You've been promoted to Admin 🛡️",
+      message: "You now have full administrative access to CodeArena.",
+    },
+    CREATOR: {
+      title: "You've been promoted to Creator 🎨",
+      message: "You can now publish courses and resources on CodeArena.",
+    },
+    USER: {
+      title: "Role Updated",
+      message: `Your role has been changed from ${oldRole} to USER by an administrator.`,
+    },
+  };
+
+  const content = messages[newRole] ?? {
+    title: "Role Updated",
+    message: `Your account role has been updated to ${newRole}.`,
+  };
+
+  return createNotification({
+    userId,
+    type: "SYSTEM",
+    title: content.title,
+    message: content.message,
+    link: "/settings",
+  });
+};

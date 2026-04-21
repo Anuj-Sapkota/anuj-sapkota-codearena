@@ -1,4 +1,4 @@
-import { FaGithub } from "react-icons/fa";
+import { FiGithub, FiX } from "react-icons/fi";
 
 interface ModalHeaderProps {
   step: number;
@@ -7,27 +7,25 @@ interface ModalHeaderProps {
 }
 
 export const ModalHeader = ({ step, path, onClose }: ModalHeaderProps) => (
-  <div className="bg-emerald-600 p-6 text-white flex justify-between items-center">
-    <div className="flex items-center gap-4">
-      <div className="p-3 bg-white/20 rounded-2xl">
-        <FaGithub size={24} />
+  <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
+    <div className="flex items-center gap-3">
+      <div className="w-8 h-8 bg-slate-900 rounded-sm flex items-center justify-center shrink-0">
+        <FiGithub size={15} className="text-white" />
       </div>
       <div>
-        <h3 className="font-black text-sm uppercase tracking-widest">
-          {step === 1 ? "Select_Repository" : "Navigate_Directories"}
-        </h3>
-        <p className="text-[10px] text-emerald-100 font-medium">
-          {step === 1
-            ? "Choose your destination repo"
-            : `Current Path: /${path || "root"}`}
+        <p className="text-[11px] font-black text-slate-900 uppercase tracking-widest">
+          {step === 1 ? "Select Repository" : "Choose Location"}
+        </p>
+        <p className="text-[9px] text-slate-400 font-bold mt-0.5">
+          {step === 1 ? "Pick where to push your solution" : `/${path || "root"}`}
         </p>
       </div>
     </div>
     <button
       onClick={onClose}
-      className="text-emerald-100 hover:text-white transition-colors"
+      className="w-7 h-7 flex items-center justify-center rounded-sm text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-all"
     >
-      ✕
+      <FiX size={14} />
     </button>
   </div>
 );
