@@ -185,11 +185,71 @@ You should see a JSON response with system details. If you see it, Judge0 is rea
 
 ### 6. Set up the database
 
+You need a PostgreSQL database running before this step. Choose one of the two options below.
+
+---
+
+#### Option A — Local PostgreSQL (recommended for offline use)
+
+**Step 1 — Install PostgreSQL:**
+
+Download and install from [https://www.postgresql.org/download/windows](https://www.postgresql.org/download/windows)
+
+During installation, set a password for the `postgres` user. Remember it.
+
+**Step 2 — Create a database:**
+
+Open **pgAdmin** (installed with PostgreSQL) or use the SQL Shell (psql):
+
+```sql
+CREATE DATABASE codearena;
+```
+
+**Step 3 — Update your `.env`:**
+
+Open `backend/.env` and set the `DATABASE_URL`:
+
+```env
+DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@localhost:5432/codearena?schema=public"
+```
+
+Replace `YOUR_PASSWORD` with the password you set during PostgreSQL installation.
+
+---
+
+#### Option B — Free cloud database (no local install needed)
+
+Use [Neon](https://neon.tech) — free PostgreSQL in the cloud.
+
+1. Go to [https://neon.tech](https://neon.tech) and sign up for free
+2. Create a new project (e.g. `codearena`)
+3. Copy the connection string from the dashboard — it looks like:
+   ```
+   postgresql://user:password@ep-xxx.us-east-1.aws.neon.tech/neondb?sslmode=require
+   ```
+4. Paste it as `DATABASE_URL` in `backend/.env`
+
+---
+
+#### Run Prisma migrations
+
+Once your `DATABASE_URL` is set, run:
+
 ```bash
 cd backend
-npx prisma migrate dev
+npx prisma migrate dev --name init
 npx prisma generate
 ```
+
+This will create all the tables in your database automatically.
+
+To verify the tables were created, you can run:
+
+```bash
+npx prisma studio
+```
+
+This opens a browser UI at `http://localhost:5555` where you can browse all tables.
 
 ### 8. Run the application
 
@@ -263,6 +323,47 @@ codearena/
 
 - Admin panel
 - Leaderboard
+
+---
+
+## Troubleshooting Database
+
+### `prisma migrate dev` fails with "connection refused"
+
+PostgreSQL is not running or the `DATABASE_URL` is wrong.
+
+- If using local PostgreSQL: open Services (Windows) and make sure **postgresql** service is running
+- Double-check the password and port in `DATABASE_URL` inside `backend/.env`
+- Default port is `5432` — make sure nothing else is using it
+
+### `P1001: Can't reach database server`
+
+Same as above — PostgreSQL isn't reachable. For Neon, check your internet connection and make sure the connection string includes `?sslmode=require`.
+
+### `P3009: migrate found failed migrations`
+
+Run this to reset and reapply:
+
+```bash
+npx prisma migrate reset
+```
+
+> ⚠️ This deletes all data in the database. Only use during initial setup.
+
+### Tables not created / schema out of sync
+
+```bash
+npx prisma migrate dev --name init
+npx prisma generate
+```
+
+If that still doesn't work, try:
+
+```bash
+npx prisma db push
+```
+
+This force-syncs the schema without using migration history.
 
 ---
 
