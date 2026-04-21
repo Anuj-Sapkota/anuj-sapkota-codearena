@@ -37,6 +37,9 @@ export const submitAssignment = async (req: Request, res: Response) => {
     const { answers } = req.body;
 
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    if (!answers || !Array.isArray(answers) || answers.length === 0) {
+      return res.status(400).json({ message: "answers array is required" });
+    }
 
     const result = await submitAssignmentService(assignmentId, userId, answers);
     res.json({ success: true, ...result });

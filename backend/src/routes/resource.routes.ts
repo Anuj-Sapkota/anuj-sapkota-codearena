@@ -18,6 +18,7 @@ import {
   submitAssignment,
 } from "../controllers/assignment.controller.js";
 import { authenticateRequest, optionalAuth } from "../middleware/auth.middleware.js";
+import { authorizeRequest } from "../middleware/authorize.middleware.js";
 
 const router = Router();
 
@@ -27,7 +28,7 @@ router.get("/explore", getPublicResources);
 // ── Protected named routes (must be before /:id wildcard) ────────────────────
 router.get("/my-resources", authenticateRequest, getMyResources);
 router.get("/creator/stats", authenticateRequest, getCreatorStats);
-router.post("/create-series", authenticateRequest, createSeries);
+router.post("/create-series", authenticateRequest, authorizeRequest("CREATOR"), createSeries);
 router.post("/complete-module", authenticateRequest, completeModule);
 
 // Assignment named routes (before /:id)

@@ -7,7 +7,7 @@ import {
   deleteChallenge,
   getPublicChallenge,
 } from "../controllers/challenge.controller.js";
-import { authenticateRequest } from "../middleware/auth.middleware.js";
+import { authenticateRequest, optionalAuth } from "../middleware/auth.middleware.js";
 import { authorizeRequest } from "../middleware/authorize.middleware.js";
 
 const router = Router();
@@ -71,9 +71,9 @@ router.delete(
 /**
  * @route   GET /api/challenges/:slug
  * @desc    Fetch detailed challenge data, including user-specific problem status
- * @access  Private (Authenticated Users)
+ * @access  Public (optionalAuth — guests see challenge but no progress)
  * @note    Dynamic parameter routes should always be placed at the end of the file.
  */
-router.get("/:slug", authenticateRequest, getSingleChallenge);
+router.get("/:slug", optionalAuth, getSingleChallenge);
 
 export default router;
