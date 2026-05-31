@@ -461,13 +461,13 @@ Possible improvements for the system:
 
 ---
 
-## Authors
+## Developer
 
-Student Name : Anuj Sapkota
+Name : Anuj Sapkota
 
-Program / Department: Bsc (Hons) Computing
+Email: anujsapkota808@gmail.com
+LinkedIn: https://www.linkedin.com/in/anuj-sapkota-1as/
 
-University / College Name : London Met University / Itahari International COllege
 
 ---
 
