@@ -69,23 +69,19 @@ export const createChallengeService = async (data: any) => {
 
 /**
  * Fetches challenges with server-side pagination.
- * FIXED: Now includes 'problems' so the Edit Modal can see linked IDs.
  */
-export const getAllChallengesService = async ({
-  page,
-  limit,
-  search,
-}: {
-  page?: string;
-  limit?: string;
-  search?: string;
+export const getAllChallengesService = async (params: {
+  page: number,
+  limit: number,
+  search: string,
 }) => {
+   
+
   // Expire any challenges whose endTime has passed before returning the list
   await autoExpireChallenges();
 
-  const p = parseInt(page || "1");
-  const l = parseInt(limit || "10");
-  const skip = (p - 1) * l;
+   const {page, limit, search} = params;
+  const skip = (page - 1) * limit;
 
   const where: any = search
     ? { title: { contains: search, mode: "insensitive" } }
@@ -96,7 +92,7 @@ export const getAllChallengesService = async ({
       prisma.challenge.findMany({
         where,
         skip,
-        take: l,
+        take: limit,
         include: {
           problems: true,
           _count: { select: { problems: true } },
@@ -108,7 +104,7 @@ export const getAllChallengesService = async ({
 
     return {
       items,
-      meta: { total, page: p, limit: l, pages: Math.ceil(total / l) },
+      meta: { total, page: page, limit: limit, pages: Math.ceil(total / limit) },
     };
   } catch (error: any) {
     throw new ServiceError("FAILED_TO_FETCH_CHALLENGES", 500);

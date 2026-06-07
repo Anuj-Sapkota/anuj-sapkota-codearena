@@ -32,6 +32,8 @@ export const getByProblem = async (
   const orderBy: any =
     sortBy === "most_upvoted" ? { upvotes: "desc" } : { createdAt: "desc" };
 
+  if (!currentUserId) throw new ServiceError("Current user ID required", 401);
+
   const discussions = await prisma.discussion.findMany({
     where: {
       problemId,
@@ -39,7 +41,6 @@ export const getByProblem = async (
       ...(language && language !== "all" ? { language } : {}),
       ...(search ? { content: { contains: search, mode: "insensitive" } } : {}),
 
-      // NEW LOGIC:
       // 1. Admins see EVERYTHING.
       // 2. Users see: (Non-blocked content) OR (Their own blocked content).
       ...(userRole !== "ADMIN"
@@ -191,7 +192,9 @@ export const updateDiscussionService = async (
   data: { content?: string; language?: string | null },
 ) => {
   // Verify ownership first
-  const existing = await prisma.discussion.findUnique({ where: { id: discussionId } });
+  const existing = await prisma.discussion.findUnique({
+    where: { id: discussionId },
+  });
   if (!existing) throw new ServiceError("Discussion not found", 404);
   if (existing.userId !== userId) throw new ServiceError("Not authorized", 403);
 
@@ -211,7 +214,9 @@ export const updateDiscussionService = async (
       upvoteTracks: { where: { userId } },
       replies: {
         include: {
-          user: { select: { username: true, full_name: true, profile_pic_url: true } },
+          user: {
+            select: { username: true, full_name: true, profile_pic_url: true },
+          },
           upvoteTracks: { where: { userId } },
         },
         orderBy: { createdAt: "asc" },
@@ -233,7 +238,8 @@ export const deleteDiscussionService = async (
     where: { id: discussionId },
   });
   if (!discussion) throw new ServiceError("Discussion not found", 404);
-  if (discussion.userId !== userId) throw new ServiceError("Not authorized", 403);
+  if (discussion.userId !== userId)
+    throw new ServiceError("Not authorized", 403);
 
   await prisma.discussion.delete({ where: { id: discussionId } });
   return { success: true };
@@ -247,7 +253,7 @@ export const reportDiscussionService = async (
   discussionId: string,
   userId: number,
   reportType: ReportType,
-  details?: string,
+  details: string | null,
 ) => {
   return await prisma.$transaction(async (tx) => {
     // 1. Create the report record
@@ -264,7 +270,13 @@ export const reportDiscussionService = async (
     const updatedStatus = await tx.discussion.update({
       where: { id: discussionId },
       data: { reportCount: { increment: 1 } },
-      select: { reportCount: true, isBlocked: true, userId: true, content: true, problemId: true },
+      select: {
+        reportCount: true,
+        isBlocked: true,
+        userId: true,
+        content: true,
+        problemId: true,
+      },
     });
 
     // 3. Notify the comment owner that their comment was reported
@@ -389,14 +401,16 @@ export const moderateDiscussionService = async (
       where: { id },
       data: {
         isBlocked: action === "BLOCK",
-        reportCount: action === "UNBLOCK" ? 0 : undefined,
+        ...(action === "UNBLOCK" && { reportCount: 0 }),
       },
     });
 
     // 2. If UNBLOCKING, delete the associated reports so the dashboard stays clean
     if (action === "UNBLOCK") {
       await tx.discussionReport.deleteMany({ where: { discussionId: id } });
-      console.log(`ADMIN_ACTION: Discussion ${id} cleared and reports deleted.`);
+      console.log(
+        `ADMIN_ACTION: Discussion ${id} cleared and reports deleted.`,
+      );
     }
 
     return updated;

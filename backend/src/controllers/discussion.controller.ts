@@ -18,10 +18,16 @@ import { truncate } from "../utils/truncate.util.js";
 /**
  * GET /api/discussions/problem/:problemId
  */
-export const getDiscussions = async (req: Request, res: Response, next: NextFunction) => {
+export const getDiscussions = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   const { problemId } = req.params;
   // Use the authenticated user's ID from the JWT — not a spoofable query param
-  const userId = (req as any).user?.sub ? Number((req as any).user.sub) : undefined;
+  const userId = (req as any).user?.sub
+    ? Number((req as any).user.sub)
+    : undefined;
   const userRole = (req as any).user?.role;
   const sortBy = req.query.sortBy as "newest" | "most_upvoted" | undefined;
   const language = req.query.language as string | undefined;
@@ -208,6 +214,7 @@ export const moderateDiscussion = async (
   try {
     const { id } = req.params;
     const { action } = req.body; // "BLOCK" | "UNBLOCK"
+    if (!id) throw new ServiceError("Id is required", 400);
 
     const updated = await moderateDiscussionService(id, action);
 
@@ -240,6 +247,8 @@ export const reportDiscussion = async (
       throw new ServiceError("INVALID_REPORT_TYPE", 400);
     }
 
+    if (!id) throw new ServiceError("Id is required", 400);
+
     const updatedDiscussion = await reportDiscussionService(
       id,
       Number(userId),
@@ -250,10 +259,14 @@ export const reportDiscussion = async (
     res.status(200).json({
       success: true,
       // We send a dynamic message based on the result
-      message: updatedDiscussion.isBlocked
+      message: updatedDiscussion?.isBlocked
         ? "CONTENT_HIDDEN_FOR_REVIEW"
         : "REPORT_SUBMITTED",
-      data: updatedDiscussion,
+      data: {
+        id: updatedDiscussion?.id,
+        isBlocked: updatedDiscussion?.isBlocked,
+        reportCount: updatedDiscussion?.reportCount,
+      },
     });
   } catch (err: any) {
     // Prisma error for unique constraint (userId + discussionId)

@@ -65,7 +65,7 @@ export const notifyCreatorApproved = (userId: number) =>
     link: "/creator/dashboard",
   });
 
-export const notifyCreatorRejected = (userId: number, reason?: string) =>
+export const notifyCreatorRejected = (userId: number, reason: string | null) =>
   createNotification({
     userId,
     type: "CREATOR_REJECTED",

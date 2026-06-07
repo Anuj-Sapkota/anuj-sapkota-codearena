@@ -159,7 +159,11 @@ model UserProgress {
 model Badge {
   id          String      @id @default(cuid())
   name        String
+<<<<<<< HEAD
+  description String?
+=======
   description String
+>>>>>>> cd7f3ccc468f09cc7f6b00f353e194cbe3ed6ed5
   iconUrl     String // Cloudinary URL for the icon
   resources   Resource[] 
   userBadges  UserBadge[]
@@ -183,7 +187,12 @@ model CreatorProfile {
   userId Int  @unique
   user   User @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
+<<<<<<< HEAD
+  bio             String?
+  status          CreatorStatus @default(NOT_APPLIED)
+=======
   status          CreatorStatus @default(PENDING)
+>>>>>>> cd7f3ccc468f09cc7f6b00f353e194cbe3ed6ed5
   portfolioUrl    String?
   rejectionReason String?       @db.Text
   githubUrl       String?

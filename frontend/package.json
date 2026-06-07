@@ -23,6 +23,10 @@
     "dotenv": "^17.2.3",
     "framer-motion": "^12.29.0",
     "lucide-react": "^1.7.0",
+<<<<<<< HEAD
+    "motion": "^12.40.0",
+=======
+>>>>>>> cd7f3ccc468f09cc7f6b00f353e194cbe3ed6ed5
     "next": "16.0.8",
     "react": "19.2.1",
     "react-calendar-heatmap": "^1.10.0",

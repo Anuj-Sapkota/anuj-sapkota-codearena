@@ -28,9 +28,18 @@ export const processSubmissionService = async (params: {
   allPassed: boolean;
 }) => {
   const {
-    userId, problemId, challengeSlug, source_code, language_id,
-    finalStatus, totalPassed, totalCases, rawTime, rawMemory,
-    failMessage, allPassed,
+    userId,
+    problemId,
+    challengeSlug,
+    source_code,
+    language_id,
+    finalStatus,
+    totalPassed,
+    totalCases,
+    rawTime,
+    rawMemory,
+    failMessage,
+    allPassed,
   } = params;
 
   const [problem, challenge] = await Promise.all([
@@ -51,7 +60,9 @@ export const processSubmissionService = async (params: {
       data: {
         userId,
         problemId,
-        challengeId: challenge?.challengeId ? Number(challenge.challengeId) : null,
+        challengeId: challenge?.challengeId
+          ? Number(challenge.challengeId)
+          : null,
         code: source_code,
         languageId: language_id,
         status: finalStatus,
@@ -80,7 +91,11 @@ export const processSubmissionService = async (params: {
       if (user) {
         let newStreak = user.streak;
         if (user.lastActivityDate) {
-          const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          const todayMidnight = new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            now.getDate(),
+          );
           const lastMidnight = new Date(
             user.lastActivityDate.getFullYear(),
             user.lastActivityDate.getMonth(),
@@ -104,10 +119,21 @@ export const processSubmissionService = async (params: {
 
           await tx.user.update({
             where: { userId },
-            data: { xp: newTotalXp, total_points: { increment: xpGained }, streak: newStreak, lastActivityDate: now, level: newLevel },
+            data: {
+              xp: newTotalXp,
+              total_points: { increment: xpGained },
+              streak: newStreak,
+              lastActivityDate: now,
+              level: newLevel,
+            },
           });
           await tx.activity.create({
-            data: { userId, type: `${problem.difficulty.toUpperCase()}_SOLVED`, xpGained, createdAt: now },
+            data: {
+              userId,
+              type: `${problem.difficulty.toUpperCase()}_SOLVED`,
+              xpGained,
+              createdAt: now,
+            },
           });
 
           notifyFirstSolveData = { title: problem.title, xp: xpGained };
@@ -127,14 +153,21 @@ export const processSubmissionService = async (params: {
         });
 
         const distinctSolved = await tx.submission.findMany({
-          where: { userId, challengeId: challenge.challengeId, status: "ACCEPTED" },
+          where: {
+            userId,
+            challengeId: challenge.challengeId,
+            status: "ACCEPTED",
+          },
           distinct: ["problemId"],
           select: { problemId: true },
         });
 
         if (distinctSolved.length === challengeProblems.length) {
           const alreadyBonused = await tx.activity.findFirst({
-            where: { userId, type: `CHALLENGE_COMPLETED_${challenge.challengeId}` },
+            where: {
+              userId,
+              type: `CHALLENGE_COMPLETED_${challenge.challengeId}`,
+            },
           });
 
           if (!alreadyBonused) {
@@ -148,10 +181,18 @@ export const processSubmissionService = async (params: {
 
             await tx.user.update({
               where: { userId },
-              data: { xp: newTotalXp, total_points: { increment: bonusXp }, level: newLevel },
+              data: {
+                xp: newTotalXp,
+                total_points: { increment: bonusXp },
+                level: newLevel,
+              },
             });
             await tx.activity.create({
-              data: { userId, type: `CHALLENGE_COMPLETED_${challenge.challengeId}`, xpGained: bonusXp },
+              data: {
+                userId,
+                type: `CHALLENGE_COMPLETED_${challenge.challengeId}`,
+                xpGained: bonusXp,
+              },
             });
 
             notifyChallengeData = { title: challenge.title, xp: bonusXp };
@@ -164,26 +205,56 @@ export const processSubmissionService = async (params: {
   });
 
   // Fire notifications after transaction
-  if (notifyFirstSolveData) notifyFirstSolve(userId, notifyFirstSolveData.title, notifyFirstSolveData.xp).catch(() => {});
-  if (notifyLevelUpData) notifyLevelUp(userId, notifyLevelUpData).catch(() => {});
-  if (notifyChallengeData) notifyChallengeCompleted(userId, notifyChallengeData.title, notifyChallengeData.xp).catch(() => {});
+  const _notifyFirstSolveData =
+    notifyFirstSolveData as typeof notifyFirstSolveData;
+
+  if (_notifyFirstSolveData)
+    notifyFirstSolve(
+      userId,
+      notifyFirstSolveData!.title,
+      notifyFirstSolveData!.xp,
+    ).catch(() => {});
+  if (notifyLevelUpData)
+    notifyLevelUp(userId, notifyLevelUpData).catch(() => {});
+
+  const _notifyChallengeData =
+    notifyChallengeData as typeof notifyChallengeData;
+  if (_notifyChallengeData as typeof notifyChallengeData)
+    notifyChallengeCompleted(
+      userId,
+      notifyChallengeData!.title,
+      notifyChallengeData!.xp,
+    ).catch(() => {});
 
   return submission;
 };
 
-export const getSubmissionHistoryService = async (userId: number, problemId: number) => {
+export const getSubmissionHistoryService = async (
+  userId: number,
+  problemId: number,
+) => {
   return prisma.submission.findMany({
     where: { userId, problemId },
     orderBy: { createdAt: "desc" },
     select: {
-      id: true, status: true, time: true, memory: true,
-      createdAt: true, languageId: true, code: true,
-      totalPassed: true, totalCases: true, failMessage: true,
+      id: true,
+      status: true,
+      time: true,
+      memory: true,
+      createdAt: true,
+      languageId: true,
+      code: true,
+      totalPassed: true,
+      totalCases: true,
+      failMessage: true,
     },
   });
 };
 
-export const getSubmissionStatsService = async (problemId: number, languageId?: number) => {
+export const getSubmissionStatsService = async (
+  problemId: number,
+  languageId?: number,
+) => {
   const where: any = {
     problemId,
     status: "ACCEPTED",

@@ -1,3 +1,4 @@
+import { Role } from "../../generated/prisma/client.js";
 import { prisma } from "../lib/prisma.js";
 
 export const getAdminStatsService = async () => {
@@ -42,23 +43,27 @@ export const getAdminStatsService = async () => {
   ]);
 
   const chartMap = new Map<string, { total: number; accepted: number; newUsers: number }>();
-  for (let i = 6; i >= 0; i--) {
+  for (let days = 6; days >= 0; days--) {
+    //current date
     const d = new Date(now);
-    d.setDate(now.getDate() - i);
-    chartMap.set(d.toISOString().split("T")[0], { total: 0, accepted: 0, newUsers: 0 });
-  }
-  for (const sub of weeklySubmissions) {
-    const key = sub.createdAt.toISOString().split("T")[0];
-    if (chartMap.has(key)) {
-      chartMap.get(key)!.total += 1;
-      if (sub.status === "ACCEPTED") chartMap.get(key)!.accepted += 1;
-    }
-  }
-  for (const u of weeklySignups) {
-    const key = u.created_at.toISOString().split("T")[0];
-    if (chartMap.has(key)) chartMap.get(key)!.newUsers += 1;
+    d.setDate(now.getDate() - days);
+    chartMap.set(String(d.toISOString().split("T")[0]), { total: 0, accepted: 0, newUsers: 0 });
   }
 
+  // submissions per week 
+  for (const submission of weeklySubmissions) {
+    const key = submission.createdAt.toISOString().split("T")[0]!;
+    if (chartMap.has(key)) {
+      chartMap.get(key)!.total += 1;
+      if (submission.status === "ACCEPTED") chartMap.get(key)!.accepted += 1;
+    }
+  }
+  //  users signedup weekly
+  for (const user of weeklySignups) {
+    const key = user.created_at.toISOString().split("T")[0]!;
+    if (chartMap.has(key!)) chartMap.get(key)!.newUsers += 1;
+  }
+  
   const submissionChart = Array.from(chartMap.entries()).map(([date, v]) => ({
     date,
     label: new Date(date).toLocaleDateString("en-US", { weekday: "short" }),
@@ -66,7 +71,7 @@ export const getAdminStatsService = async () => {
     accepted: v.accepted,
     newUsers: v.newUsers,
   }));
-
+  
   const acceptanceRate = totalSubmissions > 0
     ? Math.round((acceptedSubmissions / totalSubmissions) * 100)
     : 0;
@@ -86,6 +91,7 @@ export const getAdminStatsService = async () => {
   };
 };
 
+// fetches users with pagination and filtering
 export const getUsersService = async (params: {
   page: number; limit: number; search: string; role?: string;
 }) => {
@@ -120,7 +126,7 @@ export const getUsersService = async (params: {
   return { users, meta: { total, page, pages: Math.ceil(total / limit) } };
 };
 
-export const updateUserRoleService = async (userId: number, role: string) => {
+export const updateUserRoleService = async (userId: number, role: Role) => {
   const current = await prisma.user.findUnique({ where: { userId }, select: { role: true } });
   const updated = await prisma.user.update({
     where: { userId },

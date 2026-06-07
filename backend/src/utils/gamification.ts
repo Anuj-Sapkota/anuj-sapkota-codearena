@@ -38,15 +38,15 @@ const LEVEL_THRESHOLDS = [
 export function calculateLevel(totalXp: number): number {
   let level = 1;
   for (let i = 0; i < LEVEL_THRESHOLDS.length; i++) {
-    if (totalXp >= LEVEL_THRESHOLDS[i]) {
+    if (totalXp >= LEVEL_THRESHOLDS[i]!) {
       level = i + 1;
     } else {
       break;
     }
   }
   // Linear extension beyond level 10
-  if (totalXp >= LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1]) {
-    const extra = totalXp - LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1];
+  if (totalXp >= LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1]!) {
+    const extra = totalXp - LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1]!;
     level = LEVEL_THRESHOLDS.length + Math.floor(extra / 800);
   }
   return Math.max(1, level);
@@ -60,10 +60,10 @@ export function xpToNextLevel(totalXp: number): number {
   const nextLevel = currentLevel + 1;
 
   if (nextLevel - 1 < LEVEL_THRESHOLDS.length) {
-    return LEVEL_THRESHOLDS[nextLevel - 1] - totalXp;
+    return LEVEL_THRESHOLDS[nextLevel - 1]! - totalXp;
   }
   // Linear zone
-  const base = LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1];
+  const base = LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1]!;
   const levelsAbove10 = currentLevel - LEVEL_THRESHOLDS.length;
   const nextThreshold = base + (levelsAbove10 + 1) * 800;
   return nextThreshold - totalXp;
@@ -80,11 +80,11 @@ export function levelProgress(totalXp: number): number {
   let levelEnd: number;
 
   if (idx < LEVEL_THRESHOLDS.length - 1) {
-    levelStart = LEVEL_THRESHOLDS[idx];
-    levelEnd = LEVEL_THRESHOLDS[idx + 1];
+    levelStart = LEVEL_THRESHOLDS[idx]!;
+    levelEnd = LEVEL_THRESHOLDS[idx + 1]!;
   } else {
     // Linear zone
-    const base = LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1];
+    const base = LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1]!;
     const levelsAbove10 = currentLevel - LEVEL_THRESHOLDS.length;
     levelStart = base + levelsAbove10 * 800;
     levelEnd = levelStart + 800;

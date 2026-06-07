@@ -5,6 +5,7 @@ import {
   getUnreadCount,
   deleteNotification,
 } from "../services/notification.service.js";
+import { ServiceError } from "../errors/service.error.js";
 
 export const listNotifications = async (req: Request, res: Response) => {
   try {
@@ -32,6 +33,9 @@ export const removeNotification = async (req: Request, res: Response) => {
   try {
     const userId = Number((req as any).user.sub);
     const { id } = req.params;
+    
+    if (!id) throw new ServiceError("Notification ID required", 400);
+    
     await deleteNotification(userId, id);
     res.json({ success: true });
   } catch {

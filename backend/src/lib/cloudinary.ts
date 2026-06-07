@@ -59,7 +59,7 @@ export const uploadToCloudinary = async (
 
 const getPublicIdFromUrl = (url: string) => {
   const parts = url.split("/");
-  const lastPart = parts[parts.length - 1]; // "video.mp4"
+  const lastPart = parts[parts.length - 1]!; // "video.mp4"
   const folderPart = parts[parts.length - 2]; // "folder"
   const fileName = lastPart.split(".")[0]; // "video"
   return `${folderPart}/${fileName}`;

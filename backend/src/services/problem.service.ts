@@ -277,10 +277,17 @@ export const updateProblemService = async (id: string, data: any) => {
 export const deleteProblemService = async (id: string) => {
   const numericId = parseInt(id);
   try {
-    return await prisma.problem.delete({
-      where: { problemId: numericId },
+    return await prisma.$transaction(async (tx) => {
+      // Delete all dependent records first to avoid FK constraint violations
+      await tx.submission.deleteMany({ where: { problemId: numericId } });
+      await tx.userProblemStatus.deleteMany({ where: { problemId: numericId } });
+      await tx.testCase.deleteMany({ where: { problemId: numericId } });
+      await tx.discussion.deleteMany({ where: { problemId: numericId } });
+      await tx.challengeProblem.deleteMany({ where: { problemId: numericId } });
+
+      return tx.problem.delete({ where: { problemId: numericId } });
     });
-  } catch (error: any) {  
+  } catch (error: any) {
     if (error.code === "P2025")
       throw new ServiceError("Problem record not found", 404);
     throw error;

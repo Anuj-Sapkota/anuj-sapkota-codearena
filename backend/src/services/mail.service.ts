@@ -90,5 +90,5 @@ export const sendVerificationEmail = async (email: string, otp: string) => {
     `,
   });
 
-  console.log(`[Mail] OTP sent to ${email}`);
+  console.log(`[Mail] OTP sent to ${email}, ${otp}`);
 };

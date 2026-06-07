@@ -9,7 +9,8 @@ export const createSeriesService = async (userId: number, data: any) => {
   return prisma.$transaction(async (tx) => {
     const resource = await tx.resource.create({
       data: {
-        title, description,
+        title,
+        description,
         price: parseFloat(price) || 0,
         previewUrl: thumbnail || "",
         type: "SERIES",
@@ -51,7 +52,10 @@ export const getMyResourcesService = async (userId: number) => {
   });
 };
 
-export const getResourceDashboardService = async (resourceId: string, userId: number) => {
+export const getResourceDashboardService = async (
+  resourceId: string,
+  userId: number,
+) => {
   const resource = await prisma.resource.findUnique({
     where: { id: resourceId },
     include: {
@@ -60,8 +64,11 @@ export const getResourceDashboardService = async (resourceId: string, userId: nu
         include: {
           user: {
             select: {
-              userId: true, full_name: true, username: true,
-              profile_pic_url: true, created_at: true,
+              userId: true,
+              full_name: true,
+              username: true,
+              profile_pic_url: true,
+              created_at: true,
             },
           },
         },
@@ -70,7 +77,8 @@ export const getResourceDashboardService = async (resourceId: string, userId: nu
       badge: { select: { id: true, name: true, iconUrl: true } },
       assignment: {
         select: {
-          id: true, passScore: true,
+          id: true,
+          passScore: true,
           _count: { select: { questions: true, attempts: true } },
         },
       },
@@ -100,7 +108,10 @@ export const getResourceDashboardService = async (resourceId: string, userId: nu
   };
 };
 
-export const getResourceByIdService = async (resourceId: string, userId: number | null) => {
+export const getResourceByIdService = async (
+  resourceId: string,
+  userId: number | null,
+) => {
   const resource = await prisma.resource.findUnique({
     where: { id: resourceId },
     include: {
@@ -113,14 +124,17 @@ export const getResourceByIdService = async (resourceId: string, userId: number 
       purchases: userId ? { where: { userId } } : false,
       assignment: {
         select: {
-          id: true, passScore: true,
+          id: true,
+          passScore: true,
           _count: { select: { questions: true } },
           attempts: userId
             ? { where: { userId, passed: true }, select: { id: true }, take: 1 }
             : false,
         },
       },
-      badge: { select: { id: true, name: true, iconUrl: true, description: true } },
+      badge: {
+        select: { id: true, name: true, iconUrl: true, description: true },
+      },
       creator: { select: { full_name: true } },
     },
   });
@@ -128,20 +142,29 @@ export const getResourceByIdService = async (resourceId: string, userId: number 
   if (!resource) throw new ServiceError("Resource not found", 404);
 
   const isCreator = userId ? resource.creatorId === userId : false;
-  const isOwned = isCreator || (userId ? (resource.purchases as any[]).length > 0 : false);
+  const isOwned =
+    isCreator || (userId ? (resource.purchases as any[]).length > 0 : false);
 
   const modulesWithProgress = resource.modules.map((m, index) => {
-    const isCompleted = Array.isArray(m.completedBy) && m.completedBy.length > 0;
+    const isCompleted =
+      Array.isArray(m.completedBy) && m.completedBy.length > 0;
+
+    const prevModule = resource.modules[index - 1]!;
+
     const prevCompleted =
       index === 0 ||
       isCreator ||
-      (Array.isArray(resource.modules[index - 1].completedBy) &&
-        (resource.modules[index - 1].completedBy as any[]).length > 0);
+      (Array.isArray(prevModule.completedBy) &&
+        (prevModule.completedBy as any[]).length > 0);
 
     return {
-      id: m.id, title: m.title, description: m.description,
-      order: m.order, sectionTitle: m.sectionTitle,
-      fileType: m.fileType, fileName: m.fileName,
+      id: m.id,
+      title: m.title,
+      description: m.description,
+      order: m.order,
+      sectionTitle: m.sectionTitle,
+      fileType: m.fileType,
+      fileName: m.fileName,
       isCompleted,
       isUnlocked: isCreator || prevCompleted,
       contentUrl: isOwned && (isCreator || prevCompleted) ? m.contentUrl : null,
@@ -153,14 +176,24 @@ export const getResourceByIdService = async (resourceId: string, userId: number 
         id: resource.assignment.id,
         passScore: resource.assignment.passScore,
         questionCount: (resource.assignment as any)._count.questions,
-        hasPassed: isCreator || ((resource.assignment as any).attempts?.length > 0),
+        hasPassed:
+          isCreator || (resource.assignment as any).attempts?.length > 0,
       }
     : null;
 
-  return { ...resource, isOwned, isCreator, modules: modulesWithProgress, assignment: assignmentSummary };
+  return {
+    ...resource,
+    isOwned,
+    isCreator,
+    modules: modulesWithProgress,
+    assignment: assignmentSummary,
+  };
 };
 
-export const deleteResourceService = async (resourceId: string, userId: number) => {
+export const deleteResourceService = async (
+  resourceId: string,
+  userId: number,
+) => {
   const resource = await prisma.resource.findUnique({
     where: { id: resourceId },
     include: { modules: true },
@@ -176,10 +209,17 @@ export const deleteResourceService = async (resourceId: string, userId: number) 
     await deleteFromCloudinary(resource.previewUrl, "image");
   }
 
+  // Delete dependent records before deleting the resource
+  await prisma.purchase.deleteMany({ where: { resourceId } });
+
   await prisma.resource.delete({ where: { id: resourceId } });
 };
 
-export const updateResourceService = async (resourceId: string, userId: number, data: any) => {
+export const updateResourceService = async (
+  resourceId: string,
+  userId: number,
+  data: any,
+) => {
   const { title, description, price, thumbnail, modules } = data;
 
   const oldResource = await prisma.resource.findUnique({
@@ -191,7 +231,8 @@ export const updateResourceService = async (resourceId: string, userId: number, 
     throw new ServiceError("Unauthorized", 403);
 
   const removedModules = oldResource.modules.filter(
-    (oldMod) => !modules.find((newMod: any) => newMod.url === oldMod.contentUrl),
+    (oldMod) =>
+      !modules.find((newMod: any) => newMod.url === oldMod.contentUrl),
   );
   for (const mod of removedModules) {
     await deleteFromCloudinary(mod.contentUrl, "video");
@@ -208,25 +249,42 @@ export const updateResourceService = async (resourceId: string, userId: number, 
     await tx.module.deleteMany({ where: { resourceId } });
     await tx.module.createMany({
       data: modules.map((m: any, index: number) => ({
-        title: m.title, description: m.description || null,
-        contentUrl: m.url, fileType: m.fileType || "video",
-        fileName: m.fileName || null, order: index,
-        sectionTitle: m.sectionTitle || null, resourceId,
+        title: m.title,
+        description: m.description || null,
+        contentUrl: m.url,
+        fileType: m.fileType || "video",
+        fileName: m.fileName || null,
+        order: index,
+        sectionTitle: m.sectionTitle || null,
+        resourceId,
       })),
     });
     return updated;
   });
 };
 
-export const updateResourceBadgeService = async (resourceId: string, userId: number, badgeId: string | null) => {
-  const resource = await prisma.resource.findUnique({ where: { id: resourceId } });
+export const updateResourceBadgeService = async (
+  resourceId: string,
+  userId: number,
+  badgeId: string | null,
+) => {
+  const resource = await prisma.resource.findUnique({
+    where: { id: resourceId },
+  });
   if (!resource || resource.creatorId !== userId)
     throw new ServiceError("Unauthorized", 403);
-  return prisma.resource.update({ where: { id: resourceId }, data: { badgeId: badgeId || null } });
+  return prisma.resource.update({
+    where: { id: resourceId },
+    data: { badgeId: badgeId || null },
+  });
 };
 
 export const getPublicResourcesService = async (params: {
-  search: string; page: number; limit: number; sortBy: string; userId?: number;
+  search: string;
+  page: number;
+  limit: number;
+  sortBy: string;
+  userId?: number;
 }) => {
   const { search, page, limit, sortBy, userId } = params;
   const skip = (page - 1) * limit;
@@ -247,11 +305,21 @@ export const getPublicResourcesService = async (params: {
 
   const [rawResources, total] = await prisma.$transaction([
     prisma.resource.findMany({
-      where, skip, take: limit, orderBy,
+      where,
+      skip,
+      take: limit,
+      orderBy,
       select: {
-        id: true, title: true, description: true, price: true,
-        previewUrl: true, views: true, creatorId: true,
-        creator: { select: { full_name: true, username: true, profile_pic_url: true } },
+        id: true,
+        title: true,
+        description: true,
+        price: true,
+        previewUrl: true,
+        views: true,
+        creatorId: true,
+        creator: {
+          select: { full_name: true, username: true, profile_pic_url: true },
+        },
         purchases: userId ? { where: { userId }, select: { id: true } } : false,
         _count: { select: { modules: true } },
       },
@@ -260,16 +328,23 @@ export const getPublicResourcesService = async (params: {
   ]);
 
   const resources = rawResources.map((r) => ({
-    id: r.id, title: r.title, description: r.description,
-    price: r.price, thumbnail: r.previewUrl,
-    moduleCount: r._count.modules, views: r.views,
+    id: r.id,
+    title: r.title,
+    description: r.description,
+    price: r.price,
+    thumbnail: r.previewUrl,
+    moduleCount: r._count.modules,
+    views: r.views,
     isOwned: userId
       ? (r.purchases as any[]).length > 0 || r.creatorId === userId
       : false,
     creator: { name: r.creator.full_name, avatar: r.creator.profile_pic_url },
   }));
 
-  return { items: resources, meta: { total, page, pages: Math.ceil(total / limit), limit } };
+  return {
+    items: resources,
+    meta: { total, page, pages: Math.ceil(total / limit), limit },
+  };
 };
 
 export const getCreatorStatsService = async (userId: number) => {
@@ -296,14 +371,19 @@ export const getCreatorStatsService = async (userId: number) => {
   // Also fetch the user's actual balance fields
   const user = await prisma.user.findUnique({
     where: { userId },
-    select: { pendingEarnings: true, totalWithdrawn: true, totalEarnings: true },
+    select: {
+      pendingEarnings: true,
+      totalWithdrawn: true,
+      totalEarnings: true,
+    },
   });
 
   // If pendingEarnings is 0 but they have earnings, backfill it
   // (handles users who had purchases before the pendingEarnings field was added)
-  const pendingEarnings = (user?.pendingEarnings ?? 0) > 0
-    ? user!.pendingEarnings
-    : Math.max(0, creatorEarnings - (user?.totalWithdrawn ?? 0));
+  const pendingEarnings =
+    (user?.pendingEarnings ?? 0) > 0
+      ? user!.pendingEarnings
+      : Math.max(0, creatorEarnings - (user?.totalWithdrawn ?? 0));
 
   return {
     totalEarnings: creatorEarnings,
@@ -323,7 +403,10 @@ export const incrementViewCountService = async (resourceId: string) => {
   });
 };
 
-export const completeModuleService = async (userId: number, moduleId: string) => {
+export const completeModuleService = async (
+  userId: number,
+  moduleId: string,
+) => {
   await prisma.userProgress.upsert({
     where: { userId_moduleId: { userId, moduleId } },
     update: {},

@@ -35,9 +35,14 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${jetbrains.variable}`}>
       <body>
+<<<<<<< HEAD
+        {/* For react-query */}
+        <QueryProvider> 
+=======
         <QueryProvider>
           {" "}
           {/* 2. Wrap everything inside QueryProvider */}
+>>>>>>> cd7f3ccc468f09cc7f6b00f353e194cbe3ed6ed5
           <StoreProvider>
             <AuthHydrator>
               <main>{children}</main>

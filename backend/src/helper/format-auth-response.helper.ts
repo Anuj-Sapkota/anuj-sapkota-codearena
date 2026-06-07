@@ -1,6 +1,6 @@
 import type { AuthUser } from "../types/auth.js";
 
-const formatAuthResponse = (user: any): { user: AuthUser["user"] } => {
+const formatAuthResponse = (user: AuthUser["user"]): { user: AuthUser["user"] } => {
   // Recalculate streak: reset if last activity was more than 1 day ago
   let streak = user.streak ?? 0;
   if (user.lastActivityDate && streak > 0) {
@@ -32,7 +32,7 @@ const formatAuthResponse = (user: any): { user: AuthUser["user"] } => {
       github_id: user.github_id ?? null,
       xp: user.xp ?? 0,
       level: user.level ?? 1,
-      streak,
+      streak: user.streak ?? 0,
       creatorStatus: user.creatorStatus,
       creatorProfile: user.creatorProfile
         ? {

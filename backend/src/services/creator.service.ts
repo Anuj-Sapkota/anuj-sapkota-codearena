@@ -1,11 +1,18 @@
 import { ServiceError } from "../errors/service.error.js";
 import { prisma } from "../lib/prisma.js";
 import { sendVerificationEmail } from "./mail.service.js";
-import { notifyCreatorApproved, notifyCreatorRejected } from "./notification.service.js";
+import {
+  notifyCreatorApproved,
+  notifyCreatorRejected,
+} from "./notification.service.js";
 
-export const applyToBecomeCreatorService = async (userId: number, data: any) => {
+export const applyToBecomeCreatorService = async (
+  userId: number,
+  data: any,
+) => {
   const { bio, portfolioUrl, githubUrl } = data; // Added githubUrl from your form
 
+  console.log("BIO: ", bio); // DEBUGGING----
   const user = await prisma.user.findUnique({ where: { userId } });
   if (!user) throw new ServiceError("User not found", 404);
 
@@ -44,7 +51,7 @@ export const applyToBecomeCreatorService = async (userId: number, data: any) => 
 
     return profile;
   });
-
+  console.log("OTP created: ", otp); // DEBUG
   // Send email AFTER the transaction commits — avoids timeout
   await sendVerificationEmail(user.email, otp);
 
@@ -67,11 +74,11 @@ export const verifyCreatorOTPService = async (userId: number, otp: string) => {
     // Update Profile
     await tx.creatorProfile.update({
       where: { userId },
-      data: { 
-        isEmailVerified: true, 
-        otpCode: null, 
+      data: {
+        isEmailVerified: true,
+        otpCode: null,
         otpExpiresAt: null,
-        status: "PENDING" // Update Profile Enum
+        status: "PENDING", // Update Profile Enum
       },
     });
 
@@ -79,7 +86,7 @@ export const verifyCreatorOTPService = async (userId: number, otp: string) => {
     return await tx.user.update({
       where: { userId },
       data: { creatorStatus: "PENDING" }, // Update User Enum
-      include: { creatorProfile: true }
+      include: { creatorProfile: true },
     });
   });
 };
@@ -87,7 +94,7 @@ export const verifyCreatorOTPService = async (userId: number, otp: string) => {
 export const adminReviewCreatorService = async (
   userId: number,
   status: "APPROVED" | "REJECTED",
-  reason?: string,
+  reason: string | null = null,
 ) => {
   const user = await prisma.$transaction(async (tx) => {
     const u = await tx.user.update({

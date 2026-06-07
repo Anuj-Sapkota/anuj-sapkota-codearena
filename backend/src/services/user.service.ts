@@ -201,7 +201,8 @@ export const getUserProfileService = async (targetId: number) => {
     languageCounts[s.languageId] = (languageCounts[s.languageId] || 0) + 1;
   });
   const languageStats = Object.keys(languageCounts)
-    .map((id) => ({ name: LANGUAGE_MAP[Number(id)] || `Lang ${id}`, count: languageCounts[Number(id)] }))
+  // If languageCounts[Number(id)] is undefined, force it to be 0
+    .map((id) => ({ name: LANGUAGE_MAP[Number(id)] || `Lang ${id}`, count: languageCounts[Number(id)] ?? 0}))
     .sort((a, b) => b.count - a.count);
 
   const heatmapData = heatmapSubmissions.reduce((acc: any[], curr) => {

@@ -20,15 +20,25 @@ export interface AuthUser {
     full_name: string;
     username: string;
     email: string;
-    bio?: string | null;
+    bio: string | null;
     role: string;
     total_points: number;
     has_password: boolean;
     profile_pic_url?: string | null;
+    xp?: number;
+    level?: number;
+    streak?: number;
+    creatorStatus: string | null;
+    lastActivityDate?: Date | null;
+    creatorProfile?: {
+      rejectionReason: string | null;
+      portfolioUrl: string | null;
+      githubUrl: string | null;
+    } | null
     google_id?: string | null;
     github_id?: string | null;
   };
-}
+}  
 
 export interface AccessTokenPayload {
   sub: number;

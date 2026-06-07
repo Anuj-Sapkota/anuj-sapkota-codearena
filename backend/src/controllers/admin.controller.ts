@@ -5,7 +5,10 @@ import {
   updateUserRoleService,
   banUserService,
 } from "../services/admin.service.js";
-import { createNotification, notifyRoleChanged } from "../services/notification.service.js";
+import {
+  createNotification,
+  notifyRoleChanged,
+} from "../services/notification.service.js";
 
 export const getAdminStats = async (req: Request, res: Response) => {
   try {
@@ -19,12 +22,17 @@ export const getAdminStats = async (req: Request, res: Response) => {
 
 export const getUsers = async (req: Request, res: Response) => {
   try {
-    const page = Math.max(1, parseInt(String(req.query.page || "1")));
-    const limit = Math.min(20, parseInt(String(req.query.limit || "10")));
+    const page = Math.max(1, parseInt(String(req.query.page || 1)));
+    const limit = Math.min(20, parseInt(String(req.query.limit || 10)));
     const search = String(req.query.search || "");
     const role = req.query.role as string | undefined;
 
-    const result = await getUsersService({ page, limit, search, role });
+    const result = await getUsersService({
+      page,
+      limit,
+      search,
+      ...(role ? { role } : {}),
+    });
     res.json(result);
   } catch (err) {
     res.status(500).json({ message: "Failed to fetch users" });
@@ -43,7 +51,11 @@ export const updateUserRole = async (req: Request, res: Response) => {
     const updated = await updateUserRoleService(Number(userId), role);
 
     // Notify user of role change (non-blocking)
-    notifyRoleChanged(Number(userId), role, updated.previousRole ?? "USER").catch(() => {});
+    notifyRoleChanged(
+      Number(userId),
+      role,
+      updated.previousRole ?? "USER",
+    ).catch(() => {});
 
     res.json({ success: true, user: updated });
   } catch (err) {
@@ -57,7 +69,11 @@ export const banUser = async (req: Request, res: Response) => {
     const updated = await banUserService(Number(userId));
 
     // Notify user they've been demoted
-    notifyRoleChanged(Number(userId), "USER", updated.previousRole ?? "CREATOR").catch(() => {});
+    notifyRoleChanged(
+      Number(userId),
+      "USER",
+      updated.previousRole ?? "CREATOR",
+    ).catch(() => {});
 
     res.json({ success: true, user: updated });
   } catch (err) {
