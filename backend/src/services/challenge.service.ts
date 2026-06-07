@@ -1,0 +1,323 @@
+import { prisma } from "../lib/prisma.js";
+import { ServiceError } from "../errors/service.error.js";
+
+/**
+ * Auto-expires challenges whose endTime has passed by setting isPublic = false.
+ * Called lazily on every admin list fetch — no cron needed.
+ */
+const autoExpireChallenges = async () => {
+  const now = new Date();
+  await prisma.challenge.updateMany({
+    where: {
+      isPublic: true,
+      endTime: { lt: now },
+    },
+    data: { isPublic: false },
+  });
+};
+
+/**
+ * Creates a challenge using the provided slug.
+ */
+export const createChallengeService = async (data: any) => {
+  const {
+    title,
+    slug,
+    description,
+    bannerUrl,
+    isPublic,
+    startTime,
+    endTime,
+    problemIds,
+  } = data;
+
+  if (!title || !slug) {
+    throw new ServiceError("TITLE_AND_SLUG_REQUIRED", 400);
+  }
+
+  try {
+    return await prisma.challenge.create({
+      data: {
+        title,
+        slug: slug.toLowerCase().trim().replace(/\s+/g, "-"),
+        description,
+        bannerUrl,
+        isPublic: isPublic || false,
+        startTime: startTime ? new Date(startTime).toISOString() : null,
+        endTime: endTime ? new Date(endTime).toISOString() : null,
+        problems: {
+          create:
+            problemIds?.map((id: number, index: number) => ({
+              problemId: id,
+              order: index + 1,
+            })) || [],
+        },
+      },
+      include: {
+        // Included problems array so the UI updates immediately after creation
+        problems: true,
+        _count: { select: { problems: true } },
+      },
+    });
+  } catch (error: any) {
+    if (error.code === "P2002") {
+      throw new ServiceError("CHALLENGE_SLUG_ALREADY_EXISTS", 400);
+    }
+    throw error;
+  }
+};
+
+/**
+ * Fetches challenges with server-side pagination.
+ */
+export const getAllChallengesService = async (params: {
+  page: number,
+  limit: number,
+  search: string,
+}) => {
+   
+
+  // Expire any challenges whose endTime has passed before returning the list
+  await autoExpireChallenges();
+
+   const {page, limit, search} = params;
+  const skip = (page - 1) * limit;
+
+  const where: any = search
+    ? { title: { contains: search, mode: "insensitive" } }
+    : {};
+
+  try {
+    const [items, total] = await Promise.all([
+      prisma.challenge.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          problems: true,
+          _count: { select: { problems: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.challenge.count({ where }),
+    ]);
+
+    return {
+      items,
+      meta: { total, page: page, limit: limit, pages: Math.ceil(total / limit) },
+    };
+  } catch (error: any) {
+    throw new ServiceError("FAILED_TO_FETCH_CHALLENGES", 500);
+  }
+};
+
+/**
+ * Retrieves a single challenge via its unique slug (Public Use).
+ */
+export const getChallengeBySlugService = async (
+  slug: string,
+  userId: number,
+) => {
+  const challenge = await prisma.challenge.findUnique({
+    where: { slug },
+    include: {
+      problems: {
+        orderBy: { order: "asc" },
+        include: { problem: true },
+      },
+    },
+  });
+
+  if (!challenge) throw new Error("CHALLENGE_NOT_FOUND");
+
+  // Fetch all accepted submissions for this user specifically for THIS challenge
+  const challengeSubmissions = await prisma.submission.findMany({
+    where: {
+      userId: Number(userId),
+      challengeId: challenge.challengeId,
+      status: "ACCEPTED",
+    },
+    select: { problemId: true },
+  });
+
+  const solvedIds = new Set(challengeSubmissions.map((s) => s.problemId));
+  console.log("Challenge Submissions: ", challengeSubmissions); // This is coming empty
+  console.log("SOlved Ids: ", solvedIds);
+  // Map the problems with an 'isSolved' flag localized to this challenge
+  const problemsWithStatus = challenge.problems.map((cp) => ({
+    ...cp,
+    isSolved: solvedIds.has(cp.problemId),
+  }));
+  // console.log("Problem with status: ", problemsWithStatus)// -----------------------HERE is solved is getting false------------------//
+  const solvedCount = problemsWithStatus.filter((p) => p.isSolved).length;
+  const totalCount = problemsWithStatus.length;
+  const isCompleted = totalCount > 0 && solvedCount === totalCount;
+  return {
+    ...challenge,
+    problems: problemsWithStatus,
+    stats: {
+      solvedCount,
+      totalCount,
+      percentage: totalCount > 0 ? (solvedCount / totalCount) * 100 : 0,
+      isCompleted,
+    },
+  };
+};
+/**
+ * Updates challenge via Numeric ID (Administrative Use).
+ */
+export const updateChallengeService = async (
+  challengeId: number,
+  data: any,
+) => {
+  const { problemIds, startTime, endTime, slug, ...updateData } = data;
+
+  try {
+    return await prisma.$transaction(async (tx) => {
+      // 1. Update main record
+      await tx.challenge.update({
+        where: { challengeId },
+        data: {
+          ...updateData,
+          slug: slug
+            ? slug.toLowerCase().trim().replace(/\s+/g, "-")
+            : undefined,
+          // Force conversion to ISO to stop the "Timezone Slide"
+          startTime: startTime ? new Date(startTime).toISOString() : undefined,
+          endTime: endTime ? new Date(endTime).toISOString() : undefined,
+        },
+      });
+
+      // 2. Sync problems (Delete old, Create new)
+      if (problemIds) {
+        await tx.challengeProblem.deleteMany({
+          where: { challengeId },
+        });
+
+        if (problemIds.length > 0) {
+          await tx.challengeProblem.createMany({
+            data: problemIds.map((pId: number, index: number) => ({
+              challengeId,
+              problemId: pId,
+              order: index + 1,
+            })),
+          });
+        }
+      }
+
+      // 3. Return the complete updated object
+      return await tx.challenge.findUnique({
+        where: { challengeId },
+        include: {
+          problems: true,
+          _count: { select: { problems: true } },
+        },
+      });
+    });
+  } catch (error: any) {
+    if (error.code === "P2025") {
+      throw new ServiceError("CHALLENGE_NOT_FOUND", 404);
+    }
+    if (error.code === "P2002") {
+      throw new ServiceError("NEW_SLUG_ALREADY_IN_USE", 400);
+    }
+    throw error;
+  }
+};
+
+/**
+ * Deletes a challenge via Numeric ID.
+ */
+export const deleteChallengeService = async (challengeId: number) => {
+  try {
+    return await prisma.challenge.delete({
+      where: { challengeId },
+    });
+  } catch (error: any) {
+    if (error.code === "P2025") {
+      throw new ServiceError("CHALLENGE_NOT_FOUND", 404);
+    }
+    throw error;
+  }
+};
+
+/**
+ * Gets challenges that are public, with per-user completion status.
+ * Uses a single batched submission query instead of N+1 per challenge.
+ */
+export const getPublicChallengesService = async (userId?: number) => {
+  // Expire any challenges whose endTime has passed
+  await autoExpireChallenges();
+
+  const now = new Date();
+
+  try {
+    const challenges = await prisma.challenge.findMany({
+      where: {
+        isPublic: true,
+        startTime: { lte: now },
+        endTime: { gte: now },
+      },
+      include: {
+        _count: { select: { problems: true } },
+        problems: { select: { problemId: true } },
+      },
+      orderBy: { startTime: "desc" },
+    });
+
+    if (!userId || challenges.length === 0) {
+      return {
+        items: challenges.map((c) => ({
+          ...c,
+          problems: undefined,
+          stats: { solvedCount: 0, totalCount: c.problems.length, percentage: 0, isCompleted: false },
+        })),
+        total: challenges.length,
+      };
+    }
+
+    // Collect all challenge IDs in one go
+    const challengeIds = challenges.map((c) => c.challengeId);
+
+    // Single query for all accepted submissions across all challenges for this user
+    const allSolved = await prisma.submission.findMany({
+      where: {
+        userId,
+        challengeId: { in: challengeIds },
+        status: "ACCEPTED",
+      },
+      distinct: ["problemId", "challengeId"],
+      select: { problemId: true, challengeId: true },
+    });
+
+    // Build a Map<challengeId, Set<problemId>> for O(1) lookups
+    const solvedMap = new Map<number, Set<number>>();
+    for (const s of allSolved) {
+      if (!s.challengeId) continue;
+      if (!solvedMap.has(s.challengeId)) solvedMap.set(s.challengeId, new Set());
+      solvedMap.get(s.challengeId)!.add(s.problemId);
+    }
+
+    const enriched = challenges.map((c) => {
+      const solvedSet = solvedMap.get(c.challengeId) ?? new Set();
+      const totalCount = c.problems.length;
+      const solvedCount = solvedSet.size;
+      const isCompleted = totalCount > 0 && solvedCount === totalCount;
+
+      return {
+        ...c,
+        problems: undefined,
+        stats: {
+          solvedCount,
+          totalCount,
+          percentage: totalCount > 0 ? (solvedCount / totalCount) * 100 : 0,
+          isCompleted,
+        },
+      };
+    });
+
+    return { items: enriched, total: enriched.length };
+  } catch (error) {
+    throw new ServiceError("FAILED_TO_FETCH_PUBLIC_CHALLENGES", 500);
+  }
+};

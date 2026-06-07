@@ -1,0 +1,294 @@
+"use client";
+
+import React, { useEffect, use, useRef, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { Panel, Group, Separator } from "react-resizable-panels";
+import { toast } from "sonner";
+import { useRouter, useSearchParams } from "next/navigation";
+
+import { CodeEditor } from "@/components/problems/CodeEditor";
+import { TerminalOutput } from "@/components/problems/TerminalOutput";
+import { ProblemDescription } from "@/components/problems/ProblemDescription";
+import { ProblemHeader } from "@/components/problems/ProblemHeader";
+
+import { RootState, AppDispatch } from "@/lib/store/store";
+import { Problem } from "@/types/problem.types";
+import {
+  initCodes,
+  updateCode,
+  changeLanguage,
+  setActiveTab,
+  setDescriptionTab,
+  setSelectedSubmission,
+} from "@/lib/store/features/workspace/workspace.slice";
+import {
+  runCodeThunk,
+  fetchSubmissionHistoryThunk,
+} from "@/lib/store/features/workspace/workspace.actions";
+import { useProblemById } from "@/hooks/useProblems";
+import { DisplayTestCase, TestCaseResult } from "@/types/workspace.types";
+import { cleanError } from "@/utils/error-cleaner.util";
+
+const LANGUAGES = [
+  { id: "javascript", label: "JavaScript", judge0Id: 63 },
+  { id: "python", label: "Python", judge0Id: 71 },
+  { id: "java", label: "Java", judge0Id: 62 },
+  { id: "cpp", label: "C++", judge0Id: 54 },
+];
+
+export default function WorkspacePage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const resolvedParams = use(params);
+  const dispatch = useDispatch<AppDispatch>();
+  const router = useRouter();
+  const descriptionRef = useRef<HTMLDivElement>(null);
+  const searchParams = useSearchParams();
+  const [isSubmittingMode, setIsSubmittingMode] = useState(false);
+
+  const { data: problemData, isLoading: problemLoading, isError: problemError } = useProblemById(resolvedParams.id);
+  const problem = (problemData?.data ?? null) as Problem | null;
+
+  const {
+    codes,
+    selectedLanguage,
+    isRunning,
+    output,
+    activeTab,
+    results,
+    metrics,
+    submissions,
+    isFetchingHistory,
+  } = useSelector((state: RootState) => state.workspace);
+
+  // Init codes when problem loads
+  useEffect(() => {
+    if (problem) {
+      let starter = problem.starterCode;
+      if (typeof starter === "string") {
+        try { starter = JSON.parse(starter); } catch { starter = {}; }
+      }
+      dispatch(initCodes({
+        javascript: (starter as any)?.javascript || "",
+        python: (starter as any)?.python || "",
+        java: (starter as any)?.java || "",
+        cpp: (starter as any)?.cpp || "",
+      }));
+    }
+  }, [problem?.problemId, dispatch]);
+
+  useEffect(() => {
+    if (problemError) { toast.error("Failed to load environment."); router.push("/problems"); }
+  }, [problemError, router]);
+
+  // Fetch submission history when problem loads OR when submissions tab is opened
+  useEffect(() => {
+    if (problem?.problemId) {
+      dispatch(fetchSubmissionHistoryThunk(problem.problemId.toString()));
+    }
+  }, [problem?.problemId, dispatch]);
+
+  useEffect(() => {
+    if (activeTab === "submissions" && problem?.problemId) {
+      dispatch(fetchSubmissionHistoryThunk(problem.problemId.toString()));
+    }
+  }, [activeTab, problem?.problemId, dispatch]);
+
+  const handleExecute = async (isFinal: boolean) => {
+    if (!problem?.problemId) return;
+
+    const currentCode = codes[selectedLanguage.id];
+
+    if (!currentCode || currentCode.trim().length === 0) {
+      dispatch(setActiveTab("result"));
+      toast.error("Code cannot be empty.");
+      return;
+    }
+
+    setIsSubmittingMode(isFinal);
+
+    try {
+      const resultAction = await dispatch(
+        runCodeThunk({
+          sourceCode: currentCode,
+          langId: selectedLanguage.judge0Id,
+          problemId: problem.problemId.toString(),
+          isFinal,
+          challengeId: searchParams.get("challenge")
+        }),
+      );
+
+      if (runCodeThunk.fulfilled.match(resultAction)) {
+        console.log(
+          "BACKEND_SUBMISSION_DATA:",
+          resultAction.payload.newSubmission,
+        ); //---------------------____DEBUG____------------------------
+        const { allPassed, newSubmission } = resultAction.payload;
+
+        // --- CASE: FINAL SUBMISSION (Submit Button) ---
+        if (isFinal && newSubmission) {
+          // 1. EXTRACT THE ERROR: Find the first result that has stderr or compile_output
+          const errorResult = results?.find(
+            (r: TestCaseResult) => r.stderr || r.compile_output || r.message,
+          );
+          const actualError =
+            errorResult?.stderr ||
+            errorResult?.compile_output ||
+            errorResult?.message ||
+            "";
+
+          // 2. PATCH THE SUBMISSION: Add the error to the object manually
+          const patchedSubmission = {
+            ...newSubmission,
+            failMessage: actualError, // Now SubmissionDetail will find it!
+          };
+
+          // 3. DISPATCH THE PATCHED VERSION
+          dispatch(setSelectedSubmission(patchedSubmission));
+          dispatch(setDescriptionTab("detail"));
+
+          if (newSubmission.status === "ACCEPTED") {
+            toast.success(`SUBMITTED`, {
+              icon: "🚀",
+            });
+          } else {
+            dispatch(setActiveTab("result"));
+            toast.error(`SUBMISSION FAILED`);
+          }
+        }
+
+        // --- CASE: RUN CODE (Run Button) ---
+        else {
+          dispatch(setActiveTab("result"));
+          if (allPassed) {
+            toast.success("Accepted", {
+              icon: "🏆",
+            });
+          } else {
+            toast.error(`FAILED`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Execution error:", error);
+      toast.error("An error occurred during execution.");
+    } finally {
+      setIsSubmittingMode(false);
+    }
+  };
+
+  const displayTestCases: DisplayTestCase[] = (problem?.testCases || []).map(
+    (tc, index) => {
+      // 1. Get the result from the Redux store (set by runCodeThunk)
+      const executionResult = results?.[index];
+
+      // 2. TRUST THE BACKEND: Use the 'isCorrect' boolean we calculated in the controller
+      const isCorrect = executionResult?.isCorrect === true;
+
+      // 3. Use the decodedOutput we sent from the backend
+      const actual = executionResult?.decodedOutput || "";
+      const hasRun = results && results.length > 0;
+
+      const errorMessage = cleanError(
+        executionResult?.stderr || executionResult?.compile_output,
+      );
+
+      return {
+        id: tc.testCaseId || index,
+        input: tc.input,
+        expectedOutput: tc.expectedOutput,
+        isSample: tc.isSample,
+        // Use the clean decoded output if it exists, otherwise error, otherwise placeholder
+        actualOutput: actual || errorMessage || "---",
+        // Set status based on the backend's 'isCorrect'
+        status: !hasRun ? "IDLE" : isCorrect ? "PASSED" : "FAILED",
+      };
+    },
+  );  
+
+  if (problemLoading) {
+    return (
+      <div className="h-screen bg-[#1a1a1a] flex flex-col items-center justify-center">
+        <div className="w-12 h-12 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mb-4" />
+        <p className="text-emerald-500 font-mono text-xs tracking-widest uppercase">
+          Syncing_Environment...
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-screen flex flex-col bg-[#1a1a1a] overflow-hidden">
+      <ProblemHeader
+        handleRun={() => handleExecute(false)}
+        handleSubmit={() => handleExecute(true)}
+        isRunning={isRunning && !isSubmittingMode}
+        isSubmitting={isRunning && isSubmittingMode}
+        scrollContainerRef={descriptionRef}
+        problemTitle={problem?.title}
+      />
+
+      <div className="flex-1 overflow-hidden">
+        <Group orientation="horizontal">
+          <Panel defaultSize={45} minSize={30}>
+            <div
+              ref={descriptionRef}
+              className="h-full overflow-y-auto custom-scrollbar"
+            >
+              <ProblemDescription problem={problem!} />
+            </div>
+          </Panel>
+
+          <Separator className="w-1 bg-gray-800 hover:bg-emerald-500 transition-colors cursor-col-resize" />
+
+          <Panel defaultSize={55}>
+            <Group orientation="vertical">
+              <Panel defaultSize={60} minSize={20}>
+                <div className="flex flex-col h-full bg-[#1e1e1e]">
+                  <div className="flex bg-[#2d2d2d] border-b border-gray-800 shrink-0">
+                    {LANGUAGES.map((lang) => (
+                      <button
+                        key={lang.id}
+                        onClick={() => dispatch(changeLanguage(lang.id))}
+                        className={`px-4 py-2 text-[12px] font-bold cursor-pointer font-mono uppercase tracking-widest transition-all ${
+                          selectedLanguage.id === lang.id
+                            ? "bg-[#1e1e1e] text-emerald-400 border-t-2 border-emerald-500"
+                            : "text-gray-400 hover:text-gray-100"
+                        }`}
+                      >
+                        {lang.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                    <CodeEditor
+                      code={codes[selectedLanguage.id] || ""}
+                      setCode={(val: string) => dispatch(updateCode(val))}
+                      language={selectedLanguage.id}
+                    />
+                  </div>
+                </div>
+              </Panel>
+
+              <Separator className="h-1 bg-gray-800 hover:bg-emerald-500 transition-colors cursor-row-resize" />
+
+              <Panel defaultSize={40}>
+                <TerminalOutput
+                  output={output}
+                  testCases={displayTestCases}
+                  activeTab={activeTab}
+                  setActiveTab={(tab) => dispatch(setActiveTab(tab))}
+                  metrics={metrics}
+                  submissions={submissions}
+                  isFetchingHistory={isFetchingHistory}
+                />
+              </Panel>
+            </Group>
+          </Panel>
+        </Group>
+      </div>
+    </div>
+  );
+}

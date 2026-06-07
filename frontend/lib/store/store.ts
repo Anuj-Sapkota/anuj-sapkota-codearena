@@ -1,0 +1,46 @@
+import { combineReducers, configureStore } from "@reduxjs/toolkit";
+import storage from "redux-persist/lib/storage";
+import persistReducer from "redux-persist/es/persistReducer";
+
+import authReducer from "@/lib/store/features/auth/auth.slice";
+import workspaceReducer from "@/lib/store/features/workspace/workspace.slice";
+import creatorReducer from "@/lib/store/features/creator/creator.slice";
+
+// NOTE: problems, category, challenge, discussion slices removed — migrated to React Query
+
+const rootReducer = combineReducers({
+  auth: authReducer,
+  workspace: workspaceReducer,
+  creator: creatorReducer,
+});
+
+//setting up the persist configuration
+const persistConfig = {
+  key: "code-arena-v1",
+  storage,
+  whitelist: ["auth"], //save only auth
+};
+
+const persistedReducer = persistReducer(persistConfig, rootReducer);
+
+export const makeStore = () => {
+  return configureStore({
+    reducer: persistedReducer,
+    middleware: (getDefaultMiddleware) =>
+      getDefaultMiddleware({
+        serializableCheck: {
+          ignoredActions: [
+            "persist/PERSIST",
+            "persist/REHYDRATE",
+            "persist/REGISTER",
+            "persist/PURGE",
+          ],
+        },
+      }),
+  });
+};
+
+// Exports
+export type AppStore = ReturnType<typeof makeStore>;
+export type RootState = ReturnType<AppStore["getState"]>;
+export type AppDispatch = AppStore["dispatch"];

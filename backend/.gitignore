@@ -1,0 +1,51 @@
+*/node_modules
+*/.env
+.vscode
+*/.vscode
+backend/generated/prisma
+
+PROJECT_CYCLE.md============
+# Frontend (Next.js / React)
+# =========================
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/.turbo/
+frontend/dist/
+frontend/.vscode/
+# If you use TypeScript
+frontend/*.tsbuildinfo
+
+# =========================
+# Backend (Node / Express / Prisma)
+# =========================
+backend/dist/
+backend/build/
+backend/.vscode/
+backend/node_modules/
+
+# Prisma
+backend/prisma/dev.db
+backend/prisma/migrations/
+
+# =========================
+# Logs
+# =========================
+*.log
+
+# =========================
+# OS & Editor
+# =========================
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+.idea/
+.vscode/
+
+    # ======================
+    # Judge0 FOLDER
+    # ======================
+    judge0-v1.13.1/judge0.conf
+    judge0-v1.13.1/data/
+    judge0-v1.13.1/log/

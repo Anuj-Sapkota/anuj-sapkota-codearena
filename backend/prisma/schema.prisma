@@ -1,0 +1,526 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql" 
+}
+
+// --- ENUMS ---
+
+enum Role {
+  USER
+  CREATOR
+  ADMIN
+}
+
+enum ApplicationStatus {
+  NOT_APPLIED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum NotificationType {
+  CREATOR_APPROVED
+  CREATOR_REJECTED
+  BADGE_EARNED
+  CHALLENGE_COMPLETED
+  FIRST_SOLVE
+  LEVEL_UP
+  SYSTEM
+}
+
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  PAID
+}
+
+enum ResourceType {
+  VIDEO
+  PDF
+  ARTICLE
+  SERIES
+}
+
+enum InputType {
+  INT
+  ARRAY
+  STRING
+  BOOLEAN
+}
+
+enum ChallengeDifficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum ReportType {
+  SPAM_OR_ADVERTISING
+  HARASSMENT_OR_ABUSE
+  INAPPROPRIATE_CONTENT
+  PLAGIARISM
+  OTHER
+}
+
+enum CreatorStatus {
+  NOT_APPLIED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// --- CORE MODELS ---
+
+model User {
+  userId              Int       @id @default(autoincrement())
+  full_name           String
+  username            String    @unique
+  email               String    @unique
+  password_hash       String?
+  has_password        Boolean   @default(false)
+  auth_provider       String?
+  github_id           String?
+  github_access_token String?
+  google_id           String?
+  profile_pic_url     String?
+  resetToken          String?   @unique
+  resetTokenExpiry    DateTime?
+  bio                 String?
+  role                Role      @default(USER)
+
+  // --- Gamification Fields ---
+  xp               Int       @default(0)
+  level            Int       @default(1)
+  streak           Int       @default(0)
+  lastActivityDate DateTime?
+
+  // This is your main "Gatekeeper" field for the frontend
+  creatorStatus     CreatorStatus       @default(NOT_APPLIED)
+  total_points      Int                 @default(0)
+  totalEarnings     Float               @default(0.0)   // Lifetime gross earnings (80% of sales)
+  pendingEarnings   Float               @default(0.0)   // Available for withdrawal
+  totalWithdrawn    Float               @default(0.0)   // Already paid out
+  // Relations
+  problemStatuses   UserProblemStatus[]
+  discussions       Discussion[]
+  discussionVotes   DiscussionUpvote[]
+  discussionReports DiscussionReport[]
+  activities        Activity[]
+  submissions       Submission[] // Track all code submissions
+
+  // Learning & Marketplace Relations
+  progress       UserProgress[]
+  creatorProfile CreatorProfile?
+  ownedResources Resource[]
+  purchases      Purchase[]
+  assignmentAttempts AssignmentAttempt[]
+
+  created_at DateTime    @default(now())
+  updated_at DateTime    @updatedAt
+  userBadges UserBadge[]
+  notifications Notification[]
+  withdrawals   Withdrawal[]
+
+  @@map("users")
+}
+
+// NEW: Activity Model for the Contribution Heatmap
+model Activity {
+  id     String @id @default(cuid())
+  userId Int // FIXED: Must be Int to match User.userId
+  user   User   @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  type     String // e.g., "EASY_SOLVED", "COURSE_COMPLETED", "DAILY_LOGIN"
+  xpGained Int    @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model UserProgress {
+  id          String   @id @default(cuid())
+  userId      Int
+  moduleId    String
+  isCompleted Boolean  @default(true)
+  completedAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, moduleId]) // A user can only complete a module once
+}
+
+model Badge {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  iconUrl     String // Cloudinary URL for the icon
+  resources   Resource[] 
+  userBadges  UserBadge[]
+  createdAt   DateTime   @default(now())
+}
+
+model UserBadge {
+  id       String   @id @default(cuid())
+  userId   Int
+  badgeId  String
+  earnedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId]) // Student only gets the badge once
+}
+
+model CreatorProfile {
+  id     Int  @id @default(autoincrement())
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  bio             String?
+  status          CreatorStatus @default(NOT_APPLIED)
+  portfolioUrl    String?
+  rejectionReason String?       @db.Text
+  githubUrl       String?
+  isEmailVerified Boolean       @default(false)
+  otpCode         String?
+  otpExpiresAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("creator_profiles")
+}
+
+// --- RESOURCE MARKETPLACE ---
+
+model Resource {
+  id          String       @id @default(cuid())
+  title       String
+  description String       @db.Text
+  type        ResourceType
+  contentUrl  String
+  previewUrl  String?
+  price       Float        @default(0.0)
+  language    String?
+  views        Int     @default(0)
+  isApproved   Boolean @default(false)
+  isPublished  Boolean @default(false)
+
+  creatorId Int
+  creator   User @relation(fields: [creatorId], references: [userId])
+
+  badgeId   String?
+  badge     Badge?   @relation(fields: [badgeId], references: [id])
+
+  modules    Module[]
+  purchases  Purchase[]
+  assignment Assignment?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("resources")
+}
+
+model Module {
+  id           String  @id @default(cuid())
+  title        String
+  description  String? @db.Text
+  contentUrl   String
+  fileType     String  @default("video") // "video" | "code" | "file"
+  fileName     String? // original filename for code/file uploads
+  order        Int
+  sectionTitle String?
+
+  resourceId String
+  resource   Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  completedBy UserProgress[]
+
+  @@map("modules")
+}
+
+model Purchase {
+  id         String @id @default(cuid())
+  userId     Int
+  resourceId String
+  amount     Float
+
+  user     User     @relation(fields: [userId], references: [userId])
+  resource Resource @relation(fields: [resourceId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, resourceId])
+  @@map("purchases")
+}
+
+// --- DISCUSSIONS & MODERATION ---
+
+model Discussion {
+  id       String  @id @default(cuid())
+  title    String?
+  content  String  @db.Text
+  language String?
+
+  userId Int
+  user   User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  problemId Int
+  problem   Problem @relation(fields: [problemId], references: [problemId], onDelete: Cascade)
+
+  parentId String?
+  parent   Discussion?  @relation("DiscussionToDiscussion", fields: [parentId], references: [id])
+  replies  Discussion[] @relation("DiscussionToDiscussion")
+
+  upvotes      Int                @default(0)
+  upvoteTracks DiscussionUpvote[]
+  isBlocked    Boolean            @default(false)
+  reportCount  Int                @default(0)
+  reports      DiscussionReport[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("discussions")
+}
+
+model DiscussionReport {
+  id           Int        @id @default(autoincrement())
+  userId       Int
+  discussionId String
+  reportType   ReportType @default(OTHER)
+  details      String?    @db.Text
+
+  user       User       @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  discussion Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, discussionId])
+  @@map("discussion_reports")
+}
+
+model DiscussionUpvote {
+  id           Int    @id @default(autoincrement())
+  userId       Int
+  discussionId String
+
+  user       User       @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  discussion Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, discussionId])
+  @@map("discussion_upvotes")
+}
+
+// --- PROBLEMS & CHALLENGES ---
+
+model Problem {
+  problemId    Int       @id @default(autoincrement())
+  title        String
+  content      String    @db.Text
+  difficulty   String
+  points       Int       @default(50)
+  functionName String    @default("solution")
+  starterCode  Json
+  inputType    InputType @default(ARRAY)
+  timeLimit    Float     @default(1.0)
+  memoryLimit  Int       @default(128)
+
+  categories   Category[]
+  testCases    TestCase[]
+  submissions  Submission[]
+  userStatuses UserProblemStatus[]
+  challenges   ChallengeProblem[]
+  discussions  Discussion[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("problems")
+}
+
+model Category {
+  categoryId  Int       @id @default(autoincrement())
+  name        String    @unique
+  slug        String    @unique
+  description String?   @db.Text
+  problems    Problem[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("categories")
+}
+
+model TestCase {
+  id             Int     @id @default(autoincrement())
+  input          String  @db.Text
+  expectedOutput String  @db.Text
+  isSample       Boolean @default(false)
+  problemId      Int
+  problem        Problem @relation(fields: [problemId], references: [problemId], onDelete: Cascade)
+
+  @@map("test_cases")
+}
+
+model Submission {
+  id          String   @id @default(uuid())
+  problemId   Int
+  userId      Int
+  challengeId Int?
+  code        String   @db.Text
+  languageId  Int
+  status      String
+  totalPassed Int      @default(0)
+  totalCases  Int      @default(0)
+  memory      Int?
+  time        Float?
+  failMessage String?
+  createdAt   DateTime @default(now())
+
+  problem Problem @relation(fields: [problemId], references: [problemId])
+  user    User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@map("submissions")
+}
+
+model UserProblemStatus {
+  id        Int    @id @default(autoincrement())
+  userId    Int
+  problemId Int
+  status    String // e.g. "SOLVED", "ATTEMPTED"
+
+  user    User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  problem Problem @relation(fields: [problemId], references: [problemId])
+
+  @@unique([userId, problemId])
+  @@map("user_problem_status")
+}
+
+model Challenge {
+  challengeId Int                 @id @default(autoincrement())
+  title       String
+  slug        String              @unique
+  description String?             @db.Text
+  bannerUrl   String?
+  difficulty  ChallengeDifficulty @default(MEDIUM)
+  points      Int                 @default(100)
+  isPublic    Boolean             @default(false)
+  startTime   DateTime?
+  endTime     DateTime?
+  problems    ChallengeProblem[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@map("challenges")
+}
+
+model ChallengeProblem {
+  challenge   Challenge @relation(fields: [challengeId], references: [challengeId], onDelete: Cascade)
+  challengeId Int
+  problem     Problem   @relation(fields: [problemId], references: [problemId], onDelete: Cascade)
+  problemId   Int
+  order       Int       @default(0)
+
+  @@id([challengeId, problemId])
+  @@map("challenge_problems")
+}
+
+// --- COURSE ASSIGNMENTS (MCQ) ---
+
+model Assignment {
+  id         String @id @default(cuid())
+  resourceId String @unique
+  resource   Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  passScore  Int // e.g. 70 means 70% needed to pass
+  questions  AssignmentQuestion[]
+  attempts   AssignmentAttempt[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("assignments")
+}
+
+model AssignmentQuestion {
+  id           String @id @default(cuid())
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  question      String   @db.Text
+  options       Json     // String[] — the 4 choices
+  correctIndex  Int      // 0-3, index of the correct option
+
+  order Int @default(0)
+
+  @@map("assignment_questions")
+}
+
+model AssignmentAttempt {
+  id           String @id @default(cuid())
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  userId   Int
+  user     User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  score    Int     // number of correct answers
+  total    Int     // total questions
+  passed   Boolean
+  answers  Json    // Int[] — user's chosen indices
+
+  createdAt DateTime @default(now())
+
+  @@map("assignment_attempts")
+}
+
+// --- NOTIFICATIONS ---
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    Int
+  user      User             @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  type      NotificationType
+  title     String
+  message   String           @db.Text
+  isRead    Boolean          @default(false)
+  link      String?          // Optional deep-link (e.g. /challenges/weekly-duel)
+
+  createdAt DateTime         @default(now())
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+// --- WITHDRAWALS ---
+
+model Withdrawal {
+  id        String           @id @default(cuid())
+  userId    Int
+  user      User             @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  amount    Float            // Amount requested
+  status    WithdrawalStatus @default(PENDING)
+  method    String           @default("Bank Transfer") // e.g. eSewa, Bank Transfer
+  accountDetails String?     @db.Text // Encrypted/masked account info
+  adminNote String?          @db.Text // Admin rejection reason or note
+
+  requestedAt DateTime @default(now())
+  resolvedAt  DateTime?
+
+  @@index([userId])
+  @@index([status])
+  @@map("withdrawals")
+}

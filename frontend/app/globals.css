@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary-1: #138b51;
+  --color-primary-2: #006600;
+  --color-primary-3: #023300;
+}
+
+:root {
+  /* Colors */
+  --color-darkest: #11151c;
+  --color-dark: #212d40;
+  --color-muted: #364156;
+  --color-primary: #2ec866;
+  --color-white: #ffffff;
+  --color-light: #d3d3d3;
+
+  /* Fonts (Next.js will handle loading the actual files) */
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-code: "JetBrains Mono", "Fira Code", monospace;
+}
+/* Ensure the heatmap is using the full width of its container */
+.react-calendar-heatmap {
+  width: 100%;
+}
+
+.react-calendar-heatmap .color-empty {
+  fill: #161b22;
+}
+.react-calendar-heatmap .color-scale-1 {
+  fill: #0e4429;
+}
+.react-calendar-heatmap .color-scale-2 {
+  fill: #006d32;
+}
+.react-calendar-heatmap .color-scale-3 {
+  fill: #26a641;
+}
+.react-calendar-heatmap .color-scale-4 {
+  fill: #39d353;
+}
+
+.react-calendar-heatmap rect {
+  rx: 2; /* Rounded corners */
+  ry: 2;
+}
+
+/* Hover effect on squares */
+.react-calendar-heatmap rect:hover {
+  stroke: #555;
+  stroke-width: 1px;
+}
+
+/* Light Mode Heatmap Colors */
+.react-calendar-heatmap .color-empty-light {
+  fill: #f1f5f9;
+} /* slate-100 */
+.react-calendar-heatmap .color-blue-1 {
+  fill: #dbeafe;
+} /* blue-100 */
+.react-calendar-heatmap .color-blue-2 {
+  fill: #93c5fd;
+} /* blue-300 */
+.react-calendar-heatmap .color-blue-3 {
+  fill: #3b82f6;
+} /* blue-500 */
+.react-calendar-heatmap .color-blue-4 {
+  fill: #1d4ed8;
+} /* blue-700 */
+
+/* Global Heatmap Overrides */
+.react-calendar-heatmap text {
+  font-size: 10px;
+  fill: #64748b; /* slate-500 */
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+/* Custom Tailwind Utility Mapping (if using Tailwind 4) */
+@theme {
+  --color-darkest: var(--color-darkest);
+  --color-dark: var(--color-dark);
+  --color-muted: var(--color-muted);
+  --color-primary: var(--color-primary);
+  --color-light: var(--color-light);
+  --font-sans: var(--font-sans);
+  --font-code: var(--font-code);
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+}
+
+/* Add this to your globals.css */
+
+/* This forces the Vertical Group to actually stack its children */
+[data-panel-group-direction="vertical"] {
+  flex-direction: column !important;
+  display: flex !important;
+}
+
+/* This ensures the Horizontal Group stays side-by-side */
+[data-panel-group-direction="horizontal"] {
+  flex-direction: row !important;
+  display: flex !important;
+}
+
+/* Fix for the right side container */
+.h-full {
+  height: 100% !important;
+}
