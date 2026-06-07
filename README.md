@@ -461,6 +461,7 @@ Possible improvements for the system:
 
 ---
 
+<<<<<<< HEAD
 ## Authors
 
 Student Name : Anuj Sapkota
@@ -468,9 +469,22 @@ Student Name : Anuj Sapkota
 Program / Department: Bsc (Hons) Computing
 
 University / College Name : London Met University / Itahari International COllege
+=======
+## Developer
+
+Name : Anuj Sapkota
+
+Email: anujsapkota808@gmail.com
+LinkedIn: https://www.linkedin.com/in/anuj-sapkota-1as/
+
+>>>>>>> cd7f3ccc468f09cc7f6b00f353e194cbe3ed6ed5
 
 ---
 
 ## License
 
+<<<<<<< HEAD
 This project is created for educational purposes as part of a Final Year Project.
+=======
+This project is created for educational purposes as part of a Final Year Project.
+>>>>>>> cd7f3ccc468f09cc7f6b00f353e194cbe3ed6ed5

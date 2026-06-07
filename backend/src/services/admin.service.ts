@@ -63,7 +63,7 @@ export const getAdminStatsService = async () => {
     const key = user.created_at.toISOString().split("T")[0]!;
     if (chartMap.has(key!)) chartMap.get(key)!.newUsers += 1;
   }
- 
+  
   const submissionChart = Array.from(chartMap.entries()).map(([date, v]) => ({
     date,
     label: new Date(date).toLocaleDateString("en-US", { weekday: "short" }),
@@ -71,7 +71,7 @@ export const getAdminStatsService = async () => {
     accepted: v.accepted,
     newUsers: v.newUsers,
   }));
-   
+  
   const acceptanceRate = totalSubmissions > 0
     ? Math.round((acceptedSubmissions / totalSubmissions) * 100)
     : 0;

@@ -197,7 +197,6 @@ export const getUserProfileService = async (targetId: number) => {
   };
 
   const languageCounts: Record<number, number> = {};
-
   acceptedSubmissions.forEach((s) => {
     languageCounts[s.languageId] = (languageCounts[s.languageId] || 0) + 1;
   });
