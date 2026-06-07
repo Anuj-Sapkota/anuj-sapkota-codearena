@@ -42,7 +42,7 @@ export default function ExplorePage() {
     if (!isAuthenticated || !user) return;
     api.get<{ rankings: { userId: string; rank: number }[] }>(API.LEADERBOARD, { params: { period: "weekly", type: "points" } })
       .then(({ data }) => {
-        const found = (data?.rankings || []).find((r) => r.userId === user.userId);
+        const found = (data?.rankings || []).find((r) => Number(r.userId) === user.userId);
         setUserRank(found ? found.rank : null);
       })
       .catch(() => {});

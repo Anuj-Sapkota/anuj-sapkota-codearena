@@ -29,6 +29,7 @@ export interface Challenge {
     solvedCount: number;
     totalCount: number;
     percentage: number;
+    isCompleted: boolean;
   };
 
   _count?: {
