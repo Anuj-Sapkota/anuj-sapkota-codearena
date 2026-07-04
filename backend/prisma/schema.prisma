@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql" 
+  provider = "postgresql"
 }
 
 // --- ENUMS ---
@@ -102,9 +102,9 @@ model User {
   // This is your main "Gatekeeper" field for the frontend
   creatorStatus     CreatorStatus       @default(NOT_APPLIED)
   total_points      Int                 @default(0)
-  totalEarnings     Float               @default(0.0)   // Lifetime gross earnings (80% of sales)
-  pendingEarnings   Float               @default(0.0)   // Available for withdrawal
-  totalWithdrawn    Float               @default(0.0)   // Already paid out
+  totalEarnings     Decimal             @default(0.0) // Lifetime gross earnings (80% of sales)
+  pendingEarnings   Decimal             @default(0.0) // Available for withdrawal
+  totalWithdrawn    Decimal             @default(0.0) // Already paid out
   // Relations
   problemStatuses   UserProblemStatus[]
   discussions       Discussion[]
@@ -114,15 +114,15 @@ model User {
   submissions       Submission[] // Track all code submissions
 
   // Learning & Marketplace Relations
-  progress       UserProgress[]
-  creatorProfile CreatorProfile?
-  ownedResources Resource[]
-  purchases      Purchase[]
+  progress           UserProgress[]
+  creatorProfile     CreatorProfile?
+  ownedResources     Resource[]
+  purchases          Purchase[]
   assignmentAttempts AssignmentAttempt[]
 
-  created_at DateTime    @default(now())
-  updated_at DateTime    @updatedAt
-  userBadges UserBadge[]
+  created_at    DateTime       @default(now())
+  updated_at    DateTime       @updatedAt
+  userBadges    UserBadge[]
   notifications Notification[]
   withdrawals   Withdrawal[]
 
@@ -159,15 +159,11 @@ model UserProgress {
 model Badge {
   id          String      @id @default(cuid())
   name        String
-<<<<<<< HEAD
   description String?
-=======
-  description String
->>>>>>> cd7f3ccc468f09cc7f6b00f353e194cbe3ed6ed5
   iconUrl     String // Cloudinary URL for the icon
-  resources   Resource[] 
+  resources   Resource[]
   userBadges  UserBadge[]
-  createdAt   DateTime   @default(now())
+  createdAt   DateTime    @default(now())
 }
 
 model UserBadge {
@@ -183,16 +179,11 @@ model UserBadge {
 }
 
 model CreatorProfile {
-  id     Int  @id @default(autoincrement())
-  userId Int  @unique
-  user   User @relation(fields: [userId], references: [userId], onDelete: Cascade)
-
-<<<<<<< HEAD
+  id              Int           @id @default(autoincrement())
+  userId          Int           @unique
+  user            User          @relation(fields: [userId], references: [userId], onDelete: Cascade)
   bio             String?
   status          CreatorStatus @default(NOT_APPLIED)
-=======
-  status          CreatorStatus @default(PENDING)
->>>>>>> cd7f3ccc468f09cc7f6b00f353e194cbe3ed6ed5
   portfolioUrl    String?
   rejectionReason String?       @db.Text
   githubUrl       String?
@@ -217,15 +208,15 @@ model Resource {
   previewUrl  String?
   price       Float        @default(0.0)
   language    String?
-  views        Int     @default(0)
-  isApproved   Boolean @default(false)
-  isPublished  Boolean @default(false)
+  views       Int          @default(0)
+  isApproved  Boolean      @default(false)
+  isPublished Boolean      @default(false)
 
   creatorId Int
   creator   User @relation(fields: [creatorId], references: [userId])
 
-  badgeId   String?
-  badge     Badge?   @relation(fields: [badgeId], references: [id])
+  badgeId String?
+  badge   Badge?  @relation(fields: [badgeId], references: [id])
 
   modules    Module[]
   purchases  Purchase[]
@@ -399,14 +390,26 @@ model Submission {
   problem Problem @relation(fields: [problemId], references: [problemId])
   user    User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
+  //indexes
+  @@index([userId])
+  @@index([problemId])
+  @@index([createdAt])
   @@map("submissions")
+}
+
+enum SubmissionStatus {
+  ATTEMPTED 
+  SOLVED
+  WRONG_ANSWER
+  COMPILATION_ERROR
+  RUNTIME_ERROR
 }
 
 model UserProblemStatus {
   id        Int    @id @default(autoincrement())
   userId    Int
   problemId Int
-  status    String // e.g. "SOLVED", "ATTEMPTED"
+  status    SubmissionStatus // e.g. "SOLVED", "ATTEMPTED"
 
   user    User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
   problem Problem @relation(fields: [problemId], references: [problemId])
@@ -447,13 +450,13 @@ model ChallengeProblem {
 // --- COURSE ASSIGNMENTS (MCQ) ---
 
 model Assignment {
-  id         String @id @default(cuid())
-  resourceId String @unique
+  id         String   @id @default(cuid())
+  resourceId String   @unique
   resource   Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
 
-  passScore  Int // e.g. 70 means 70% needed to pass
-  questions  AssignmentQuestion[]
-  attempts   AssignmentAttempt[]
+  passScore Int // e.g. 70 means 70% needed to pass
+  questions AssignmentQuestion[]
+  attempts  AssignmentAttempt[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -462,13 +465,13 @@ model Assignment {
 }
 
 model AssignmentQuestion {
-  id           String @id @default(cuid())
+  id           String     @id @default(cuid())
   assignmentId String
   assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
 
-  question      String   @db.Text
-  options       Json     // String[] — the 4 choices
-  correctIndex  Int      // 0-3, index of the correct option
+  question     String @db.Text
+  options      Json // String[] — the 4 choices
+  correctIndex Int // 0-3, index of the correct option
 
   order Int @default(0)
 
@@ -476,17 +479,17 @@ model AssignmentQuestion {
 }
 
 model AssignmentAttempt {
-  id           String @id @default(cuid())
+  id           String     @id @default(cuid())
   assignmentId String
   assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
 
-  userId   Int
-  user     User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  userId Int
+  user   User @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
-  score    Int     // number of correct answers
-  total    Int     // total questions
-  passed   Boolean
-  answers  Json    // Int[] — user's chosen indices
+  score   Int // number of correct answers
+  total   Int // total questions
+  passed  Boolean
+  answers Json // Int[] — user's chosen indices
 
   createdAt DateTime @default(now())
 
@@ -496,17 +499,17 @@ model AssignmentAttempt {
 // --- NOTIFICATIONS ---
 
 model Notification {
-  id        String           @id @default(cuid())
-  userId    Int
-  user      User             @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId Int
+  user   User   @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
-  type      NotificationType
-  title     String
-  message   String           @db.Text
-  isRead    Boolean          @default(false)
-  link      String?          // Optional deep-link (e.g. /challenges/weekly-duel)
+  type    NotificationType
+  title   String
+  message String           @db.Text
+  isRead  Boolean          @default(false)
+  link    String? // Optional deep-link (e.g. /challenges/weekly-duel)
 
-  createdAt DateTime         @default(now())
+  createdAt DateTime @default(now())
 
   @@index([userId, isRead])
   @@map("notifications")
@@ -515,17 +518,17 @@ model Notification {
 // --- WITHDRAWALS ---
 
 model Withdrawal {
-  id        String           @id @default(cuid())
-  userId    Int
-  user      User             @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId Int
+  user   User   @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
-  amount    Float            // Amount requested
-  status    WithdrawalStatus @default(PENDING)
-  method    String           @default("Bank Transfer") // e.g. eSewa, Bank Transfer
-  accountDetails String?     @db.Text // Encrypted/masked account info
-  adminNote String?          @db.Text // Admin rejection reason or note
+  amount         Float // Amount requested
+  status         WithdrawalStatus @default(PENDING)
+  method         String           @default("Bank Transfer") // e.g. eSewa, Bank Transfer
+  accountDetails String?          @db.Text // Encrypted/masked account info
+  adminNote      String?          @db.Text // Admin rejection reason or note
 
-  requestedAt DateTime @default(now())
+  requestedAt DateTime  @default(now())
   resolvedAt  DateTime?
 
   @@index([userId])
